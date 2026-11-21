@@ -1,5 +1,6 @@
 <?php
 
+use App\Domains\Accounts\Models\OtpCode;
 use Illuminate\Foundation\Inspiring;
 use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\Schedule;
@@ -12,4 +13,6 @@ Artisan::command('inspire', function () {
 Schedule::command('queue:work --stop-when-empty --max-time=50 --tries=3')->everyMinute()
     ->withoutOverlapping(5)
     ->runInBackground()
-    ->when(fn (): bool => config('tayari.queue.work_from_scheduler'));
+    ->when(fn (): bool => config()->boolean('tayari.queue.work_from_scheduler', true));
+
+Schedule::command('model:prune', ['--model' => [OtpCode::class]])->daily();

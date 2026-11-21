@@ -15,11 +15,20 @@ paths:
 app/Domains/{Accounts,Tayars,Catalog,Pricing,Orders,Payments,Wallet,Incentives,Support}/
     Models/  Actions/  Enums/  Events/  Listeners/  Data/  Policies/
 app/Http/Controllers/Api/V1/{Public,Auth,Client,Tayar,Admin}/
-app/Http/Requests/Api/V1/{Auth,Client,Tayar,Admin}/
+app/Http/Requests/Api/V1/{Public,Auth,Client,Tayar,Admin}/
 app/Http/Resources/Api/V1/{Public,Auth,Client,Tayar,Admin}/
 ```
 
 The `app/Domains/*` skeleton above already exists, with a `.gitkeep` in each empty folder. Put every new file in the matching domain folder (remove the `.gitkeep` once the folder has a real file). `Data/` holds simple DTOs, only when needed.
+
+Resources used by more than one side (e.g. `MediaResource`) live at the `app/Http/Resources/Api/V1/` root, not in a side folder.
+
+Approved folders outside `app/Domains` and the HTTP side folders:
+
+- `app/Rules`: validation rules (`php artisan make:rule`), e.g. `EgyptianMobileNumber`.
+- `app/Http/Requests/Concerns`: traits shared by FormRequests (`php artisan make:trait`), e.g. phone normalization and pagination.
+- `app/Contracts`: interfaces for swappable infrastructure, e.g. `SmsSender`.
+- `app/Services/Sms`: the SMS drivers behind `SmsSender`, picked by `config('tayari.sms.driver')`.
 
 ## API versioning
 
@@ -115,13 +124,14 @@ Phase 2 runs on Octane, so the app stays in memory between requests. Write code 
 
 - **Actions are a domain's public entry point.** A domain may read another domain's models, but must not write another domain's tables directly; it calls that domain's Action (e.g. Orders calls Wallet's `CreditWalletAction`, never inserts `wallet_transactions` itself).
 - **Slow or external work runs on queues**, never inside the request: notifications, WhatsApp/SMS, media conversions, nightly rank recalculation, bonus calculation.
+- **OTP SMS is the one exception:** it is sent inside the request, so the plain code never sits in the `jobs` table and arrives right away. Every other SMS and notification goes through the queue.
 - **Files always go through Laravel disks by name**, never raw paths. Personal documents (national ID, criminal record, licences) use the private `local` disk and are served only by temporary signed URLs or an authorised download route. Public images (order photos, icons) use the `public` disk. Disk names come from config/env, so moving later to an S3-compatible store (e.g. Hetzner Object Storage) is only an `.env` change plus copying the existing files.
 - **The API is stateless** (tokens), so more servers can be added later.
 - **Location:** the production database engine only stores a Tayar's last known position, never a full location history from every update.
 - **Queries:** every new query filter or sort needs a supporting index. Every list endpoint is paginated (cursor pagination for long lists). Lazy loading is prevented outside production (`Model::preventLazyLoading(! app()->isProduction())`).
 - **Values that change** live in config or the database (see Constants and settings).
 - **Read-heavy lookups** (categories, modes, pricing rules, ranks) are cached, and the cache is cleared when they change.
-- **Tests mirror the structure:** `tests/Feature/Api/V1/{Public,Shared,Auth,Client,Tayar,Admin}/...` and `tests/Unit/Domains/{Domain}/...`. `Public/` covers unauthenticated endpoints (`routes/api/v1/public.php`); `Shared/` covers behaviour every v1 route shares (middleware, error format).
+- **Tests mirror the structure:** `tests/Feature/Api/V1/{Public,Shared,Auth,Client,Tayar,Admin}/...`, `tests/Feature/Domains/{Domain}/...` for Action tests that need the database, `tests/Unit/Domains/{Domain}/...` for tests without it, and `tests/Unit/Services/{Service}/...` for unit tests of `app/Services`. `Public/` covers unauthenticated endpoints (`routes/api/v1/public.php`); `Shared/` covers behaviour every v1 route shares (middleware, error format).
 
 ## Migrations
 

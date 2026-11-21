@@ -7,12 +7,13 @@ paths:
 
 # Validation
 
-## Validate in a FormRequest under app/Http/Requests/Api/V1/{Auth,Client,Tayar,Admin}
+## Validate in a FormRequest under app/Http/Requests/Api/V1/{Public,Auth,Client,Tayar,Admin}
 
 Every input an endpoint uses is validated in a FormRequest under the folder for the client that calls it:
 
 | Folder | Use for |
 | --- | --- |
+| `app/Http/Requests/Api/V1/Public/` | unauthenticated endpoints (`routes/api/v1/public.php`, e.g. list query parameters) |
 | `app/Http/Requests/Api/V1/Auth/` | OTP, login and logout endpoints (`auth/` routes) |
 | `app/Http/Requests/Api/V1/Client/` | customer and business endpoints (`client/` routes) |
 | `app/Http/Requests/Api/V1/Tayar/` | rider endpoints (`tayar/` routes) |
