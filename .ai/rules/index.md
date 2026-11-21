@@ -8,7 +8,7 @@
 | [scope.md](scope.md) | all files | Starting any change: confirm scope, make the minimal change, no extra scope |
 | [architecture.md](architecture.md) | `app/**`, `routes/**`, `config/**`, `database/migrations/**`, `tests/**` | Adding or moving backend code: domain folders, API versioning, thin controllers, Actions, Listeners, constants and settings, environments, scalability |
 | [domain-rules.md](domain-rules.md) | `app/**`, `database/**`, `routes/**`, `tests/**` | Touching money, wallets, payments, order statuses, codes/OTPs, ranks, bonuses or business time |
-| [validation.md](validation.md) | `app/Http/Requests/**`, `app/Http/Controllers/**`, `app/Domains/**/Actions/**` | Adding or changing endpoint input: FormRequests under `app/Http/Requests/Api/V1/{Auth,Client,Tayar,Admin}` |
+| [validation.md](validation.md) | `app/Http/Requests/**`, `app/Http/Controllers/**`, `app/Domains/**/Actions/**` | Adding or changing endpoint input: FormRequests under `app/Http/Requests/Api/V1/{Public,Auth,Client,Tayar,Admin}` |
 | [query-changes.md](query-changes.md) | `app/Domains/**`, `app/Jobs/**`, `app/Console/Commands/**`, `app/Http/Controllers/**`, `routes/console.php`, `database/migrations/**` | Rewriting a query: prove the same rows, call out condition changes, no index hints |
 | [sql.md](sql.md) | `app/**`, `database/**`, `routes/**`, `tests/**` | Writing any query: verify columns against migrations or a sample row first |
 | [code-comments.md](code-comments.md) | `app/**`, `database/**`, `routes/**`, `tests/**` | Writing comments: short, only for the non-obvious why |

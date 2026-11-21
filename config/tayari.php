@@ -45,4 +45,95 @@ return [
         'work_from_scheduler' => (bool) env('QUEUE_WORK_FROM_SCHEDULER', true),
     ],
 
+    /*
+    |--------------------------------------------------------------------------
+    | Authentication
+    |--------------------------------------------------------------------------
+    |
+    | When phone verification is required, register sends an OTP, and login
+    | and client routes need a verified phone.
+    |
+    */
+
+    'auth' => [
+        'require_phone_verification' => (bool) env('REQUIRE_PHONE_VERIFICATION', true),
+        'login_attempts_per_minute' => (int) env('LOGIN_ATTEMPTS_PER_MINUTE', 5),
+        'login_attempts_per_phone_per_hour' => (int) env('LOGIN_ATTEMPTS_PER_PHONE_PER_HOUR', 20),
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
+    | One-Time Passwords
+    |--------------------------------------------------------------------------
+    */
+
+    'otp' => [
+        'length' => (int) env('OTP_LENGTH', 6),
+        'expires_minutes' => (int) env('OTP_EXPIRES_MINUTES', 5),
+        'max_attempts' => (int) env('OTP_MAX_ATTEMPTS', 5),
+        'resend_cooldown_seconds' => (int) env('OTP_RESEND_COOLDOWN_SECONDS', 60),
+        'rate_limits' => [
+            'decay_minutes' => (int) env('OTP_RATE_LIMIT_DECAY_MINUTES', 60),
+            'per_phone' => (int) env('OTP_RATE_LIMIT_PER_PHONE', 5),
+            'per_ip' => (int) env('OTP_RATE_LIMIT_PER_IP', 20),
+        ],
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
+    | SMS
+    |--------------------------------------------------------------------------
+    |
+    | Supported drivers: "log". The log driver writes the full message only
+    | in local and testing; elsewhere it logs the number and [redacted].
+    |
+    */
+
+    'sms' => [
+        'driver' => env('SMS_DRIVER', 'log'),
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
+    | Media
+    |--------------------------------------------------------------------------
+    |
+    | Personal and business documents live on the private disk and are only
+    | served through short-lived signed URLs.
+    |
+    */
+
+    'media' => [
+        'private_disk' => env('MEDIA_PRIVATE_DISK', 'local'),
+        'signed_url_minutes' => (int) env('MEDIA_SIGNED_URL_MINUTES', 5),
+        'max_upload_kb' => (int) env('MEDIA_MAX_UPLOAD_KB', 5120),
+        'allowed_mimes' => ['jpg', 'jpeg', 'png', 'webp', 'pdf'],
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
+    | Pagination
+    |--------------------------------------------------------------------------
+    */
+
+    'pagination' => [
+        'per_page' => 20,
+        'max_per_page' => 100,
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
+    | First Super Admin
+    |--------------------------------------------------------------------------
+    |
+    | Created by SuperAdminSeeder. The phone is normalized to +20… on seeding.
+    |
+    */
+
+    'super_admin' => [
+        'name' => env('SUPER_ADMIN_NAME'),
+        'phone' => env('SUPER_ADMIN_PHONE'),
+        'password' => env('SUPER_ADMIN_PASSWORD'),
+    ],
+
 ];

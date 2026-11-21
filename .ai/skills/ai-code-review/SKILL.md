@@ -219,7 +219,7 @@ Each item below is something that follows directly from how Tayari is built, or 
 - **Hard-coded drivers:** a cache, queue, broadcast, session or filesystem driver/connection named in code (`Cache::store('redis')`, `->onConnection('redis')`, `Storage::disk('s3')`) instead of the configured default or a config value is **major**: the code must run unchanged on shared hosting (database drivers) and on the VPS (Redis).
 - Server state that stops the API being stateless (local files as shared state, in-memory state across requests) is **major**.
 - Read-heavy lookups (categories, modes, pricing rules, ranks) are cached and the cache is cleared when they change. A write path that changes a cached lookup without clearing it is **major**.
-- New tests go under `tests/Feature/Api/V1/{Public,Shared,Auth,Client,Tayar,Admin}/...` or `tests/Unit/Domains/{Domain}/...`: **minor** if elsewhere.
+- New tests go under `tests/Feature/Api/V1/{Public,Shared,Auth,Client,Tayar,Admin}/...`, `tests/Feature/Domains/{Domain}/...` (Action tests that need the database), `tests/Unit/Domains/{Domain}/...` (no database) or `tests/Unit/Services/{Service}/...` (unit tests of `app/Services`): **minor** if elsewhere.
 
 ### 5.6 Validation
 - Where inputs are validated: see `validation.md`.

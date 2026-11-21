@@ -2,12 +2,25 @@
 
 namespace App\Providers;
 
+use App\Contracts\SmsSender;
+use App\Domains\Accounts\Data\PhoneNumber;
+use App\Domains\Accounts\Enums\StaffRole;
+use App\Domains\Accounts\Models\BusinessProfile;
+use App\Domains\Accounts\Policies\BusinessProfilePolicy;
+use App\Domains\Accounts\Policies\MediaPolicy;
+use App\Domains\Accounts\Policies\UserPolicy;
 use App\Http\ClientContext;
 use App\Models\User;
+use App\Services\Sms\LogSmsSender;
+use Illuminate\Cache\RateLimiting\Limit;
 use Illuminate\Contracts\Foundation\Application;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Gate;
+use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\ServiceProvider;
+use InvalidArgumentException;
+use Spatie\MediaLibrary\MediaCollections\Models\Media;
 
 class AppServiceProvider extends ServiceProvider
 {
@@ -23,6 +36,11 @@ class AppServiceProvider extends ServiceProvider
         }
 
         $this->app->scoped(ClientContext::class, fn (Application $app): ClientContext => ClientContext::fromRequest($app->make('request')));
+
+        $this->app->bind(SmsSender::class, fn (): SmsSender => match (config('tayari.sms.driver')) {
+            'log' => new LogSmsSender,
+            default => throw new InvalidArgumentException('Unsupported SMS driver ['.config('tayari.sms.driver').'].'),
+        });
     }
 
     /**
@@ -33,5 +51,48 @@ class AppServiceProvider extends ServiceProvider
         Model::preventLazyLoading(! $this->app->isProduction());
 
         Gate::define('viewApiDocs', fn (User $user): bool => in_array($user->email, config('scramble.allowed_emails'), true));
+
+        Gate::before(fn (User $user): ?bool => $user->hasRole(StaffRole::SuperAdmin->value) ? true : null);
+
+        Gate::policy(BusinessProfile::class, BusinessProfilePolicy::class);
+        Gate::policy(User::class, UserPolicy::class);
+        Gate::policy(Media::class, MediaPolicy::class);
+
+        $this->configureRateLimiting();
+    }
+
+    private function configureRateLimiting(): void
+    {
+        $otpLimits = function (string $name, Request $request): array {
+            $decayMinutes = config('tayari.otp.rate_limits.decay_minutes');
+            $phone = $this->phoneLimiterKey($request);
+
+            return [
+                Limit::perMinutes($decayMinutes, config('tayari.otp.rate_limits.per_phone'))->by("{$name}:phone:{$phone}"),
+                Limit::perMinutes($decayMinutes, config('tayari.otp.rate_limits.per_ip'))->by("{$name}:ip:{$request->ip()}"),
+            ];
+        };
+
+        RateLimiter::for('otp-send', fn (Request $request): array => $otpLimits('otp-send', $request));
+        RateLimiter::for('otp-verify', fn (Request $request): array => $otpLimits('otp-verify', $request));
+
+        RateLimiter::for('login', function (Request $request): array {
+            $phone = $this->phoneLimiterKey($request);
+
+            return [
+                Limit::perMinute(config('tayari.auth.login_attempts_per_minute'))->by("login:{$phone}|{$request->ip()}"),
+                Limit::perHour(config('tayari.auth.login_attempts_per_phone_per_hour'))->by("login:phone:{$phone}"),
+            ];
+        });
+    }
+
+    /**
+     * Runs before validation, so the input may be anything (e.g. phone[]=x); only a scalar is ever cast to a string.
+     */
+    private function phoneLimiterKey(Request $request): string
+    {
+        $phone = $request->input('phone');
+
+        return PhoneNumber::tryFrom($phone)?->value ?? (is_scalar($phone) ? (string) $phone : '');
     }
 }

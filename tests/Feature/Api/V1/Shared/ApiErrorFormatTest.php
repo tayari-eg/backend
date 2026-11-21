@@ -52,7 +52,7 @@ class ApiErrorFormatTest extends TestCase
             throw new \RuntimeException('Secret internal detail');
         });
 
-        $response = $this->getJson('/api/v1/_test/server-error');
+        $response = $this->getJson('/api/v1/_test/server-error', ['Accept-Language' => 'en']);
 
         $response->assertInternalServerError()
             ->assertExactJson([

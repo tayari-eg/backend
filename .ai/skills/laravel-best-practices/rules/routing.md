@@ -144,7 +144,7 @@ Register middleware aliases and groups in `withMiddleware()` in `bootstrap/app.p
 
 ### Only the HTTP layer is versioned
 
-Controllers, requests and resources live under a version folder: `app/Http/Controllers/Api/V1/{Public,Auth,Client,Tayar,Admin}`, `app/Http/Requests/Api/V1/{Auth,Client,Tayar,Admin}`, `app/Http/Resources/Api/V1/{Public,Auth,Client,Tayar,Admin}`. `app/Domains` (Models, Actions, Enums, Events) is never versioned: every version calls the same Actions.
+Controllers, requests and resources live under a version folder: `app/Http/Controllers/Api/V1/{Public,Auth,Client,Tayar,Admin}`, `app/Http/Requests/Api/V1/{Public,Auth,Client,Tayar,Admin}`, `app/Http/Resources/Api/V1/{Public,Auth,Client,Tayar,Admin}`. Resources used by more than one side (e.g. `MediaResource`) live at the `app/Http/Resources/Api/V1/` root. `app/Domains` (Models, Actions, Enums, Events) is never versioned: every version calls the same Actions.
 
 ### When to add v2
 

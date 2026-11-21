@@ -2,7 +2,7 @@
 
 ## Validate in a Form Request
 
-In Tayari, new validation always goes in a form request under `app/Http/Requests/Api/V1/{Auth,Client,Tayar,Admin}/` (see `.ai/rules/validation.md`). That holds even for small rule sets: don't add inline `$request->validate()` or `Validator::make()` to controllers. The few existing inline cases are legacy, not a pattern to copy.
+In Tayari, new validation always goes in a form request under `app/Http/Requests/Api/V1/{Public,Auth,Client,Tayar,Admin}/` (see `.ai/rules/validation.md`). That holds even for small rule sets: don't add inline `$request->validate()` or `Validator::make()` to controllers. The few existing inline cases are legacy, not a pattern to copy.
 
 ```php
 public function store(StorePostRequest $request): RedirectResponse

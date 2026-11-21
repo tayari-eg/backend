@@ -28,9 +28,9 @@ class EnsureAppVersionIsSupported
         $minimumVersion = config("tayari.min_supported_versions.{$clientContext->platform?->value}");
 
         if ($clientContext->isBelowMinimumVersion($minimumVersion)) {
-            Log::info('Blocked unsupported app version', ['minimum_version' => $minimumVersion]);
+            Log::notice('Blocked unsupported app version', ['minimum_version' => $minimumVersion]);
 
-            abort(Response::HTTP_UPGRADE_REQUIRED, __('This version of the app is no longer supported. Please update the app to continue.'));
+            abort(Response::HTTP_UPGRADE_REQUIRED, __('api.upgrade_required'));
         }
 
         return $next($request);

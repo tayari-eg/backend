@@ -2,6 +2,10 @@
 
 use App\Exceptions\ApiExceptionRenderer;
 use App\Http\Middleware\EnsureAppVersionIsSupported;
+use App\Http\Middleware\EnsureUserIsActive;
+use App\Http\Middleware\EnsureUserIsClient;
+use App\Http\Middleware\EnsureUserIsStaff;
+use App\Http\Middleware\SetRequestLocale;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
@@ -34,12 +38,18 @@ return Application::configure(basePath: dirname(__DIR__))
         __DIR__.'/../app/Domains/*/Listeners',
     ])
     ->withMiddleware(function (Middleware $middleware): void {
+        // Global, so messages are translated even for routes that don't match (404).
+        $middleware->prepend(SetRequestLocale::class);
+
         $middleware->statefulApi();
 
         $middleware->alias([
             'role' => RoleMiddleware::class,
             'permission' => PermissionMiddleware::class,
             'role_or_permission' => RoleOrPermissionMiddleware::class,
+            'active' => EnsureUserIsActive::class,
+            'client' => EnsureUserIsClient::class,
+            'staff' => EnsureUserIsStaff::class,
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {

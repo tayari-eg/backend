@@ -21,6 +21,7 @@ class AppConfigTest extends TestCase
             'tayari.min_supported_versions.ios' => '1.5.2',
             'tayari.latest_versions.android' => '1.8.0',
             'tayari.latest_versions.ios' => '1.9.1',
+            'tayari.auth.require_phone_verification' => true,
         ]);
         Carbon::setTestNow('2026-11-20 10:30:00');
 
@@ -37,6 +38,7 @@ class AppConfigTest extends TestCase
                         'android' => '1.8.0',
                         'ios' => '1.9.1',
                     ],
+                    'phone_verification_required' => true,
                     'server_time' => '2026-11-20T10:30:00Z',
                 ],
             ]);
@@ -45,6 +47,15 @@ class AppConfigTest extends TestCase
     public function test_it_is_public(): void
     {
         $this->getJson('/api/v1/app-config')->assertOk();
+    }
+
+    public function test_it_reports_when_phone_verification_is_not_required(): void
+    {
+        config(['tayari.auth.require_phone_verification' => false]);
+
+        $this->getJson(route('api.v1.public.app-config'))
+            ->assertOk()
+            ->assertJsonPath('data.phone_verification_required', false);
     }
 
     public function test_blank_version_env_values_are_returned_as_null(): void

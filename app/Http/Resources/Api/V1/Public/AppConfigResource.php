@@ -13,7 +13,7 @@ class AppConfigResource extends JsonResource
     /**
      * Transform the resource into an array.
      *
-     * @return array{min_supported_version: array{android: ?string, ios: ?string}, latest_version: array{android: ?string, ios: ?string}, server_time: string}
+     * @return array{min_supported_version: array{android: ?string, ios: ?string}, latest_version: array{android: ?string, ios: ?string}, phone_verification_required: bool, server_time: string}
      */
     public function toArray(Request $request): array
     {
@@ -26,6 +26,7 @@ class AppConfigResource extends JsonResource
                 'android' => $this->resource['latest_versions']['android'] ?? null,
                 'ios' => $this->resource['latest_versions']['ios'] ?? null,
             ],
+            'phone_verification_required' => config()->boolean('tayari.auth.require_phone_verification', true),
             'server_time' => now('UTC')->toIso8601ZuluString(),
         ];
     }

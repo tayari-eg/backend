@@ -3,6 +3,7 @@
 namespace Tests\Feature\Api\V1\Shared;
 
 use App\Http\Middleware\EnsureAppVersionIsSupported;
+use Illuminate\Support\Facades\Context;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Route;
 use Tests\TestCase;
@@ -30,6 +31,7 @@ class EnsureAppVersionIsSupportedTest extends TestCase
         $response = $this->getJson(self::PROTECTED_URI, [
             'X-Platform' => 'android',
             'X-App-Version' => '1.9.9',
+            'Accept-Language' => 'en',
         ]);
 
         $response->assertStatus(426)
@@ -66,9 +68,11 @@ class EnsureAppVersionIsSupportedTest extends TestCase
             'X-App-Version' => '1.9.9',
         ])->assertStatus(426);
 
-        Log::shouldHaveReceived('info')
+        Log::shouldHaveReceived('notice')
             ->once()
             ->with('Blocked unsupported app version', ['minimum_version' => '2.0.0']);
+        $this->assertSame('android', Context::get('platform'));
+        $this->assertSame('1.9.9', Context::get('app_version'));
     }
 
     public function test_an_allowed_request_does_not_log_a_blocked_version(): void
@@ -80,7 +84,7 @@ class EnsureAppVersionIsSupportedTest extends TestCase
             'X-App-Version' => '2.0.0',
         ])->assertOk();
 
-        Log::shouldNotHaveReceived('info');
+        Log::shouldNotHaveReceived('notice');
     }
 
     public function test_an_old_ios_version_is_blocked_with_426(): void
