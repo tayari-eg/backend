@@ -45,6 +45,7 @@ Approved folders outside `app/Domains` and the HTTP side folders:
 - **Headers:** clients send `X-Platform` (`web` | `android` | `ios`); the Flutter app also sends `X-App-Version`. `GET /api/v1/app-config` (public, route name `api.v1.public.app-config`) returns `min_supported_version` and `latest_version` per platform (`android`, `ios`) plus the server time in UTC. There is no `force_update` flag: an app below `min_supported_version` must update. A middleware returns `426 Upgrade Required` for app versions below the minimum. Log `X-App-Version` to track old-version usage.
 - **Responses** always go through API Resources (never return a model directly). Every version uses one error format: `{ "message": ..., "errors": {...} }`.
 - The same Sanctum token works for every version.
+- **API docs:** every new endpoint needs a one-line Scramble summary on its controller method, and must be added to the Postman docs: its documentation with the full template in `docs/postman/endpoints.php`, and its app(s), folder, name and screen in `docs/postman/{flutter,website,admin}.php` (or `not_used_directly` in `docs/postman/collection.php` with the reason). These docs files are not config: `postman:export` loads them with `require`, never through `config()`. Every change to the API or to `docs/postman` must add an entry at the top of `docs/postman/changelog.php` with a raised version: **major** for a new API version (`/api/v2`) or a breaking change, **minor** for new endpoints, new fields, new folders or new screens in the docs, **patch** for wording fixes, clearer docs, or corrected limits or examples. Then run `php artisan postman:export` and commit the updated `postman/` files (a test fails when they differ from a fresh export).
 
 ## Thin controllers
 
@@ -131,7 +132,7 @@ Phase 2 runs on Octane, so the app stays in memory between requests. Write code 
 - **Queries:** every new query filter or sort needs a supporting index. Every list endpoint is paginated (cursor pagination for long lists). Lazy loading is prevented outside production (`Model::preventLazyLoading(! app()->isProduction())`).
 - **Values that change** live in config or the database (see Constants and settings).
 - **Read-heavy lookups** (categories, modes, pricing rules, ranks) are cached, and the cache is cleared when they change.
-- **Tests mirror the structure:** `tests/Feature/Api/V1/{Public,Shared,Auth,Client,Tayar,Admin}/...`, `tests/Feature/Domains/{Domain}/...` for Action tests that need the database, `tests/Unit/Domains/{Domain}/...` for tests without it, and `tests/Unit/Services/{Service}/...` for unit tests of `app/Services`. `Public/` covers unauthenticated endpoints (`routes/api/v1/public.php`); `Shared/` covers behaviour every v1 route shares (middleware, error format).
+- **Tests mirror the structure:** `tests/Feature/Api/V1/{Public,Shared,Auth,Client,Tayar,Admin}/...`, `tests/Feature/Domains/{Domain}/...` for Action tests that need the database, `tests/Unit/Domains/{Domain}/...` for tests without it, and `tests/Unit/Services/{Service}/...` for unit tests of `app/Services`, and `tests/Feature/Console/...` for Artisan commands. `Public/` covers unauthenticated endpoints (`routes/api/v1/public.php`); `Shared/` covers behaviour every v1 route shares (middleware, error format).
 
 ## Migrations
 

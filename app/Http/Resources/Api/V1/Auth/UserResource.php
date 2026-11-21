@@ -3,6 +3,8 @@
 namespace App\Http\Resources\Api\V1\Auth;
 
 use App\Domains\Accounts\Enums\DocumentCollection;
+use App\Domains\Accounts\Enums\StaffPermission;
+use App\Domains\Accounts\Enums\StaffRole;
 use App\Http\Resources\Api\V1\Client\BusinessProfileResource;
 use App\Http\Resources\Api\V1\MediaResource;
 use App\Models\User;
@@ -26,7 +28,14 @@ class UserResource extends JsonResource
      */
     public function toArray(Request $request): array
     {
-        $isStaff = $this->relationLoaded('roles') && $this->roles->isNotEmpty();
+        $roles = $this->roles->pluck('name')->values()->all();
+
+        // Super admins hold no direct permissions (Gate::before lets them through), so list every permission for the UI.
+        $permissions = match (true) {
+            $roles === [] => [],
+            in_array(StaffRole::SuperAdmin->value, $roles, true) => array_column(StaffPermission::cases(), 'value'),
+            default => $this->getAllPermissions()->pluck('name')->values()->all(),
+        };
 
         return [
             'id' => $this->id,
@@ -46,8 +55,8 @@ class UserResource extends JsonResource
                 'back' => MediaResource::optional($this->getFirstMedia(DocumentCollection::NationalIdBack->value)),
             ]),
             'business_profile' => BusinessProfileResource::make($this->whenLoaded('businessProfile')),
-            'roles' => $this->when($isStaff, fn () => $this->roles->pluck('name')->values()),
-            'permissions' => $this->when($isStaff, fn () => $this->getAllPermissions()->pluck('name')->values()),
+            'roles' => $roles,
+            'permissions' => $permissions,
         ];
     }
 }

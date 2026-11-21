@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Api\V1\Public;
 
 use App\Http\Controllers\Controller;
 use App\Http\Resources\Api\V1\Public\AppConfigResource;
+use Illuminate\Support\Fluent;
 
 class AppConfigController extends Controller
 {
@@ -14,9 +15,9 @@ class AppConfigController extends Controller
      */
     public function __invoke(): AppConfigResource
     {
-        return new AppConfigResource([
+        return new AppConfigResource(new Fluent([
             'min_supported_versions' => config('tayari.min_supported_versions'),
             'latest_versions' => config('tayari.latest_versions'),
-        ]);
+        ]));
     }
 }

@@ -4,9 +4,12 @@ namespace App\Http\Resources\Api\V1\Public;
 
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
+use Illuminate\Support\Fluent;
 
 /**
- * @property array{min_supported_versions: array{android: ?string, ios: ?string}, latest_versions: array{android: ?string, ios: ?string}} $resource
+ * Wraps the app versions from config('tayari'): min_supported_versions and latest_versions, each keyed by android and ios.
+ *
+ * @property Fluent $resource
  */
 class AppConfigResource extends JsonResource
 {

@@ -2,6 +2,7 @@
 
 namespace Tests\Feature\Api\V1\Auth;
 
+use App\Domains\Accounts\Enums\StaffPermission;
 use App\Domains\Accounts\Enums\StaffRole;
 use App\Domains\Accounts\Models\BusinessProfile;
 use App\Models\User;
@@ -26,7 +27,8 @@ class MeTest extends TestCase
             ->assertJsonPath('data.business_profile', null)
             ->assertJsonMissingPath('data.password')
             ->assertJsonMissingPath('data.remember_token')
-            ->assertJsonMissingPath('data.roles');
+            ->assertJsonPath('data.roles', [])
+            ->assertJsonPath('data.permissions', []);
     }
 
     public function test_it_includes_the_business_profile(): void
@@ -48,6 +50,16 @@ class MeTest extends TestCase
             ->assertOk()
             ->assertJsonPath('data.roles', ['support'])
             ->assertJsonPath('data.permissions', ['business_profiles.view', 'national_ids.view']);
+    }
+
+    public function test_a_super_admin_gets_every_permission(): void
+    {
+        Sanctum::actingAs($this->createStaffUser(StaffRole::SuperAdmin));
+
+        $this->getJson(route('api.v1.auth.me'))
+            ->assertOk()
+            ->assertJsonPath('data.roles', ['super_admin'])
+            ->assertJsonPath('data.permissions', array_column(StaffPermission::cases(), 'value'));
     }
 
     public function test_guests_get_401(): void

@@ -34,6 +34,9 @@ class BusinessProfileReviewController extends Controller
         return BusinessProfileResource::collection($profiles);
     }
 
+    /**
+     * Approve a pending business profile.
+     */
     public function approve(ApproveBusinessProfileRequest $request, BusinessProfile $businessProfile, ApproveBusinessProfileAction $approveBusinessProfile): BusinessProfileResource
     {
         $profile = $approveBusinessProfile->handle($businessProfile, $request->user());
@@ -41,6 +44,9 @@ class BusinessProfileReviewController extends Controller
         return BusinessProfileResource::make($profile->load(self::RELATIONS));
     }
 
+    /**
+     * Reject a pending business profile with a reason.
+     */
     public function reject(RejectBusinessProfileRequest $request, BusinessProfile $businessProfile, RejectBusinessProfileAction $rejectBusinessProfile): BusinessProfileResource
     {
         $profile = $rejectBusinessProfile->handle($businessProfile, $request->user(), $request->validated('reason'));
