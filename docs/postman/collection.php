@@ -104,7 +104,7 @@ return [
             - **419 (web only):** the CSRF cookie is missing or old. Call `sanctum/csrf-cookie` again and retry once.
             - **422:** invalid input. Show `errors` under the fields.
             - **426 (mobile only):** force update.
-            - **429:** too many attempts. Limits are per phone number and per IP address (users on the same network share the IP limit). Wait (see the `Retry-After` header, in seconds) and let the user retry.
+            - **429:** too many attempts. Most limits are per phone number and per IP address (users on the same network share the IP limit); login counts tries per phone number from the same IP address, plus an hourly limit per phone number. Wait (see the `Retry-After` header, in seconds) and let the user retry.
             - **500:** something went wrong on the server. Show a generic error and let the user retry.
 
             ## Lists and pages

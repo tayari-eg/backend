@@ -8,4 +8,9 @@ enum StaffPermission: string
     case BusinessProfilesReview = 'business_profiles.review';
     case NationalIdsView = 'national_ids.view';
     case NationalIdsReview = 'national_ids.review';
+    case BusinessTypesView = 'business_types.view';
+    case BusinessTypesManage = 'business_types.manage';
+    case UsersView = 'users.view';
+    case UsersBlock = 'users.block';
+    case StaffManage = 'staff.manage';
 }

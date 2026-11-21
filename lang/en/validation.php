@@ -229,6 +229,15 @@ return [
         'reason' => 'reason',
         'status' => 'status',
         'per_page' => 'items per page',
+        'name.ar' => 'Arabic name',
+        'name.en' => 'English name',
+        'is_active' => 'active',
+        'sort_order' => 'sort order',
+        'search' => 'search',
+        'phone_verified' => 'phone verified',
+        'national_id_status' => 'national ID status',
+        'business_profile_status' => 'business profile status',
+        'role' => 'role',
     ],
 
 ];

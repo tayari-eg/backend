@@ -13,6 +13,8 @@ use App\Domains\Accounts\Models\UserDevice;
 use Database\Factories\UserFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Attributes\Hidden;
+use Illuminate\Database\Eloquent\Attributes\Scope;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
@@ -116,6 +118,44 @@ class User extends Authenticatable implements HasMedia
     public function isStaff(): bool
     {
         return $this->hasAnyRole(StaffRole::values());
+    }
+
+    /**
+     * Customer and business accounts: users without a staff role.
+     *
+     * @param  Builder<self>  $query
+     */
+    #[Scope]
+    protected function customers(Builder $query): void
+    {
+        $query->whereDoesntHave('roles', fn (Builder $roles) => $roles->whereIn('name', StaffRole::values()));
+    }
+
+    /**
+     * @param  Builder<self>  $query
+     */
+    #[Scope]
+    protected function staff(Builder $query): void
+    {
+        $query->whereHas('roles', fn (Builder $roles) => $roles->whereIn('name', StaffRole::values()));
+    }
+
+    /**
+     * The same rules as nationalIdStatus(); null means no national ID was uploaded.
+     *
+     * @param  Builder<self>  $query
+     */
+    #[Scope]
+    protected function whereNationalIdStatus(Builder $query, ?VerificationStatus $status): void
+    {
+        $hasFront = fn (Builder $media) => $media->where('collection_name', DocumentCollection::NationalIdFront->value);
+
+        match ($status) {
+            VerificationStatus::Approved => $query->whereNotNull('id_verified_at'),
+            VerificationStatus::Rejected => $query->whereNull('id_verified_at')->whereNotNull('id_reviewed_at'),
+            VerificationStatus::Pending => $query->whereNull('id_verified_at')->whereNull('id_reviewed_at')->whereHas('media', $hasFront),
+            null => $query->whereNull('id_verified_at')->whereNull('id_reviewed_at')->whereDoesntHave('media', $hasFront),
+        };
     }
 
     /**

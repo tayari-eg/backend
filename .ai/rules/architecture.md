@@ -111,6 +111,7 @@ The database moves from MySQL 8 to PostgreSQL + PostGIS, so every query must run
 - No index hints (`FORCE INDEX`, `USE INDEX`, `IGNORE INDEX`).
 - No MySQL-only functions (e.g. `IFNULL`, `GROUP_CONCAT`, `FIELD()`, `DATE_FORMAT`) and no `JSON_*` raw SQL. Use the query builder's JSON helpers (`where('options->key', ...)`, `whereJsonContains()`).
 - Text search uses `whereLike()` / `orWhereLike()`, never raw `LIKE`/`ILIKE`.
+- **The one exception:** for translatable JSON columns, a case-insensitive match may use `lower()` on the grammar-wrapped JSON path (`$query->getQuery()->getGrammar()->wrap('name->en')`) with `like` or `=` and bound parameters, inside a model scope, because MySQL compares JSON text case-sensitively. Everything else still uses `whereLike()`.
 - JSON columns are `json()`, not `jsonb()`. Migrations use the Schema builder only.
 
 ## Octane safety

@@ -14,6 +14,7 @@
 $phoneField = '`phone` (string, required): any Egyptian mobile format (`01000000000`, `+201000000000`, `00201000000000`, spaces, dashes and Arabic digits are fine). The server saves it as `+201XXXXXXXXX`.';
 $fileRule = 'jpg, jpeg, png, webp or pdf, up to :max_upload_mb MB';
 $throttled = '- **429:** too many attempts from this phone number or this IP address (users on the same network share the IP limit). Wait for `Retry-After` seconds, then let the user retry.';
+$loginThrottled = '- **429:** too many login tries: :login_per_minute per minute for each phone number from the same IP address, or :login_per_phone_per_hour per hour for one phone number from any IP address. Wait for `Retry-After` seconds, then let the user retry.';
 $upgrade = '- **426 (mobile):** the app is too old. Show the force-update screen.';
 $serverError = '- **500:** show a generic error and a retry button.';
 $loggedOut = '- **401:** not logged in, or the login expired. Clear the stored login and go to Login.';
@@ -22,6 +23,12 @@ $clientOnly = '- **403:** `message` explains why: the account is blocked, the ph
 $staffOnly = '- **403:** not a staff account, blocked, or missing the permission (`message` says which). Hide this action for users without the permission.';
 $userFields = '`id`, `name`, `phone`, `email`, `account_type` (`individual` | `business`), `locale` (`ar` | `en`), `status` (`active` | `blocked`), `is_phone_verified`, `phone_verified_at`, `national_id` (`status`: null | `pending` | `approved` | `rejected`, `rejection_reason`, `verified_at`, `front` and `back` files with a signed `url`), `business_profile` (or null), `roles` (staff role names, for display only; an empty list for customers) and `permissions` (what the user may do; an empty list for customers, every permission for a super admin)';
 $profileFields = '`id`, `business_type` (`id`, `name`), `business_name`, `description`, `avg_daily_orders`, `tax_registration_number`, `verification_status` (`pending` | `approved` | `rejected`), `rejection_reason`, `reviewed_at`, `links` (`id`, `type`, `url`), `documents` (`national_id_front`, `national_id_back`, `tax_register` (the commercial register, السجل التجاري), `tax_card` (the tax card, البطاقة الضريبية): each a file with `file_name`, `mime_type`, `size`, `uploaded_at` and a signed `url`, or null), `created_at`, `updated_at`';
+$businessTypeFields = '`id`, `name` (`ar` and `en`), `is_active`, `sort_order`, `business_profiles_count` (how many business profiles use it), `created_at`, `updated_at`';
+$customerFields = '`id`, `name`, `phone`, `email`, `account_type` (`individual` | `business`), `locale`, `status` (`active` | `blocked`), `blocked_reason`, `is_phone_verified`, `phone_verified_at`, `national_id` (`status`: null | `pending` | `approved` | `rejected`, `rejection_reason`, `verified_at`, `reviewed_at`, `front` and `back` files with a signed `url`), `business_profile` (or null), `created_at`';
+$staffFields = '`id`, `name`, `phone`, `role` (`super_admin` | `admin` | `ops` | `support`), `status` (`active` | `blocked`), `blocked_reason`, `created_at`';
+$typeNotFound = '- **404:** no business type with this id.';
+$customerNotFound = '- **404:** no customer with this id (staff accounts are 404 here too: manage them under **Staff**).';
+$staffNotFound = '- **404:** no staff member with this id (customer accounts are 404 here too).';
 $otpCodeError = 'The same error for a wrong code, an expired code, a used code, a code with too many wrong tries (:otp_max_attempts per code) and an unknown phone: `errors.code` = "The code is wrong or has expired…". Show it under the code input and offer **Resend code**.';
 
 return [
@@ -85,8 +92,8 @@ return [
         'who' => 'Guest.',
         'request' => "- {$phoneField}\n- `password` (string, required): up to 64 characters.\n- `device_name` (string, required): up to 100 characters, for example the phone model. It names the token.",
         'success' => "**200** with:\n- `token`: send it as `Authorization: Bearer <token>` on every request. Store it in secure storage.\n- `token_type`: `Bearer`.\n- `data`: the user: {$userFields}.",
-        'errors' => "- **422:** wrong phone or password: `errors.phone` = \"These credentials do not match our records.\" (the same for an unknown phone).\n- **403:** the account is blocked, or the phone is not verified while phone verification is on. Show `message`; for \"verify your phone\", open the OTP screen (call **Resend code** first).\n{$throttled}\n{$upgrade}\n{$serverError}",
-        'notes' => '- Limits: :login_per_minute tries per minute per phone number and IP address (users on the same network share the IP limit), and :login_per_phone_per_hour per hour per phone.',
+        'errors' => "- **422:** wrong phone or password: `errors.phone` = \"These credentials do not match our records.\" (the same for an unknown phone).\n- **403:** the account is blocked, or the phone is not verified while phone verification is on. Show `message`; for \"verify your phone\", open the OTP screen (call **Resend code** first).\n{$loginThrottled}\n{$upgrade}\n{$serverError}",
+        'notes' => '- Limits: :login_per_minute tries per minute for each phone number from the same IP address, plus :login_per_phone_per_hour per hour for each phone number from any IP address. Mobile and web login share these limits.',
     ],
 
     'api.v1.auth.login' => [
@@ -94,8 +101,8 @@ return [
         'who' => 'Guest, from the React website or admin panel.',
         'request' => "- First call `GET {{appUrl}}/sanctum/csrf-cookie`.\n- Send with cookies and the `X-XSRF-TOKEN` header.\n- {$phoneField}\n- `password` (string, required): up to 64 characters.",
         'success' => "**200** with `data`, the logged-in user: {$userFields}. The session cookie is now set; later requests just send cookies.",
-        'errors' => "- **400:** the request did not come from a trusted website domain (`SANCTUM_STATEFUL_DOMAINS`), so no session could start.\n- **419:** the CSRF cookie is missing or old: call `sanctum/csrf-cookie` again and retry.\n- **422:** wrong phone or password: `errors.phone` = \"These credentials do not match our records.\".\n- **403:** the account is blocked, or the phone is not verified while phone verification is on. Show `message`.\n{$throttled}\n{$serverError}",
-        'notes' => '- Limits: :login_per_minute tries per minute per phone number and IP address (users on the same network share the IP limit), and :login_per_phone_per_hour per hour per phone.',
+        'errors' => "- **400:** the request did not come from a trusted website domain (`SANCTUM_STATEFUL_DOMAINS`), so no session could start.\n- **419:** the CSRF cookie is missing or old: call `sanctum/csrf-cookie` again and retry.\n- **422:** wrong phone or password: `errors.phone` = \"These credentials do not match our records.\".\n- **403:** the account is blocked, or the phone is not verified while phone verification is on. Show `message`.\n{$loginThrottled}\n{$serverError}",
+        'notes' => '- Limits: :login_per_minute tries per minute for each phone number from the same IP address, plus :login_per_phone_per_hour per hour for each phone number from any IP address. Mobile and web login share these limits.',
     ],
 
     'api.v1.auth.forgot-password' => [
@@ -212,7 +219,16 @@ return [
         'request' => "- Query `status` (optional): `pending` (default), `approved` or `rejected`.\n- Query `per_page` (optional, 1 to :max_per_page, default :per_page) and `page`.",
         'success' => "**200** with `data`: a list of business profiles, each with {$profileFields}, and the owner as `user` (`id`, `name`, `phone`). Plus `meta` and `links` for pages.",
         'errors' => "- **422:** an unknown `status` or `per_page` out of range.\n{$loggedOut}\n{$staffOnly}\n{$serverError}",
-        'notes' => '- There is no separate "one profile" endpoint: open the details page with the item from this list. The document `url`s expire after :signed_url_minutes minutes, so reload the list for fresh links.',
+        'notes' => '- Open the Review details page with **Get business profile**. The document `url`s expire after :signed_url_minutes minutes.',
+    ],
+
+    'api.v1.admin.business-profiles.show' => [
+        'what' => 'Returns one business profile with everything the Review details page needs: the business data, links, documents, the owner and who reviewed it.',
+        'who' => 'Staff with `business_profiles.view` (support, ops, admin, super admin).',
+        'request' => '- Path `businessProfile`: the profile `id` (from the list). No body.',
+        'success' => "**200** with `data`, the business profile: {$profileFields}, the owner as `user` (`id`, `name`, `phone`) and `reviewed_by` (`id`, `name` of the staff member who approved or rejected it, or null).",
+        'errors' => "- **404:** no profile with this id.\n{$loggedOut}\n{$staffOnly}\n{$serverError}",
+        'notes' => '- Call it again to refresh the document `url`s; they expire after :signed_url_minutes minutes.',
     ],
 
     'api.v1.admin.business-profiles.approve' => [
@@ -258,6 +274,149 @@ return [
         'success' => '**200** with the review item (`status` = `rejected`, `rejection_reason`). Close the dialog and remove it from the list.',
         'errors' => "- **404:** no user with this id.\n- **422:** `errors.reason` (missing or too long) or `errors.status` (not waiting for review: reload the list).\n{$loggedOut}\n{$staffOnly} Staff (except super admins) can't review their own ID.\n{$serverError}",
         'notes' => '- The client can upload a new ID; it then shows up in the list again.',
+    ],
+
+    'api.v1.admin.business-types.index' => [
+        'what' => 'Lists every business type, active and inactive, in sort order.',
+        'who' => 'Staff with `business_types.view` (support, ops, admin, super admin).',
+        'request' => "- Query `is_active` (optional): `true` for the Active tab, `false` for the Inactive tab; leave it out for all.\n- Query `search` (optional, up to 100 characters): part of the Arabic or English name, any letter case.\n- Query `per_page` (optional, 1 to :max_per_page, default :per_page) and `page`.",
+        'success' => "**200** with `data`: a list of business types, each with {$businessTypeFields}. Plus `meta` and `links` for pages.",
+        'errors' => "- **422:** an invalid `is_active`, `search` too long or `per_page` out of range.\n{$loggedOut}\n{$staffOnly}\n{$serverError}",
+        'notes' => '- Show **Delete** only when `business_profiles_count` is 0; otherwise offer **Deactivate**.',
+    ],
+
+    'api.v1.admin.business-types.show' => [
+        'what' => 'Returns one business type with its name in both languages, to fill the edit form.',
+        'who' => 'Staff with `business_types.view`.',
+        'request' => '- Path `businessType`: the type `id`. No body.',
+        'success' => "**200** with `data`: {$businessTypeFields}.",
+        'errors' => "{$typeNotFound}\n{$loggedOut}\n{$staffOnly}\n{$serverError}",
+    ],
+
+    'api.v1.admin.business-types.store' => [
+        'what' => 'Creates a business type.',
+        'who' => 'Staff with `business_types.manage` (admin, super admin).',
+        'request' => "- `name.ar` and `name.en` (strings, both required): up to 100 characters each, as `{ \"name\": { \"ar\": \"مطعم\", \"en\": \"Restaurant\" } }`.\n- `is_active` (boolean, optional): default `true`.\n- `sort_order` (number, optional): 0 to 65535. Left out, the type goes to the end of the list.",
+        'success' => "**201** with `data`, the new type: {$businessTypeFields}.",
+        'errors' => "- **422:** field errors. A name another type already uses (ignoring letter case) gets `errors[\"name.ar\"]` or `errors[\"name.en\"]` = \"Another business type already has this name.\"\n{$loggedOut}\n{$staffOnly}\n{$serverError}",
+        'notes' => '- An active type shows up in the public **Get business types** list at once.',
+    ],
+
+    'api.v1.admin.business-types.update' => [
+        'what' => 'Updates a business type. Send only the fields that change.',
+        'who' => 'Staff with `business_types.manage` (admin, super admin).',
+        'request' => "- Path `businessType`: the type `id`.\n- Any of `name` (both `ar` and `en` when sent), `is_active`, `sort_order` (same rules as create).",
+        'success' => "**200** with `data`, the updated type: {$businessTypeFields}.",
+        'errors' => "{$typeNotFound}\n- **422:** field errors, for example a name with one language only, or a name another type already uses (ignoring letter case).\n{$loggedOut}\n{$staffOnly}\n{$serverError}",
+        'notes' => '- Renaming a type changes the name every business profile with this type shows.',
+    ],
+
+    'api.v1.admin.business-types.activate' => [
+        'what' => 'Activates a business type, so it shows in the public list again.',
+        'who' => 'Staff with `business_types.manage` (admin, super admin).',
+        'request' => '- Path `businessType`: the type `id`. No body.',
+        'success' => "**200** with `data`, the type (`is_active` = true): {$businessTypeFields}. Move it to the Active tab.",
+        'errors' => "{$typeNotFound}\n{$loggedOut}\n{$staffOnly}\n{$serverError}",
+        'notes' => '- Activating an active type also answers 200.',
+    ],
+
+    'api.v1.admin.business-types.deactivate' => [
+        'what' => 'Deactivates a business type: it leaves the public list, and new business profiles can\'t pick it.',
+        'who' => 'Staff with `business_types.manage` (admin, super admin).',
+        'request' => '- Path `businessType`: the type `id`. No body.',
+        'success' => "**200** with `data`, the type (`is_active` = false): {$businessTypeFields}. Move it to the Inactive tab.",
+        'errors' => "{$typeNotFound}\n{$loggedOut}\n{$staffOnly}\n{$serverError}",
+        'notes' => '- Existing business profiles keep the type. Use this instead of delete for a type that is in use.',
+    ],
+
+    'api.v1.admin.business-types.destroy' => [
+        'what' => 'Deletes a business type that no business profile uses.',
+        'who' => 'Staff with `business_types.manage` (admin, super admin).',
+        'request' => '- Path `businessType`: the type `id`. No body.',
+        'success' => '**204** with no body. Remove the row.',
+        'errors' => "{$typeNotFound}\n- **422:** a business profile uses the type: `errors.business_type` = \"This business type is used by business profiles, so it cannot be deleted. Deactivate it instead.\" Show it in the dialog with a **Deactivate** button.\n{$loggedOut}\n{$staffOnly}\n{$serverError}",
+        'notes' => '- Ask for confirmation first; a delete can\'t be undone.',
+    ],
+
+    'api.v1.admin.users.index' => [
+        'what' => 'Lists customer and business accounts (never staff), newest first, with search and filters.',
+        'who' => 'Staff with `users.view` (support, ops, admin, super admin).',
+        'request' => "- Query `search` (optional, up to 100 characters), Arabic digits are fine:\n  - a full Egyptian mobile number in any format (`01000000000`, `+201000000000`) finds that exact phone;\n  - 4 or more digits find phones that contain them (a leading 0 is ignored, so `0100000` finds `+20100000…`);\n  - anything else searches the name.\n- Query `account_type` (optional): `individual` or `business`.\n- Query `status` (optional): `active` or `blocked`.\n- Query `phone_verified` (optional): `true` or `false`.\n- Query `national_id_status` (optional): `none` (never uploaded), `pending`, `approved` or `rejected`.\n- Query `business_profile_status` (optional): `pending`, `approved` or `rejected` (only business accounts with a profile).\n- Query `per_page` (optional, 1 to :max_per_page, default :per_page) and `page`.",
+        'success' => "**200** with `data`: a list of users, each with {$customerFields}. In the list, `business_profile` has the profile data without `business_type`, `links` and `documents`; open the user for those. Plus `meta` and `links` for pages.",
+        'errors' => "- **422:** an unknown filter value or `per_page` out of range.\n{$loggedOut}\n{$staffOnly}\n{$serverError}",
+        'notes' => '- Keep the search and filters in the page URL, so the list survives a reload.',
+    ],
+
+    'api.v1.admin.users.show' => [
+        'what' => 'Returns one customer or business account for the User details page: the national ID and the business profile with links and documents.',
+        'who' => 'Staff with `users.view`.',
+        'request' => '- Path `customer`: the user `id` (from the list). No body.',
+        'success' => "**200** with `data`: {$customerFields}, with `business_profile` in full: {$profileFields}.",
+        'errors' => "{$customerNotFound}\n{$loggedOut}\n{$staffOnly}\n{$serverError}",
+        'notes' => "- A file comes without `url` when the staff member can't view that kind of document (`national_ids.view` for the national ID, `business_profiles.view` for business documents).\n- The `url`s expire after :signed_url_minutes minutes: call it again to refresh them.",
+    ],
+
+    'api.v1.admin.users.block' => [
+        'what' => 'Blocks a customer or business account with a reason. Their mobile logins are signed out at once, and every request from them answers 403.',
+        'who' => 'Staff with `users.block` (ops, admin, super admin).',
+        'request' => "- Path `customer`: the user `id`.\n- `reason` (string, required): up to 255 characters, for the staff (the user only sees \"Your account has been blocked\").",
+        'success' => "**200** with `data`, the user (`status` = `blocked`, `blocked_reason`): {$customerFields}.",
+        'errors' => "{$customerNotFound}\n- **422:** `errors.reason` (missing or too long).\n{$loggedOut}\n{$staffOnly}\n{$serverError}",
+        'notes' => '- Blocking a blocked user answers 200 and only replaces the reason.',
+    ],
+
+    'api.v1.admin.users.unblock' => [
+        'what' => 'Unblocks a customer or business account and clears the reason.',
+        'who' => 'Staff with `users.block` (ops, admin, super admin).',
+        'request' => '- Path `customer`: the user `id`. No body.',
+        'success' => "**200** with `data`, the user (`status` = `active`, `blocked_reason` = null): {$customerFields}.",
+        'errors' => "{$customerNotFound}\n{$loggedOut}\n{$staffOnly}\n{$serverError}",
+        'notes' => '- Unblocking an active user also answers 200. The user logs in again; old mobile tokens stay deleted.',
+    ],
+
+    'api.v1.admin.staff.index' => [
+        'what' => 'Lists staff members with their role and status, newest first.',
+        'who' => 'Staff with `staff.manage` (super admin only).',
+        'request' => '- Query `per_page` (optional, 1 to :max_per_page, default :per_page) and `page`.',
+        'success' => "**200** with `data`: a list of staff members, each with {$staffFields}. Plus `meta` and `links` for pages.",
+        'errors' => "- **422:** `per_page` out of range.\n{$loggedOut}\n{$staffOnly}\n{$serverError}",
+        'notes' => '- Hide the **Staff** menu item for users without `staff.manage`.',
+    ],
+
+    'api.v1.admin.staff.store' => [
+        'what' => 'Creates a staff account with a role. The staff member can log in to the admin panel at once with this phone and password.',
+        'who' => 'Staff with `staff.manage` (super admin only).',
+        'request' => "- `name` (string, required): up to 255 characters.\n- {$phoneField} It must not belong to any account, customer or staff.\n- `password` (string, required): 8 to 64 characters.\n- `password_confirmation` (string, required): the same password again.\n- `role` (required): `admin`, `ops` or `support`. `super_admin` can't be given through the API.",
+        'success' => "**201** with `data`, the new staff member: {$staffFields}.",
+        'errors' => "- **422:** field errors. A phone that already has an account gets `errors.phone` = \"This phone number already belongs to an account.\"\n{$loggedOut}\n{$staffOnly}\n{$serverError}",
+        'notes' => '- The phone counts as verified. Share the password with the staff member privately and ask them to change it after the first login.',
+    ],
+
+    'api.v1.admin.staff.role.update' => [
+        'what' => 'Changes a staff member\'s role.',
+        'who' => 'Staff with `staff.manage` (super admin only).',
+        'request' => "- Path `staff`: the staff member `id`.\n- `role` (required): `admin`, `ops` or `support`.",
+        'success' => "**200** with `data`, the staff member with the new role: {$staffFields}.",
+        'errors' => "{$staffNotFound}\n- **422:** `errors.role` (unknown or `super_admin`), or `errors.staff`: \"You cannot change your own role.\" or \"This is the last active super admin, so it cannot be blocked or demoted.\"\n{$loggedOut}\n{$staffOnly}\n{$serverError}",
+        'notes' => '- Hide the change-role action on the logged-in user\'s own row. The new permissions apply from their next request.',
+    ],
+
+    'api.v1.admin.staff.block' => [
+        'what' => 'Blocks a staff member with a reason. Their logins stop working at once.',
+        'who' => 'Staff with `staff.manage` (super admin only).',
+        'request' => "- Path `staff`: the staff member `id`.\n- `reason` (string, required): up to 255 characters.",
+        'success' => "**200** with `data`, the staff member (`status` = `blocked`, `blocked_reason`): {$staffFields}.",
+        'errors' => "{$staffNotFound}\n- **422:** `errors.reason` (missing or too long), or `errors.staff`: \"You cannot block your own account.\" or \"This is the last active super admin, so it cannot be blocked or demoted.\"\n{$loggedOut}\n{$staffOnly}\n{$serverError}",
+        'notes' => '- Hide the block action on the logged-in user\'s own row. Blocking a blocked staff member answers 200 and only replaces the reason.',
+    ],
+
+    'api.v1.admin.staff.unblock' => [
+        'what' => 'Unblocks a staff member and clears the reason.',
+        'who' => 'Staff with `staff.manage` (super admin only).',
+        'request' => '- Path `staff`: the staff member `id`. No body.',
+        'success' => "**200** with `data`, the staff member (`status` = `active`): {$staffFields}.",
+        'errors' => "{$staffNotFound}\n{$loggedOut}\n{$staffOnly}\n{$serverError}",
+        'notes' => '- Unblocking an active staff member also answers 200.',
     ],
 
 ];

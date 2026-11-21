@@ -18,6 +18,20 @@
 return [
 
     [
+        'version' => '1.1.0',
+        'date' => '2026-11-21',
+        'changes' => [
+            'Admin panel, Business types: list active and inactive types with search, show, create, update, activate, deactivate, and delete (only when no business profile uses the type; otherwise a 422 asks to deactivate it instead). Names must be unique in each language, ignoring letter case.',
+            'Admin panel, Users: list customer and business accounts with search by name, full phone or part of a phone, and filters (account type, status, phone verified, national ID status, business profile status); user details with the national ID and the business profile; block with a reason and unblock.',
+            'Admin panel, Staff (super admins only): list staff, create a staff member (admin, ops or support), change a role, block and unblock. Nobody can change their own role or block themselves, and the last active super admin can\'t be blocked or demoted.',
+            'Admin panel, Business profiles review: the Review details page now uses the new **Get business profile** endpoint, which also returns `reviewed_by`.',
+            'New permissions: `business_types.view`, `business_types.manage`, `users.view`, `users.block` and `staff.manage`. Admin has every permission except `staff.manage`; ops gets the business types and users view permissions and `users.block`; support gets the business types and users view permissions.',
+            'Login rate limits, clearer wording: tries are counted per phone number from the same IP address, plus an hourly limit per phone number from any IP address.',
+            'Example bodies: the `reason` example in the reject and block requests is now a neutral placeholder.',
+        ],
+    ],
+
+    [
         'version' => '1.0.0',
         'date' => '2026-11-21',
         'changes' => [

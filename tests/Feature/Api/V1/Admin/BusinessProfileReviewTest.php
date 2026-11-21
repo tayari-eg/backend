@@ -38,6 +38,46 @@ class BusinessProfileReviewTest extends TestCase
         $this->assertStringContainsString('signature=', $response->json('data.0.documents.national_id_front.url'));
     }
 
+    public function test_staff_open_one_profile_with_the_reviewer_and_signed_document_urls(): void
+    {
+        Storage::fake('local');
+        $reviewer = $this->createStaffUser(StaffRole::Ops);
+        $profile = BusinessProfile::factory()->approved($reviewer)->create();
+        $profile->addMedia(UploadedFile::fake()->create('front.pdf', 10, 'application/pdf'))->toMediaCollection('national_id_front');
+        Sanctum::actingAs($this->createStaffUser(StaffRole::Support));
+
+        $response = $this->getJson(route('api.v1.admin.business-profiles.show', $profile))
+            ->assertOk()
+            ->assertJsonPath('data.id', $profile->id)
+            ->assertJsonPath('data.user.phone', $profile->user->phone)
+            ->assertJsonPath('data.business_type.id', $profile->business_type_id)
+            ->assertJsonPath('data.reviewed_by', ['id' => $reviewer->id, 'name' => $reviewer->name]);
+
+        $this->assertStringContainsString('signature=', $response->json('data.documents.national_id_front.url'));
+    }
+
+    public function test_a_profile_that_was_never_reviewed_has_no_reviewer_and_an_unknown_id_is_404(): void
+    {
+        $profile = BusinessProfile::factory()->create();
+        Sanctum::actingAs($this->createStaffUser(StaffRole::Support));
+
+        $this->getJson(route('api.v1.admin.business-profiles.show', $profile))
+            ->assertOk()
+            ->assertJsonPath('data.reviewed_by', null);
+
+        $this->getJson(route('api.v1.admin.business-profiles.show', 999))->assertNotFound();
+    }
+
+    public function test_the_client_profile_never_shows_the_reviewer(): void
+    {
+        $profile = BusinessProfile::factory()->approved($this->createStaffUser())->create();
+        Sanctum::actingAs($profile->user);
+
+        $this->getJson(route('api.v1.client.business-profile.show'))
+            ->assertOk()
+            ->assertJsonMissingPath('data.reviewed_by');
+    }
+
     public function test_the_list_can_be_filtered_and_is_paginated(): void
     {
         BusinessProfile::factory()->count(3)->rejected()->create();

@@ -160,7 +160,7 @@ class ExportPostmanCollectionTest extends TestCase
             array_column($this->topFolder($collection, 'React website')['item'], 'name'),
         );
         $this->assertSame(
-            ['1. Login', '2. Business profiles review', '3. National IDs review', '4. Account'],
+            ['1. Login', '2. Business profiles review', '3. National IDs review', '4. Users', '5. Business types', '6. Staff', '7. Account'],
             array_column($this->topFolder($collection, 'React admin panel')['item'], 'name'),
         );
     }

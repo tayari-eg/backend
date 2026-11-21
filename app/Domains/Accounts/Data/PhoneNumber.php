@@ -24,12 +24,7 @@ final readonly class PhoneNumber implements Stringable
             return null;
         }
 
-        $digits = strtr((string) $input, [
-            '٠' => '0', '١' => '1', '٢' => '2', '٣' => '3', '٤' => '4',
-            '٥' => '5', '٦' => '6', '٧' => '7', '٨' => '8', '٩' => '9',
-            '۰' => '0', '۱' => '1', '۲' => '2', '۳' => '3', '۴' => '4',
-            '۵' => '5', '۶' => '6', '۷' => '7', '۸' => '8', '۹' => '9',
-        ]);
+        $digits = self::westernDigits((string) $input);
 
         $digits = preg_replace('/[\s\-.()]/u', '', $digits) ?? '';
 
@@ -44,6 +39,19 @@ final readonly class PhoneNumber implements Stringable
         }
 
         return new self(self::COUNTRY_CODE.$matches[1]);
+    }
+
+    /**
+     * Converts Arabic-Indic and Persian digits to 0-9.
+     */
+    public static function westernDigits(string $input): string
+    {
+        return strtr($input, [
+            '٠' => '0', '١' => '1', '٢' => '2', '٣' => '3', '٤' => '4',
+            '٥' => '5', '٦' => '6', '٧' => '7', '٨' => '8', '٩' => '9',
+            '۰' => '0', '۱' => '1', '۲' => '2', '۳' => '3', '۴' => '4',
+            '۵' => '5', '۶' => '6', '۷' => '7', '۸' => '8', '۹' => '9',
+        ]);
     }
 
     public static function from(mixed $input): self

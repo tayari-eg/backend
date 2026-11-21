@@ -92,7 +92,9 @@ class ExportPostmanCollection extends Command
         'device_name' => 'Example Phone',
         'push_token' => 'example-fcm-token',
         'app_version' => '1.0.0',
-        'reason' => 'The national ID photo is not clear.',
+        'reason' => 'Example reason.',
+        'ar' => 'مثال',
+        'en' => 'Example',
         'business_name' => 'Example Store',
         'description' => 'Example description',
         'tax_registration_number' => '000-000-000',
@@ -654,7 +656,8 @@ class ExportPostmanCollection extends Command
             return $schema['enum'][0];
         }
 
-        if ($name !== null && array_key_exists($name, self::FIELD_EXAMPLES)) {
+        // Field examples are for plain values; an object such as a translated name { ar, en } is built from its properties.
+        if ($name !== null && array_key_exists($name, self::FIELD_EXAMPLES) && ! in_array($this->type($schema), ['object', 'array'], true)) {
             return self::FIELD_EXAMPLES[$name];
         }
 
