@@ -69,6 +69,18 @@ return [
 
     /*
     |--------------------------------------------------------------------------
+    | Business Timezone
+    |--------------------------------------------------------------------------
+    |
+    | Everything is stored in UTC. Business rules (the 11 pm withdrawal
+    | cut-off, campaign start/end, "today") are calculated in this timezone.
+    |
+    */
+
+    'business_timezone' => env('BUSINESS_TIMEZONE', 'Africa/Cairo'),
+
+    /*
+    |--------------------------------------------------------------------------
     | Application Locale Configuration
     |--------------------------------------------------------------------------
     |
