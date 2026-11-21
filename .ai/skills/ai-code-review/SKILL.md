@@ -117,7 +117,7 @@ Open the report with a flag for each area the diff touches. A flag means *scruti
 | 🗄️ Migration | `database/migrations/**` | §5.1 |
 | 🐢 Queries | Eloquent or query builder changes, `DB::`, raw SQL, eager loading, model `$with` | §5.2 |
 | 🧊 Cache | `Cache::remember/tags/flush/memo`, cached counters | §5.3 |
-| 🌐 API contract | `app/Http/Resources/Api/V*`, `routes/api/v*/*.php`, `routes/api.php`, `bootstrap/app.php` routing, response shape/status codes, error format (consumed by the React website and the Flutter apps) | §5.4 |
+| 🌐 API contract | `app/Http/Resources/Api/V*`, `routes/api/v*/*.php`, `routes/api.php`, `bootstrap/app.php` routing, `docs/postman/**`, response shape/status codes, error format (consumed by the React website and the Flutter apps) | §5.4 |
 | 💰 Money / wallet | `app/Domains/{Wallet,Payments,Pricing,Incentives}`, `wallets`, `wallet_transactions`, `bonus_campaigns`, any amount, fee or balance | §5.5.1 |
 | 📦 Order status | `app/Domains/Orders`, `OrderStatus`, `order_status_histories`, accept/pickup/deliver/cancel Actions | §5.5.2 |
 | 🔢 Codes / OTP | delivery or refusal codes, OTP send/verify, their routes and rate limiters | §5.5.3 |
@@ -165,6 +165,7 @@ Each item below is something that follows directly from how Tayari is built, or 
 - Money is returned as a string (from `decimal`), never a float.
 - Privacy: embedded users stay limited. No national ID, documents, tokens, codes, OTPs, or another party's phone or location beyond what the order needs (§5.5.8).
 - Use `Resource::make`/`Collection` like sibling endpoints. When verifying, reason via `resolve()`/HTTP, not `toArray()` (`MissingValue`).
+- **Docs changelog** (`architecture.md`, API docs): a change to routes, request or response shapes, or `docs/postman/**` without a new entry at the top of `docs/postman/changelog.php` with a raised version is a finding (**minor**). So is a wrong bump: **major** for `/api/v2` or a breaking change, **minor** for new endpoints, fields, folders or screens, **patch** for wording, clearer docs, or corrected limits or examples. The updated `postman/` files must be in the same PR.
 
 ### 5.5 Tayari risk checklist
 
@@ -219,7 +220,7 @@ Each item below is something that follows directly from how Tayari is built, or 
 - **Hard-coded drivers:** a cache, queue, broadcast, session or filesystem driver/connection named in code (`Cache::store('redis')`, `->onConnection('redis')`, `Storage::disk('s3')`) instead of the configured default or a config value is **major**: the code must run unchanged on shared hosting (database drivers) and on the VPS (Redis).
 - Server state that stops the API being stateless (local files as shared state, in-memory state across requests) is **major**.
 - Read-heavy lookups (categories, modes, pricing rules, ranks) are cached and the cache is cleared when they change. A write path that changes a cached lookup without clearing it is **major**.
-- New tests go under `tests/Feature/Api/V1/{Public,Shared,Auth,Client,Tayar,Admin}/...`, `tests/Feature/Domains/{Domain}/...` (Action tests that need the database), `tests/Unit/Domains/{Domain}/...` (no database) or `tests/Unit/Services/{Service}/...` (unit tests of `app/Services`): **minor** if elsewhere.
+- New tests go under `tests/Feature/Api/V1/{Public,Shared,Auth,Client,Tayar,Admin}/...`, `tests/Feature/Domains/{Domain}/...` (Action tests that need the database), `tests/Unit/Domains/{Domain}/...` (no database) `tests/Unit/Services/{Service}/...` (unit tests of `app/Services`) or `tests/Feature/Console/...` (Artisan commands): **minor** if elsewhere.
 
 ### 5.6 Validation
 - Where inputs are validated: see `validation.md`.

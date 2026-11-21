@@ -31,11 +31,17 @@ class NationalIdReviewController extends Controller
         return NationalIdReviewResource::collection($users);
     }
 
+    /**
+     * Verify a client's pending national ID.
+     */
     public function verify(VerifyNationalIdRequest $request, User $user, VerifyNationalIdAction $verifyNationalId): NationalIdReviewResource
     {
         return NationalIdReviewResource::make($verifyNationalId->handle($user, $request->user())->load('media'));
     }
 
+    /**
+     * Reject a client's pending national ID with a reason.
+     */
     public function reject(RejectNationalIdRequest $request, User $user, RejectNationalIdAction $rejectNationalId): NationalIdReviewResource
     {
         return NationalIdReviewResource::make($rejectNationalId->handle($user, $request->user(), $request->validated('reason'))->load('media'));
