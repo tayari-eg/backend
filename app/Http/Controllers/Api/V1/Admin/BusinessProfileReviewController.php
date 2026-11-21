@@ -35,6 +35,14 @@ class BusinessProfileReviewController extends Controller
     }
 
     /**
+     * Show one business profile with everything the review page needs.
+     */
+    public function show(BusinessProfile $businessProfile): BusinessProfileResource
+    {
+        return BusinessProfileResource::make($businessProfile->load([...self::RELATIONS, 'reviewer']));
+    }
+
+    /**
      * Approve a pending business profile.
      */
     public function approve(ApproveBusinessProfileRequest $request, BusinessProfile $businessProfile, ApproveBusinessProfileAction $approveBusinessProfile): BusinessProfileResource

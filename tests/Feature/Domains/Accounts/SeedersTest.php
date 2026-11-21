@@ -12,6 +12,7 @@ use Database\Seeders\RolesAndPermissionsSeeder;
 use Database\Seeders\SuperAdminSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Hash;
+use Spatie\Permission\Models\Permission;
 use Spatie\Permission\Models\Role;
 use Tests\TestCase;
 
@@ -25,8 +26,45 @@ class SeedersTest extends TestCase
         $this->seed(RolesAndPermissionsSeeder::class);
 
         $this->assertSame(['admin', 'ops', 'super_admin', 'support'], Role::query()->where('guard_name', 'web')->orderBy('name')->pluck('name')->all());
-        $this->assertCount(count(StaffPermission::cases()), Role::findByName('admin', 'web')->permissions);
-        $this->assertSame(['business_profiles.view', 'national_ids.view'], Role::findByName('support', 'web')->permissions->pluck('name')->sort()->values()->all());
+        $this->assertSame($this->permissionNames(StaffRole::Admin), $this->rolePermissions('admin'));
+        $this->assertNotContains(StaffPermission::StaffManage->value, $this->rolePermissions('admin'));
+        $this->assertSame(['business_profiles.review', 'business_profiles.view', 'business_types.view', 'national_ids.review', 'national_ids.view', 'users.block', 'users.view'], $this->rolePermissions('ops'));
+        $this->assertSame(['business_profiles.view', 'business_types.view', 'national_ids.view', 'users.view'], $this->rolePermissions('support'));
+        $this->assertSame([], $this->rolePermissions('super_admin'));
+    }
+
+    public function test_running_the_seeder_again_adds_new_permissions_to_an_existing_database(): void
+    {
+        // The database as the first release seeded it: four permissions, and support with only the two view ones.
+        foreach (['business_profiles.view', 'business_profiles.review', 'national_ids.view', 'national_ids.review'] as $permission) {
+            Permission::findOrCreate($permission, 'web');
+        }
+        Role::findOrCreate('support', 'web')->syncPermissions(['business_profiles.view', 'national_ids.view']);
+        $support = User::factory()->create()->assignRole('support');
+
+        $this->seed(RolesAndPermissionsSeeder::class);
+
+        $this->assertSame(count(StaffPermission::cases()), Permission::query()->where('guard_name', 'web')->count());
+        $this->assertSame($this->permissionNames(StaffRole::Support), $this->rolePermissions('support'));
+        $this->assertSame($this->permissionNames(StaffRole::Ops), $this->rolePermissions('ops'));
+        $this->assertTrue($support->refresh()->hasRole('support'));
+        $this->assertTrue($support->can(StaffPermission::UsersView->value));
+    }
+
+    /**
+     * @return list<string>
+     */
+    private function rolePermissions(string $role): array
+    {
+        return Role::findByName($role, 'web')->permissions->pluck('name')->sort()->values()->all();
+    }
+
+    /**
+     * @return list<string>
+     */
+    private function permissionNames(StaffRole $role): array
+    {
+        return collect($role->permissions())->map(fn (StaffPermission $permission): string => $permission->value)->sort()->values()->all();
     }
 
     public function test_the_super_admin_comes_from_env(): void

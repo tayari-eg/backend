@@ -1,0 +1,108 @@
+<?php
+
+namespace Tests\Feature\Api\V1\Admin;
+
+use App\Domains\Accounts\Enums\StaffPermission;
+use App\Domains\Accounts\Enums\StaffRole;
+use App\Domains\Accounts\Models\BusinessProfile;
+use App\Domains\Accounts\Models\BusinessType;
+use App\Models\User;
+use Illuminate\Database\Eloquent\Model;
+use Illuminate\Foundation\Testing\RefreshDatabase;
+use Laravel\Sanctum\Sanctum;
+use PHPUnit\Framework\Attributes\DataProvider;
+use Symfony\Component\HttpFoundation\Response;
+use Tests\TestCase;
+
+class AdminRolePermissionsTest extends TestCase
+{
+    use RefreshDatabase;
+
+    /**
+     * Every admin route: the HTTP method, the route parameter it needs, and the permission it requires.
+     *
+     * @var array<string, array{string, ?string, StaffPermission}>
+     */
+    private const array ROUTES = [
+        'api.v1.admin.business-profiles.index' => ['GET', null, StaffPermission::BusinessProfilesView],
+        'api.v1.admin.business-profiles.show' => ['GET', 'businessProfile', StaffPermission::BusinessProfilesView],
+        'api.v1.admin.business-profiles.approve' => ['POST', 'businessProfile', StaffPermission::BusinessProfilesReview],
+        'api.v1.admin.business-profiles.reject' => ['POST', 'businessProfile', StaffPermission::BusinessProfilesReview],
+        'api.v1.admin.national-ids.index' => ['GET', null, StaffPermission::NationalIdsView],
+        'api.v1.admin.national-ids.verify' => ['POST', 'user', StaffPermission::NationalIdsReview],
+        'api.v1.admin.national-ids.reject' => ['POST', 'user', StaffPermission::NationalIdsReview],
+        'api.v1.admin.business-types.index' => ['GET', null, StaffPermission::BusinessTypesView],
+        'api.v1.admin.business-types.show' => ['GET', 'businessType', StaffPermission::BusinessTypesView],
+        'api.v1.admin.business-types.store' => ['POST', null, StaffPermission::BusinessTypesManage],
+        'api.v1.admin.business-types.update' => ['PATCH', 'businessType', StaffPermission::BusinessTypesManage],
+        'api.v1.admin.business-types.activate' => ['POST', 'businessType', StaffPermission::BusinessTypesManage],
+        'api.v1.admin.business-types.deactivate' => ['POST', 'businessType', StaffPermission::BusinessTypesManage],
+        'api.v1.admin.business-types.destroy' => ['DELETE', 'businessType', StaffPermission::BusinessTypesManage],
+        'api.v1.admin.users.index' => ['GET', null, StaffPermission::UsersView],
+        'api.v1.admin.users.show' => ['GET', 'customer', StaffPermission::UsersView],
+        'api.v1.admin.users.block' => ['POST', 'customer', StaffPermission::UsersBlock],
+        'api.v1.admin.users.unblock' => ['POST', 'customer', StaffPermission::UsersBlock],
+        'api.v1.admin.staff.index' => ['GET', null, StaffPermission::StaffManage],
+        'api.v1.admin.staff.store' => ['POST', null, StaffPermission::StaffManage],
+        'api.v1.admin.staff.role.update' => ['PUT', 'staff', StaffPermission::StaffManage],
+        'api.v1.admin.staff.block' => ['POST', 'staff', StaffPermission::StaffManage],
+        'api.v1.admin.staff.unblock' => ['POST', 'staff', StaffPermission::StaffManage],
+    ];
+
+    /**
+     * @return array<string, array{StaffRole, string}>
+     */
+    public static function rolesAndRoutes(): array
+    {
+        $cases = [];
+
+        foreach (StaffRole::cases() as $role) {
+            foreach (array_keys(self::ROUTES) as $routeName) {
+                $cases["{$role->value} {$routeName}"] = [$role, $routeName];
+            }
+        }
+
+        return $cases;
+    }
+
+    private function routeModel(?string $parameter): ?Model
+    {
+        return match ($parameter) {
+            'businessProfile' => BusinessProfile::factory()->create(),
+            'businessType' => BusinessType::factory()->create(),
+            'customer', 'user' => User::factory()->create(),
+            'staff' => $this->createStaffUser(StaffRole::Support),
+            null => null,
+        };
+    }
+
+    #[DataProvider('rolesAndRoutes')]
+    public function test_each_role_gets_exactly_its_permissions(StaffRole $role, string $routeName): void
+    {
+        [$method, $parameter, $permission] = self::ROUTES[$routeName];
+        $model = $this->routeModel($parameter);
+        Sanctum::actingAs($this->createStaffUser($role));
+
+        $status = $this->json($method, route($routeName, $model === null ? [] : [$parameter => $model]))->getStatusCode();
+
+        $isAllowed = $role === StaffRole::SuperAdmin || in_array($permission, $role->permissions(), true);
+
+        if ($isAllowed) {
+            $this->assertNotSame(Response::HTTP_FORBIDDEN, $status, "[{$role->value}] should be allowed on [{$routeName}].");
+        } else {
+            $this->assertSame(Response::HTTP_FORBIDDEN, $status, "[{$role->value}] should be forbidden on [{$routeName}].");
+        }
+    }
+
+    public function test_every_admin_route_is_in_the_matrix(): void
+    {
+        $adminRoutes = collect(app('router')->getRoutes()->getRoutes())
+            ->map(fn ($route): ?string => $route->getName())
+            ->filter(fn (?string $name): bool => str_starts_with((string) $name, 'api.v1.admin.'))
+            ->sort()
+            ->values()
+            ->all();
+
+        $this->assertSame($adminRoutes, collect(array_keys(self::ROUTES))->sort()->values()->all());
+    }
+}

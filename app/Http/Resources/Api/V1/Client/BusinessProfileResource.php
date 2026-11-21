@@ -29,6 +29,11 @@ class BusinessProfileResource extends JsonResource
             'verification_status' => $this->verification_status,
             'rejection_reason' => $this->rejection_reason,
             'reviewed_at' => $this->reviewed_at?->toIso8601ZuluString(),
+            // Only the admin show loads the reviewer, so customers never see staff names.
+            'reviewed_by' => $this->whenLoaded('reviewer', fn (): ?array => $this->reviewer === null ? null : [
+                'id' => $this->reviewer->id,
+                'name' => $this->reviewer->name,
+            ]),
             'links' => BusinessLinkResource::collection($this->whenLoaded('links')),
             'documents' => $this->whenLoaded('media', fn (): array => collect(DocumentCollection::forBusinessProfile())
                 ->mapWithKeys(fn (DocumentCollection $collection): array => [

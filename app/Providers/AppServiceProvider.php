@@ -18,6 +18,7 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\RateLimiter;
+use Illuminate\Support\Facades\Route;
 use Illuminate\Support\ServiceProvider;
 use InvalidArgumentException;
 use Spatie\MediaLibrary\MediaCollections\Models\Media;
@@ -57,6 +58,11 @@ class AppServiceProvider extends ServiceProvider
         Gate::policy(BusinessProfile::class, BusinessProfilePolicy::class);
         Gate::policy(User::class, UserPolicy::class);
         Gate::policy(Media::class, MediaPolicy::class);
+
+        // Admin customer routes never reach staff and staff routes never reach customers (404). Bound here, not in
+        // the route file, so the scopes still apply when routes are cached.
+        Route::bind('customer', fn (string $value): User => User::query()->customers()->findOrFail($value));
+        Route::bind('staff', fn (string $value): User => User::query()->staff()->findOrFail($value));
 
         $this->configureRateLimiting();
     }

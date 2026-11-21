@@ -214,6 +214,15 @@ return [
         'reason' => 'السبب',
         'status' => 'الحالة',
         'per_page' => 'عدد العناصر في الصفحة',
+        'name.ar' => 'الاسم بالعربية',
+        'name.en' => 'الاسم بالإنجليزية',
+        'is_active' => 'مفعّل',
+        'sort_order' => 'ترتيب العرض',
+        'search' => 'البحث',
+        'phone_verified' => 'تأكيد رقم الموبايل',
+        'national_id_status' => 'حالة البطاقة',
+        'business_profile_status' => 'حالة ملف النشاط',
+        'role' => 'الدور',
     ],
 
 ];
