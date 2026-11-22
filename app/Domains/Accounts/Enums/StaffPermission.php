@@ -13,4 +13,8 @@ enum StaffPermission: string
     case UsersView = 'users.view';
     case UsersBlock = 'users.block';
     case StaffManage = 'staff.manage';
+    case TayarsView = 'tayars.view';
+    case TayarsReview = 'tayars.review';
+    case VehicleTypesView = 'vehicle_types.view';
+    case VehicleTypesManage = 'vehicle_types.manage';
 }

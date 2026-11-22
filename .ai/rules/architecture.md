@@ -27,6 +27,7 @@ Approved folders outside `app/Domains` and the HTTP side folders:
 
 - `app/Rules`: validation rules (`php artisan make:rule`), e.g. `EgyptianMobileNumber`.
 - `app/Http/Requests/Concerns`: traits shared by FormRequests (`php artisan make:trait`), e.g. phone normalization and pagination.
+- `app/Models/Concerns`: traits shared by models in more than one domain (`php artisan make:trait`), e.g. `HasTranslatedNameSearch` for the translatable `name` scopes.
 - `app/Contracts`: interfaces for swappable infrastructure, e.g. `SmsSender`.
 - `app/Services/Sms`: the SMS drivers behind `SmsSender`, picked by `config('tayari.sms.driver')`.
 
@@ -46,6 +47,7 @@ Approved folders outside `app/Domains` and the HTTP side folders:
 - **Responses** always go through API Resources (never return a model directly). Every version uses one error format: `{ "message": ..., "errors": {...} }`.
 - The same Sanctum token works for every version.
 - **API docs:** every new endpoint needs a one-line Scramble summary on its controller method, and must be added to the Postman docs: its documentation with the full template in `docs/postman/endpoints.php`, and its app(s), folder, name and screen in `docs/postman/{flutter,website,admin}.php` (or `not_used_directly` in `docs/postman/collection.php` with the reason). These docs files are not config: `postman:export` loads them with `require`, never through `config()`. Every change to the API or to `docs/postman` must add an entry at the top of `docs/postman/changelog.php` with a raised version: **major** for a new API version (`/api/v2`) or a breaking change, **minor** for new endpoints, new fields, new folders or new screens in the docs, **patch** for wording fixes, clearer docs, or corrected limits or examples. Then run `php artisan postman:export` and commit the updated `postman/` files (a test fails when they differ from a fresh export).
+- **Changelog lines:** every line in `docs/postman/changelog.php` starts with a tag, then the method and full path, ` — `, what changed, and the apps it affects (Website, Admin panel, Flutter client mode, Flutter tayar mode); one endpoint per line. `Added:` a new endpoint; `Changed:` an existing endpoint behaves differently but old clients keep working; `Breaking:` an existing client can break (a renamed or removed field or value, a field that becomes required, a changed response shape or success status), and the line says what each app must change; `Removed:` an endpoint removed; `Docs:` documentation only. Every change to an endpoint that already exists on `main` needs its own tagged line, found by comparing with `git diff main`. `Breaking:` means a major version, unless it happens before launch and the line starts with `Breaking (before launch):`. `postman:export` fails on a line without a tag.
 
 ## Thin controllers
 
@@ -112,6 +114,7 @@ The database moves from MySQL 8 to PostgreSQL + PostGIS, so every query must run
 - No MySQL-only functions (e.g. `IFNULL`, `GROUP_CONCAT`, `FIELD()`, `DATE_FORMAT`) and no `JSON_*` raw SQL. Use the query builder's JSON helpers (`where('options->key', ...)`, `whereJsonContains()`).
 - Text search uses `whereLike()` / `orWhereLike()`, never raw `LIKE`/`ILIKE`.
 - **The one exception:** for translatable JSON columns, a case-insensitive match may use `lower()` on the grammar-wrapped JSON path (`$query->getQuery()->getGrammar()->wrap('name->en')`) with `like` or `=` and bound parameters, inside a model scope, because MySQL compares JSON text case-sensitively. Everything else still uses `whereLike()`.
+- **Distance math:** the nearest-tayar scope (`TayarProfile::nearestOnline()`) may use `radians`, `sin`, `cos`, `acos` and `least` in raw expressions with bound parameters; both engines have them. Moving to PostGIS later only changes that scope.
 - JSON columns are `json()`, not `jsonb()`. Migrations use the Schema builder only.
 
 ## Octane safety

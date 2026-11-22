@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\Api\V1\Auth\AppModeController;
 use App\Http\Controllers\Api\V1\Auth\DeviceController;
 use App\Http\Controllers\Api\V1\Auth\ForgotPasswordController;
 use App\Http\Controllers\Api\V1\Auth\LogoutController;
@@ -31,4 +32,6 @@ Route::middleware(['auth:sanctum', 'active'])->group(function (): void {
 
     Route::post('devices', [DeviceController::class, 'store'])->name('devices.store');
     Route::delete('devices', [DeviceController::class, 'destroy'])->name('devices.destroy');
+
+    Route::patch('mode', AppModeController::class)->name('mode.update');
 });

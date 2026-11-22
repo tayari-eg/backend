@@ -5,6 +5,7 @@ use App\Http\Middleware\EnsureAppVersionIsSupported;
 use App\Http\Middleware\EnsureUserIsActive;
 use App\Http\Middleware\EnsureUserIsClient;
 use App\Http\Middleware\EnsureUserIsStaff;
+use App\Http\Middleware\EnsureUserIsTayar;
 use App\Http\Middleware\SetRequestLocale;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
@@ -50,6 +51,7 @@ return Application::configure(basePath: dirname(__DIR__))
             'active' => EnsureUserIsActive::class,
             'client' => EnsureUserIsClient::class,
             'staff' => EnsureUserIsStaff::class,
+            'tayar' => EnsureUserIsTayar::class,
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {

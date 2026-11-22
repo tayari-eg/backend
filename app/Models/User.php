@@ -2,7 +2,9 @@
 
 namespace App\Models;
 
+use App\Domains\Accounts\Data\PhoneNumber;
 use App\Domains\Accounts\Enums\AccountType;
+use App\Domains\Accounts\Enums\AppMode;
 use App\Domains\Accounts\Enums\DocumentCollection;
 use App\Domains\Accounts\Enums\Locale;
 use App\Domains\Accounts\Enums\StaffRole;
@@ -10,6 +12,8 @@ use App\Domains\Accounts\Enums\UserStatus;
 use App\Domains\Accounts\Enums\VerificationStatus;
 use App\Domains\Accounts\Models\BusinessProfile;
 use App\Domains\Accounts\Models\UserDevice;
+use App\Domains\Tayars\Models\TayarProfile;
+use App\Models\Concerns\EscapesLikeValues;
 use Database\Factories\UserFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Attributes\Hidden;
@@ -31,7 +35,7 @@ use Spatie\Permission\Traits\HasRoles;
 class User extends Authenticatable implements HasMedia
 {
     /** @use HasFactory<UserFactory> */
-    use HasApiTokens, HasFactory, HasRoles, InteractsWithMedia, Notifiable;
+    use EscapesLikeValues, HasApiTokens, HasFactory, HasRoles, InteractsWithMedia, Notifiable;
 
     /**
      * Guard used by spatie/laravel-permission, so roles resolve the same
@@ -46,6 +50,7 @@ class User extends Authenticatable implements HasMedia
         'account_type' => AccountType::Individual->value,
         'locale' => Locale::Ar->value,
         'status' => UserStatus::Active->value,
+        'last_mode' => AppMode::Client->value,
     ];
 
     /**
@@ -64,6 +69,7 @@ class User extends Authenticatable implements HasMedia
             'account_type' => AccountType::class,
             'locale' => Locale::class,
             'status' => UserStatus::class,
+            'last_mode' => AppMode::class,
         ];
     }
 
@@ -82,6 +88,14 @@ class User extends Authenticatable implements HasMedia
     public function businessProfile(): HasOne
     {
         return $this->hasOne(BusinessProfile::class);
+    }
+
+    /**
+     * @return HasOne<TayarProfile, $this>
+     */
+    public function tayarProfile(): HasOne
+    {
+        return $this->hasOne(TayarProfile::class);
     }
 
     /**
@@ -138,6 +152,20 @@ class User extends Authenticatable implements HasMedia
     protected function staff(Builder $query): void
     {
         $query->whereHas('roles', fn (Builder $roles) => $roles->whereIn('name', StaffRole::values()));
+    }
+
+    /**
+     * The admin search: an exact phone, part of a phone, or part of the name (at most one is given).
+     *
+     * @param  Builder<self>  $query
+     */
+    #[Scope]
+    protected function whereMatchesSearch(Builder $query, ?PhoneNumber $phone, ?string $phoneDigits, ?string $name): void
+    {
+        $query
+            ->when($phone, fn (Builder $query) => $query->where('phone', $phone->value))
+            ->when($phoneDigits, fn (Builder $query) => $query->whereLike('phone', static::likeContains($phoneDigits)))
+            ->when($name, fn (Builder $query) => $query->whereLike('name', static::likeContains($name)));
     }
 
     /**

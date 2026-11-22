@@ -165,6 +165,7 @@ return [
     'uuid' => 'يجب أن يكون حقل :attribute UUID صحيحًا.',
 
     'egyptian_mobile_number' => 'يجب أن يكون حقل :attribute رقم موبايل مصري صحيحًا.',
+    'egyptian_national_id_number' => 'يجب أن يكون حقل :attribute رقم بطاقة مصري من 14 رقمًا بتاريخ ميلاد صحيح.',
 
     /*
     |--------------------------------------------------------------------------
@@ -208,7 +209,7 @@ return [
         'links.*.url' => 'الرابط',
         'national_id_front' => 'وجه البطاقة',
         'national_id_back' => 'ظهر البطاقة',
-        'tax_register' => 'السجل التجاري',
+        'commercial_register' => 'السجل التجاري',
         'tax_card' => 'البطاقة الضريبية',
         'file' => 'الملف',
         'reason' => 'السبب',
@@ -223,6 +224,25 @@ return [
         'national_id_status' => 'حالة البطاقة',
         'business_profile_status' => 'حالة ملف النشاط',
         'role' => 'الدور',
+        'national_id_number' => 'رقم البطاقة',
+        'criminal_record' => 'الفيش الجنائي',
+        'personal_photo' => 'الصورة الشخصية',
+        'driving_license' => 'رخصة القيادة',
+        'vehicle_type_id' => 'نوع المركبة',
+        'plate_number' => 'رقم اللوحة',
+        'model' => 'الموديل',
+        'color' => 'اللون',
+        'year' => 'سنة الصنع',
+        'vehicle_license' => 'رخصة المركبة',
+        'vehicle_photos' => 'صور المركبة',
+        'vehicle_photos.*' => 'صورة المركبة',
+        'requires_license' => 'تحتاج رخصة',
+        'can_carry_food' => 'تنقل الطعام',
+        'lat' => 'خط العرض',
+        'lng' => 'خط الطول',
+        'mode' => 'الوضع',
+        'is_online' => 'متصل',
+        'blocked' => 'محظور',
     ],
 
 ];

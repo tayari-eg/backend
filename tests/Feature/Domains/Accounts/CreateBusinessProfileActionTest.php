@@ -6,6 +6,7 @@ use App\Domains\Accounts\Actions\CreateBusinessProfileAction;
 use App\Domains\Accounts\Events\BusinessProfileSubmitted;
 use App\Domains\Accounts\Models\BusinessType;
 use App\Models\User;
+use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Event;
@@ -45,5 +46,23 @@ class CreateBusinessProfileActionTest extends TestCase
         $this->assertDatabaseCount('business_links', 0);
         $this->assertDatabaseCount('media', 0);
         Event::assertNotDispatched(BusinessProfileSubmitted::class);
+    }
+
+    public function test_a_double_submit_answers_like_the_sequential_duplicate(): void
+    {
+        Storage::fake('local');
+        $user = User::factory()->business()->create();
+        $attributes = ['business_type_id' => BusinessType::factory()->create()->id, 'business_name' => 'Koshary Corner'];
+        app(CreateBusinessProfileAction::class)->handle($user, $attributes, [], []);
+
+        // The policy check of the second request ran before the first one saved, so only the unique index stops it.
+        try {
+            app(CreateBusinessProfileAction::class)->handle($user, $attributes, [], []);
+            $this->fail('A second profile for the same user was expected to fail.');
+        } catch (AuthorizationException $exception) {
+            $this->assertSame(__('business.profile_exists'), $exception->getMessage());
+        }
+
+        $this->assertDatabaseCount('business_profiles', 1);
     }
 }

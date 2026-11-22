@@ -5,7 +5,10 @@ use App\Http\Controllers\Api\V1\Admin\BusinessProfileReviewController;
 use App\Http\Controllers\Api\V1\Admin\BusinessTypeController;
 use App\Http\Controllers\Api\V1\Admin\NationalIdReviewController;
 use App\Http\Controllers\Api\V1\Admin\StaffController;
+use App\Http\Controllers\Api\V1\Admin\TayarApplicationReviewController;
+use App\Http\Controllers\Api\V1\Admin\TayarController;
 use App\Http\Controllers\Api\V1\Admin\UserController;
+use App\Http\Controllers\Api\V1\Admin\VehicleTypeController;
 use Illuminate\Support\Facades\Route;
 
 Route::middleware(['auth:sanctum', 'staff'])->group(function (): void {
@@ -53,6 +56,31 @@ Route::middleware(['auth:sanctum', 'staff'])->group(function (): void {
     Route::middleware('permission:'.StaffPermission::UsersBlock->value)->group(function (): void {
         Route::post('users/{customer}/block', [UserController::class, 'block'])->name('users.block');
         Route::post('users/{customer}/unblock', [UserController::class, 'unblock'])->name('users.unblock');
+    });
+
+    Route::middleware('permission:'.StaffPermission::TayarsView->value)->group(function (): void {
+        Route::get('tayar-applications', [TayarApplicationReviewController::class, 'index'])->name('tayar-applications.index');
+        Route::get('tayar-applications/{tayarProfile}', [TayarApplicationReviewController::class, 'show'])->name('tayar-applications.show');
+        Route::get('tayars', [TayarController::class, 'index'])->name('tayars.index');
+        Route::get('tayars/{tayar}', [TayarController::class, 'show'])->name('tayars.show');
+    });
+
+    Route::middleware('permission:'.StaffPermission::TayarsReview->value)->group(function (): void {
+        Route::post('tayar-applications/{tayarProfile}/approve', [TayarApplicationReviewController::class, 'approve'])->name('tayar-applications.approve');
+        Route::post('tayar-applications/{tayarProfile}/reject', [TayarApplicationReviewController::class, 'reject'])->name('tayar-applications.reject');
+    });
+
+    Route::middleware('permission:'.StaffPermission::VehicleTypesView->value)->group(function (): void {
+        Route::get('vehicle-types', [VehicleTypeController::class, 'index'])->name('vehicle-types.index');
+        Route::get('vehicle-types/{vehicleType}', [VehicleTypeController::class, 'show'])->name('vehicle-types.show');
+    });
+
+    Route::middleware('permission:'.StaffPermission::VehicleTypesManage->value)->group(function (): void {
+        Route::post('vehicle-types', [VehicleTypeController::class, 'store'])->name('vehicle-types.store');
+        Route::patch('vehicle-types/{vehicleType}', [VehicleTypeController::class, 'update'])->name('vehicle-types.update');
+        Route::post('vehicle-types/{vehicleType}/activate', [VehicleTypeController::class, 'activate'])->name('vehicle-types.activate');
+        Route::post('vehicle-types/{vehicleType}/deactivate', [VehicleTypeController::class, 'deactivate'])->name('vehicle-types.deactivate');
+        Route::delete('vehicle-types/{vehicleType}', [VehicleTypeController::class, 'destroy'])->name('vehicle-types.destroy');
     });
 
     Route::middleware('permission:'.StaffPermission::StaffManage->value)->group(function (): void {

@@ -8,6 +8,8 @@ use App\Domains\Accounts\Models\OtpCode;
 use App\Exceptions\OtpResendCooldownException;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Hash;
+use Mockery;
 use Mockery\MockInterface;
 use Tests\TestCase;
 
@@ -72,6 +74,25 @@ class ResendOtpTest extends TestCase
         $unknown->assertOk();
         $verified->assertOk();
         $this->assertSame($unknown->json('message'), $verified->json('message'));
+        $this->assertSame([], $sms->messages);
+    }
+
+    public function test_every_silent_skip_spends_a_hash_check_like_a_real_send(): void
+    {
+        config(['tayari.otp.resend_cooldown_seconds' => 60]);
+        $sms = $this->fakeSmsSender();
+        User::factory()->create(['phone' => '+201000000001']);
+        User::factory()->unverifiedPhone()->create(['phone' => self::PHONE]);
+        OtpCode::factory()->create(['phone' => self::PHONE, 'created_at' => now()->subSeconds(20)]);
+        $hash = Mockery::mock(app('hash'));
+        Hash::swap($hash);
+
+        foreach (['+201000000099', '+201000000001', self::PHONE] as $phone) {
+            $this->postJson(route('api.v1.auth.otp.resend'), ['phone' => $phone, 'purpose' => 'verify_phone'])->assertOk();
+        }
+
+        // Unknown phone, already verified phone and cooldown skip: one dummy check each, and no SMS.
+        $hash->shouldHaveReceived('check')->times(3);
         $this->assertSame([], $sms->messages);
     }
 

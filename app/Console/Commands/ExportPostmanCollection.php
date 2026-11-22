@@ -2,6 +2,7 @@
 
 namespace App\Console\Commands;
 
+use DateTimeImmutable;
 use Dedoc\Scramble\Contracts\RouteProvider;
 use Dedoc\Scramble\Generator;
 use Dedoc\Scramble\Scramble;
@@ -22,7 +23,8 @@ use Illuminate\Support\Str;
  */
 #[Signature('postman:export
     {--docs=docs/postman : The folder with the Postman docs, relative to the project root}
-    {--output= : The folder to write the files to, relative to the project root (default: the paths in collection.php)}')]
+    {--output= : The folder to write the files to, relative to the project root (default: the paths in collection.php)}
+    {--env-example=.env.example : The env example file the placeholders are read from, relative to the project root}')]
 #[Description('Export the API v1 Postman collection, organized by app, and the local environment')]
 class ExportPostmanCollection extends Command
 {
@@ -36,6 +38,11 @@ class ExportPostmanCollection extends Command
     private const string SEMVER_PATTERN = '/^(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)(?:-((?:0|[1-9]\d*|\d*[a-zA-Z-][0-9a-zA-Z-]*)(?:\.(?:0|[1-9]\d*|\d*[a-zA-Z-][0-9a-zA-Z-]*))*))?(?:\+([0-9a-zA-Z-]+(?:\.[0-9a-zA-Z-]+)*))?$/';
 
     private const string CHANGELOG_FOLDER = 'Changelog';
+
+    /**
+     * Every changelog line starts with one of these tags (see the header of docs/postman/changelog.php).
+     */
+    private const string CHANGELOG_TAG_PATTERN = '/^(Added|Changed|Breaking|Breaking \(before launch\)|Removed|Docs): \S/';
 
     /**
      * Template sections in order. All but "notes" are required for every request.
@@ -60,11 +67,8 @@ class ExportPostmanCollection extends Command
     private const string TOKEN_RESPONSE_FIELD = 'token';
 
     /**
-     * Clearly fake example values by field name, the same on every run.
-     */
-    /**
-     * Text placeholders: the .env.example key (null when the value is not env-backed) and the config/tayari.php key
-     * whose default is used when .env.example has no value.
+     * Text placeholders: the .env.example key (null when the value is not env-backed, then the config/tayari.php
+     * default is used) and the config/tayari.php key.
      */
     private const array PLACEHOLDERS = [
         ':otp_length' => ['OTP_LENGTH', 'otp.length'],
@@ -78,10 +82,16 @@ class ExportPostmanCollection extends Command
         ':login_per_phone_per_hour' => ['LOGIN_ATTEMPTS_PER_PHONE_PER_HOUR', 'auth.login_attempts_per_phone_per_hour'],
         ':max_upload_kb' => ['MEDIA_MAX_UPLOAD_KB', 'media.max_upload_kb'],
         ':signed_url_minutes' => ['MEDIA_SIGNED_URL_MINUTES', 'media.signed_url_minutes'],
+        ':tayar_location_per_minute' => ['TAYAR_LOCATION_UPDATES_PER_MINUTE', 'tayars.location_updates_per_minute'],
+        ':tayar_offline_minutes' => ['TAYAR_OFFLINE_AFTER_MINUTES', 'tayars.offline_after_minutes'],
+        ':tayar_reapply_hours' => ['TAYAR_REAPPLY_AFTER_HOURS', 'tayars.reapply_after_hours'],
         ':per_page' => [null, 'pagination.per_page'],
         ':max_per_page' => [null, 'pagination.max_per_page'],
     ];
 
+    /**
+     * Clearly fake example values by field name, the same on every run.
+     */
     private const array FIELD_EXAMPLES = [
         'name' => 'Example User',
         'phone' => '+201000000000',
@@ -102,6 +112,14 @@ class ExportPostmanCollection extends Command
         'business_type_id' => 1,
         'avg_daily_orders' => 40,
         'per_page' => 20,
+        'national_id_number' => '29003030000000',
+        'vehicle_type_id' => 1,
+        'plate_number' => 'ABC 1234',
+        'model' => 'Example Model',
+        'color' => 'Red',
+        'year' => 2020,
+        'lat' => 30.0444,
+        'lng' => 31.2357,
     ];
 
     /**
@@ -199,11 +217,16 @@ class ExportPostmanCollection extends Command
      */
     private function placeholderValues(): array
     {
-        $example = Dotenv::parse(File::get(base_path('.env.example')));
+        $envExample = $this->option('env-example');
+        $example = Dotenv::parse(File::get(base_path($envExample)));
         $defaults = require config_path('tayari.php');
         $values = [];
 
         foreach (self::PLACEHOLDERS as $placeholder => [$envKey, $configKey]) {
+            if ($envKey !== null && blank($example[$envKey] ?? null)) {
+                $this->problems[] = "Placeholder [{$placeholder}] needs {$envKey} in {$envExample}.";
+            }
+
             $value = $envKey !== null && filled($example[$envKey] ?? null) ? $example[$envKey] : Arr::get($defaults, $configKey);
             $values[$placeholder] = (string) (int) $value;
         }
@@ -232,6 +255,24 @@ class ExportPostmanCollection extends Command
 
         foreach ($changelog as $entry) {
             $version = (string) ($entry['version'] ?? '');
+            $date = (string) ($entry['date'] ?? '');
+            $changes = $entry['changes'] ?? null;
+
+            $parsedDate = DateTimeImmutable::createFromFormat('!Y-m-d', $date);
+
+            if ($parsedDate === false || $parsedDate->format('Y-m-d') !== $date) {
+                $this->problems[] = "Changelog version [{$version}] has the date [{$date}]: use a real date as YYYY-MM-DD.";
+            }
+
+            if (! is_array($changes) || $changes === [] || ! array_is_list($changes) || collect($changes)->contains(fn (mixed $change): bool => ! is_string($change) || blank($change))) {
+                $this->problems[] = "Changelog version [{$version}] needs changes: a non-empty list of change lines.";
+            } else {
+                foreach ($changes as $change) {
+                    if (preg_match(self::CHANGELOG_TAG_PATTERN, $change) !== 1) {
+                        $this->problems[] = "Changelog version [{$version}] has a line without a tag (Added:, Changed:, Breaking:, Breaking (before launch):, Removed: or Docs:): [".Str::limit($change, 60).'].';
+                    }
+                }
+            }
 
             if (preg_match(self::SEMVER_PATTERN, $version) !== 1) {
                 $this->problems[] = "Changelog version [{$version}] is not a valid semver version (for example 1.2.0).";
@@ -262,7 +303,11 @@ class ExportPostmanCollection extends Command
     private function changelogFolder(): array
     {
         $sections = array_map(
-            fn (array $entry): string => "## {$entry['version']} ({$entry['date']})\n\n".implode("\n", array_map(fn (string $change): string => "- {$change}", $entry['changes'])),
+            // checkChangelog() already reported malformed entries; this only has to not crash on them.
+            fn (array $entry): string => '## '.($entry['version'] ?? '').' ('.($entry['date'] ?? '').")\n\n".collect(is_array($entry['changes'] ?? null) ? $entry['changes'] : [])
+                ->filter(fn (mixed $change): bool => is_string($change))
+                ->map(fn (string $change): string => "- {$change}")
+                ->implode("\n"),
             $this->docs('changelog'),
         );
 

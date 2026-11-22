@@ -21,7 +21,7 @@ class UserResource extends JsonResource
      *
      * @var list<string>
      */
-    public const array RELATIONS = ['media', 'roles', 'businessProfile.businessType', 'businessProfile.links', 'businessProfile.media'];
+    public const array RELATIONS = ['media', 'roles', 'businessProfile.businessType', 'businessProfile.links', 'businessProfile.media', 'tayarProfile'];
 
     /**
      * @return array<string, mixed>
@@ -44,6 +44,7 @@ class UserResource extends JsonResource
             'email' => $this->email,
             'account_type' => $this->account_type,
             'locale' => $this->locale,
+            'last_mode' => $this->last_mode,
             'status' => $this->status,
             'is_phone_verified' => $this->hasVerifiedPhone(),
             'phone_verified_at' => $this->phone_verified_at?->toIso8601ZuluString(),
@@ -55,6 +56,11 @@ class UserResource extends JsonResource
                 'back' => MediaResource::optional($this->getFirstMedia(DocumentCollection::NationalIdBack->value)),
             ]),
             'business_profile' => BusinessProfileResource::make($this->whenLoaded('businessProfile')),
+            'tayar_profile' => $this->whenLoaded('tayarProfile', fn (): ?array => $this->tayarProfile === null ? null : [
+                'id' => $this->tayarProfile->id,
+                'status' => $this->tayarProfile->status,
+                'is_online' => $this->tayarProfile->is_online,
+            ]),
             'roles' => $roles,
             'permissions' => $permissions,
         ];

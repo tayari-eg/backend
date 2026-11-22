@@ -9,7 +9,7 @@ enum DocumentCollection: string
 {
     case NationalIdFront = 'national_id_front';
     case NationalIdBack = 'national_id_back';
-    case TaxRegister = 'tax_register';
+    case CommercialRegister = 'commercial_register';
     case TaxCard = 'tax_card';
 
     /**

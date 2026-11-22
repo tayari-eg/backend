@@ -5,6 +5,7 @@ namespace Tests\Feature\Api\V1\Auth;
 use App\Domains\Accounts\Enums\StaffPermission;
 use App\Domains\Accounts\Enums\StaffRole;
 use App\Domains\Accounts\Models\BusinessProfile;
+use App\Domains\Tayars\Models\TayarProfile;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Laravel\Sanctum\Sanctum;
@@ -49,7 +50,7 @@ class MeTest extends TestCase
         $this->getJson(route('api.v1.auth.me'))
             ->assertOk()
             ->assertJsonPath('data.roles', ['support'])
-            ->assertJsonPath('data.permissions', ['business_profiles.view', 'national_ids.view', 'business_types.view', 'users.view']);
+            ->assertJsonPath('data.permissions', ['business_profiles.view', 'national_ids.view', 'business_types.view', 'users.view', 'tayars.view', 'vehicle_types.view']);
     }
 
     public function test_a_super_admin_gets_every_permission(): void
@@ -60,6 +61,25 @@ class MeTest extends TestCase
             ->assertOk()
             ->assertJsonPath('data.roles', ['super_admin'])
             ->assertJsonPath('data.permissions', array_column(StaffPermission::cases(), 'value'));
+    }
+
+    public function test_it_returns_the_last_mode_and_the_tayar_profile(): void
+    {
+        $user = User::factory()->create();
+        Sanctum::actingAs($user);
+
+        $this->getJson(route('api.v1.auth.me'))
+            ->assertOk()
+            ->assertJsonPath('data.last_mode', 'client')
+            ->assertJsonPath('data.tayar_profile', null);
+
+        $profile = TayarProfile::factory()->approved()->onlineAt(30.0444, 31.2357)->create(['user_id' => $user->id]);
+        $user->forceFill(['last_mode' => 'tayar'])->save();
+
+        $this->getJson(route('api.v1.auth.me'))
+            ->assertOk()
+            ->assertJsonPath('data.last_mode', 'tayar')
+            ->assertJsonPath('data.tayar_profile', ['id' => $profile->id, 'status' => 'approved', 'is_online' => true]);
     }
 
     public function test_guests_get_401(): void
