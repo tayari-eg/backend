@@ -38,7 +38,7 @@ class StoreBusinessProfileRequest extends FormRequest
             'links.*.url' => ['required', 'url', 'max:2048'],
             DocumentCollection::NationalIdFront->value => ['required', ...array_slice($document, 1)],
             DocumentCollection::NationalIdBack->value => ['required', ...array_slice($document, 1)],
-            DocumentCollection::TaxRegister->value => $document,
+            DocumentCollection::CommercialRegister->value => $document,
             DocumentCollection::TaxCard->value => $document,
         ];
     }

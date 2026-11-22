@@ -29,12 +29,17 @@ enum StaffRole: string
                 StaffPermission::BusinessProfilesReview,
                 StaffPermission::NationalIdsView,
                 StaffPermission::NationalIdsReview,
+                StaffPermission::TayarsView,
+                StaffPermission::TayarsReview,
+                StaffPermission::VehicleTypesView,
             ],
             self::Support => [
                 StaffPermission::BusinessTypesView,
                 StaffPermission::UsersView,
                 StaffPermission::BusinessProfilesView,
                 StaffPermission::NationalIdsView,
+                StaffPermission::TayarsView,
+                StaffPermission::VehicleTypesView,
             ],
         };
     }

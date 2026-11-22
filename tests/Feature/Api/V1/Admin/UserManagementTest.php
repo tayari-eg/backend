@@ -97,6 +97,17 @@ class UserManagementTest extends TestCase
         $this->assertCount(1, $this->listedIds(['search' => '123']));
     }
 
+    public function test_percent_and_underscore_in_a_name_search_are_literal(): void
+    {
+        $percent = User::factory()->create(['name' => 'Sale 50% Store']);
+        User::factory()->create(['name' => 'Sale 500 Store']);
+        $underscore = User::factory()->create(['name' => 'mona_ali']);
+        User::factory()->create(['name' => 'monaXali']);
+
+        $this->assertSame([$percent->id], $this->listedIds(['search' => '50%']));
+        $this->assertSame([$underscore->id], $this->listedIds(['search' => 'a_a']));
+    }
+
     public function test_the_list_filters_by_account_type_status_and_phone_verification(): void
     {
         $business = User::factory()->business()->create();

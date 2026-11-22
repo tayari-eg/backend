@@ -65,7 +65,7 @@ class BusinessProfileTest extends TestCase
             ->assertJsonPath('data.business_name', 'Koshary Corner')
             ->assertJsonPath('data.verification_status', 'pending')
             ->assertJsonCount(2, 'data.links')
-            ->assertJsonPath('data.documents.tax_register', null);
+            ->assertJsonPath('data.documents.commercial_register', null);
         $this->assertNotNull($response->json('data.documents.national_id_front.url'));
 
         $profile = BusinessProfile::query()->sole();

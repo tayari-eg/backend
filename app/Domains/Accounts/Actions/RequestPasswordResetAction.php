@@ -20,6 +20,8 @@ class RequestPasswordResetAction
         $user = User::query()->where('phone', $phone->value)->first();
 
         if ($user === null || $this->sendOtp->secondsUntilResendAllowed($phone, OtpPurpose::ResetPassword) > 0) {
+            $this->sendOtp->matchSendTiming();
+
             return;
         }
 

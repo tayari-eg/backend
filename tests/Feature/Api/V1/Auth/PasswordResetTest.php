@@ -12,6 +12,7 @@ use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\Hash;
+use Mockery;
 use Mockery\MockInterface;
 use Tests\TestCase;
 
@@ -60,6 +61,24 @@ class PasswordResetTest extends TestCase
 
         $this->assertSame([[200, ['message' => __('passwords.sent')]]], array_values(array_unique($responses, SORT_REGULAR)));
         $this->assertCount(1, $sms->messages);
+    }
+
+    public function test_every_silent_forgot_password_skip_spends_a_hash_check_like_a_real_send(): void
+    {
+        config(['tayari.otp.resend_cooldown_seconds' => 60]);
+        $sms = $this->fakeSmsSender();
+        User::factory()->create(['phone' => '+201000000001']);
+        OtpCode::factory()->create(['phone' => '+201000000001', 'purpose' => 'reset_password', 'created_at' => now()->subSeconds(20)]);
+        $hash = Mockery::mock(app('hash'));
+        Hash::swap($hash);
+
+        foreach (['+201000000099', '+201000000001'] as $phone) {
+            $this->postJson(route('api.v1.auth.forgot-password'), ['phone' => $phone])->assertOk();
+        }
+
+        // Unknown phone and cooldown skip: one dummy check each, and no SMS.
+        $hash->shouldHaveReceived('check')->twice();
+        $this->assertSame([], $sms->messages);
     }
 
     public function test_forgot_password_uses_the_otp_even_when_phone_verification_is_off(): void

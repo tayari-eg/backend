@@ -71,6 +71,17 @@ class BusinessTypeManagementTest extends TestCase
         }
     }
 
+    public function test_percent_and_underscore_in_the_search_are_literal(): void
+    {
+        $underscore = BusinessType::factory()->create(['name' => ['ar' => 'وجبات', 'en' => 'Fast_Food']]);
+        BusinessType::factory()->create(['name' => ['ar' => 'أكل', 'en' => 'FastXFood']]);
+        $percent = BusinessType::factory()->create(['name' => ['ar' => 'خصم', 'en' => '100% Organic']]);
+        BusinessType::factory()->create(['name' => ['ar' => 'عضوي', 'en' => '1000 Organic']]);
+
+        $this->assertSame([$underscore->id], $this->getJson(route('api.v1.admin.business-types.index', ['search' => 't_f']))->json('data.*.id'));
+        $this->assertSame([$percent->id], $this->getJson(route('api.v1.admin.business-types.index', ['search' => '0%']))->json('data.*.id'));
+    }
+
     public function test_show_returns_one_type(): void
     {
         $type = BusinessType::factory()->create();

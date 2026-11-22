@@ -9,6 +9,8 @@ use App\Domains\Accounts\Models\BusinessProfile;
 use App\Domains\Accounts\Policies\BusinessProfilePolicy;
 use App\Domains\Accounts\Policies\MediaPolicy;
 use App\Domains\Accounts\Policies\UserPolicy;
+use App\Domains\Tayars\Models\TayarProfile;
+use App\Domains\Tayars\Policies\TayarProfilePolicy;
 use App\Http\ClientContext;
 use App\Models\User;
 use App\Services\Sms\LogSmsSender;
@@ -58,11 +60,13 @@ class AppServiceProvider extends ServiceProvider
         Gate::policy(BusinessProfile::class, BusinessProfilePolicy::class);
         Gate::policy(User::class, UserPolicy::class);
         Gate::policy(Media::class, MediaPolicy::class);
+        Gate::policy(TayarProfile::class, TayarProfilePolicy::class);
 
         // Admin customer routes never reach staff and staff routes never reach customers (404). Bound here, not in
         // the route file, so the scopes still apply when routes are cached.
         Route::bind('customer', fn (string $value): User => User::query()->customers()->findOrFail($value));
         Route::bind('staff', fn (string $value): User => User::query()->staff()->findOrFail($value));
+        Route::bind('tayar', fn (string $value): TayarProfile => TayarProfile::query()->approved()->findOrFail($value));
 
         $this->configureRateLimiting();
     }
@@ -81,6 +85,9 @@ class AppServiceProvider extends ServiceProvider
 
         RateLimiter::for('otp-send', fn (Request $request): array => $otpLimits('otp-send', $request));
         RateLimiter::for('otp-verify', fn (Request $request): array => $otpLimits('otp-verify', $request));
+
+        RateLimiter::for('tayar-location', fn (Request $request): Limit => Limit::perMinute(config('tayari.tayars.location_updates_per_minute'))
+            ->by('tayar-location:'.$request->user()->id));
 
         RateLimiter::for('login', function (Request $request): array {
             $phone = $this->phoneLimiterKey($request);

@@ -13,6 +13,7 @@
 
 $phoneField = '`phone` (string, required): any Egyptian mobile format (`01000000000`, `+201000000000`, `00201000000000`, spaces, dashes and Arabic digits are fine). The server saves it as `+201XXXXXXXXX`.';
 $fileRule = 'jpg, jpeg, png, webp or pdf, up to :max_upload_mb MB';
+$imageRule = 'an image: jpg, jpeg, png or webp (no pdf), up to :max_upload_mb MB';
 $throttled = '- **429:** too many attempts from this phone number or this IP address (users on the same network share the IP limit). Wait for `Retry-After` seconds, then let the user retry.';
 $loginThrottled = '- **429:** too many login tries: :login_per_minute per minute for each phone number from the same IP address, or :login_per_phone_per_hour per hour for one phone number from any IP address. Wait for `Retry-After` seconds, then let the user retry.';
 $upgrade = '- **426 (mobile):** the app is too old. Show the force-update screen.';
@@ -21,14 +22,24 @@ $loggedOut = '- **401:** not logged in, or the login expired. Clear the stored l
 $blocked = '- **403:** the account is blocked (`message` says so). Show the message and log the user out.';
 $clientOnly = '- **403:** `message` explains why: the account is blocked, the phone is not verified yet (when phone verification is on), or a staff account tried a customer screen. Show the message; for "verify your phone", send the user to the OTP screen.';
 $staffOnly = '- **403:** not a staff account, blocked, or missing the permission (`message` says which). Hide this action for users without the permission.';
-$userFields = '`id`, `name`, `phone`, `email`, `account_type` (`individual` | `business`), `locale` (`ar` | `en`), `status` (`active` | `blocked`), `is_phone_verified`, `phone_verified_at`, `national_id` (`status`: null | `pending` | `approved` | `rejected`, `rejection_reason`, `verified_at`, `front` and `back` files with a signed `url`), `business_profile` (or null), `roles` (staff role names, for display only; an empty list for customers) and `permissions` (what the user may do; an empty list for customers, every permission for a super admin)';
-$profileFields = '`id`, `business_type` (`id`, `name`), `business_name`, `description`, `avg_daily_orders`, `tax_registration_number`, `verification_status` (`pending` | `approved` | `rejected`), `rejection_reason`, `reviewed_at`, `links` (`id`, `type`, `url`), `documents` (`national_id_front`, `national_id_back`, `tax_register` (the commercial register, السجل التجاري), `tax_card` (the tax card, البطاقة الضريبية): each a file with `file_name`, `mime_type`, `size`, `uploaded_at` and a signed `url`, or null), `created_at`, `updated_at`';
+$userFields = '`id`, `name`, `phone`, `email`, `account_type` (`individual` | `business`), `locale` (`ar` | `en`), `status` (`active` | `blocked`), `is_phone_verified`, `phone_verified_at`, `national_id` (`status`: null | `pending` | `approved` | `rejected`, `rejection_reason`, `verified_at`, `front` and `back` files with a signed `url`), `business_profile` (or null), `last_mode` (`client` | `tayar`: the mode the app reopens in), `tayar_profile` (`id`, `status`, `is_online`, or null when the user never applied), `roles` (staff role names, for display only; an empty list for customers) and `permissions` (what the user may do; an empty list for customers, every permission for a super admin)';
+$profileFields = '`id`, `business_type` (`id`, `name`), `business_name`, `description`, `avg_daily_orders`, `tax_registration_number`, `verification_status` (`pending` | `approved` | `rejected`), `rejection_reason`, `reviewed_at`, `links` (`id`, `type`, `url`), `documents` (`national_id_front`, `national_id_back`, `commercial_register` (the commercial register, السجل التجاري), `tax_card` (the tax card, البطاقة الضريبية): each a file with `file_name`, `mime_type`, `size`, `uploaded_at` and a signed `url`, or null), `created_at`, `updated_at`';
 $businessTypeFields = '`id`, `name` (`ar` and `en`), `is_active`, `sort_order`, `business_profiles_count` (how many business profiles use it), `created_at`, `updated_at`';
 $customerFields = '`id`, `name`, `phone`, `email`, `account_type` (`individual` | `business`), `locale`, `status` (`active` | `blocked`), `blocked_reason`, `is_phone_verified`, `phone_verified_at`, `national_id` (`status`: null | `pending` | `approved` | `rejected`, `rejection_reason`, `verified_at`, `reviewed_at`, `front` and `back` files with a signed `url`), `business_profile` (or null), `created_at`';
 $staffFields = '`id`, `name`, `phone`, `role` (`super_admin` | `admin` | `ops` | `support`), `status` (`active` | `blocked`), `blocked_reason`, `created_at`';
 $typeNotFound = '- **404:** no business type with this id.';
 $customerNotFound = '- **404:** no customer with this id (staff accounts are 404 here too: manage them under **Staff**).';
 $staffNotFound = '- **404:** no staff member with this id (customer accounts are 404 here too).';
+$vehicleTypeFields = '`id`, `name` (`ar` and `en`), `requires_license`, `can_carry_food`, `is_active`, `sort_order`, `vehicles_count` (how many vehicles use it), `created_at`, `updated_at`';
+$vehicleTypeNotFound = '- **404:** no vehicle type with this id.';
+$vehicleFields = '`id`, `vehicle_type` (`id`, `name`, `requires_license`, `can_carry_food`), `plate_number`, `model`, `color`, `year`, `status` (`pending` | `approved` | `rejected`), `is_active`, `documents` (`vehicle_license`: a file or null; `vehicle_photos`: a list of files; each file with a signed `url`)';
+$tayarProfileFields = "`id`, `status` (`pending` | `approved` | `rejected`), `rejection_reason`, `can_reapply_at` (when a rejected applicant may change the application again, or null), `reviewed_at`, `national_id_number`, `is_online`, `location` (`lat`, `lng`, `updated_at`, or null), `documents` (`national_id_front`, `national_id_back`, `criminal_record` (the فيش), `personal_photo`, `driving_license`: each a file with a signed `url`, or null), `vehicle` ({$vehicleFields}), `created_at`, `updated_at`";
+$tayarAdminFields = "{$tayarProfileFields}, the applicant as `user` (`id`, `name`, `phone`, `status`)";
+$tayarAdminDetailFields = "{$tayarAdminFields}, `reviewed_by` (`id`, `name`, or null) and `reviews` (every approval and rejection, oldest first: `decision`, `reason`, `reviewed_by`, `created_at`)";
+$workStatusFields = '`is_online`, `work_session` (`id`, `vehicle_id`, `started_at`, or null when offline), `location` (`lat`, `lng`, `updated_at`, or null)';
+$notTayar = '- **403:** not an approved tayar (`message`: "Tayar mode is only available after your tayar application is approved."), the account is blocked, or the phone is not verified. Leave tayar mode and show the application status.';
+$reapplyLater = '- **422:** `errors.status` = "You can change your application again from …" while a rejected application still has to wait until `can_reapply_at`.';
+$backToReview = 'An approved or rejected application goes back to `pending` (and an online tayar goes offline): warn the user before saving.';
 $otpCodeError = 'The same error for a wrong code, an expired code, a used code, a code with too many wrong tries (:otp_max_attempts per code) and an unknown phone: `errors.code` = "The code is wrong or has expired…". Show it under the code input and offer **Resend code**.';
 
 return [
@@ -180,7 +191,7 @@ return [
     'api.v1.client.business-profile.store' => [
         'what' => 'Creates the business profile, with the documents, in one multipart request. It starts as `pending`.',
         'who' => 'A logged-in **business** account without a business profile yet.',
-        'request' => "Send `multipart/form-data`:\n- `business_type_id` (number, required): an `id` from the business types list.\n- `business_name` (string, required): up to 255 characters.\n- `description` (string, optional): up to 2000 characters.\n- `avg_daily_orders` (number, optional): 0 to 100000.\n- `tax_registration_number` (string, optional): up to 50 characters.\n- `links` (optional, up to 10): `links[0][type]` (`website`, `facebook`, `instagram`, `tiktok`, `whatsapp` or `other`) and `links[0][url]` (a full URL, up to 2048 characters).\n- `national_id_front` and `national_id_back` (files, required): {$fileRule}.\n- `tax_register` (the commercial register, السجل التجاري) and `tax_card` (the tax card, البطاقة الضريبية) (files, optional): {$fileRule}.",
+        'request' => "Send `multipart/form-data`:\n- `business_type_id` (number, required): an `id` from the business types list.\n- `business_name` (string, required): up to 255 characters.\n- `description` (string, optional): up to 2000 characters.\n- `avg_daily_orders` (number, optional): 0 to 100000.\n- `tax_registration_number` (string, optional): up to 50 characters.\n- `links` (optional, up to 10): `links[0][type]` (`website`, `facebook`, `instagram`, `tiktok`, `whatsapp` or `other`) and `links[0][url]` (a full URL, up to 2048 characters).\n- `national_id_front` and `national_id_back` (files, required): {$fileRule}.\n- `commercial_register` (the commercial register, السجل التجاري) and `tax_card` (the tax card, البطاقة الضريبية) (files, optional): {$fileRule}.",
         'success' => "**201** with `data`, the new business profile: {$profileFields}. Show the \"waiting for review\" state.",
         'errors' => "- **403:** the account is not a business account (\"Only business accounts can have a business profile.\") or already has a profile (\"You already have a business profile.\"), or one of the account checks below.\n- **422:** field errors, for example a missing ID side, a file that is too big or of the wrong type, or an inactive business type.\n{$loggedOut}\n{$clientOnly}\n{$upgrade}\n{$serverError}",
         'notes' => '- The documents are private: they are only reachable through the signed URLs in the responses.',
@@ -198,7 +209,7 @@ return [
     'api.v1.client.business-profile.documents.store' => [
         'what' => 'Uploads or replaces one business document.',
         'who' => 'The logged-in business account that owns the profile.',
-        'request' => "- Path `collection`: `national_id_front`, `national_id_back`, `tax_register` (the commercial register, السجل التجاري) or `tax_card` (the tax card, البطاقة الضريبية).\n- `file` (file, required, `multipart/form-data`): {$fileRule}.",
+        'request' => "- Path `collection`: `national_id_front`, `national_id_back`, `commercial_register` (the commercial register, السجل التجاري) or `tax_card` (the tax card, البطاقة الضريبية).\n- `file` (file, required, `multipart/form-data`): {$fileRule}.",
         'success' => "**200** with `data`, the updated business profile: {$profileFields}. The new file replaces the old one.",
         'errors' => "- **404:** unknown document name in the path.\n- **403:** no business profile yet, or one of the account checks below.\n- **422:** the file is missing, too big or of the wrong type.\n{$loggedOut}\n{$clientOnly}\n{$upgrade}\n{$serverError}",
         'notes' => '- Any document change sends an approved or rejected profile back to `pending`. Warn the user before uploading.',
@@ -236,7 +247,7 @@ return [
         'who' => 'Staff with `business_profiles.review` (ops, admin, super admin).',
         'request' => '- Path `businessProfile`: the profile `id`. No body.',
         'success' => '**200** with the updated profile (`verification_status` = `approved`, `reviewed_at` set). Remove it from the pending tab.',
-        'errors' => "- **404:** no profile with this id.\n- **422:** the profile is not pending any more (`errors.status`): reload the list.\n{$loggedOut}\n{$staffOnly}\n{$serverError}",
+        'errors' => "- **404:** no profile with this id.\n- **422:** the profile is not pending any more (`errors.status`): reload the list.\n{$loggedOut}\n{$staffOnly} Staff (except super admins) can't review their own business profile.\n{$serverError}",
         'notes' => '- Hide the button for staff without `business_profiles.review`.',
     ],
 
@@ -245,7 +256,7 @@ return [
         'who' => 'Staff with `business_profiles.review` (ops, admin, super admin).',
         'request' => "- Path `businessProfile`: the profile `id`.\n- `reason` (string, required): up to 255 characters. Write it for the business owner: it is shown in their app.",
         'success' => '**200** with the updated profile (`verification_status` = `rejected`, `rejection_reason`, `reviewed_at`). Close the dialog and remove it from the pending tab.',
-        'errors' => "- **404:** no profile with this id.\n- **422:** `errors.reason` (missing or too long) or `errors.status` (not pending any more: reload the list).\n{$loggedOut}\n{$staffOnly}\n{$serverError}",
+        'errors' => "- **404:** no profile with this id.\n- **422:** `errors.reason` (missing or too long) or `errors.status` (not pending any more: reload the list).\n{$loggedOut}\n{$staffOnly} Staff (except super admins) can't review their own business profile.\n{$serverError}",
         'notes' => '- The business can fix the data or documents; the profile then goes back to pending and shows up in the queue again.',
     ],
 
@@ -417,6 +428,221 @@ return [
         'success' => "**200** with `data`, the staff member (`status` = `active`): {$staffFields}.",
         'errors' => "{$staffNotFound}\n{$loggedOut}\n{$staffOnly}\n{$serverError}",
         'notes' => '- Unblocking an active staff member also answers 200.',
+    ],
+
+    'api.v1.public.vehicle-types.index' => [
+        'what' => 'Lists the active vehicle types (car, motorcycle, scooter, bicycle, …) for the vehicle type picker.',
+        'who' => 'Anyone, no login.',
+        'request' => "- Query `per_page` (optional, 1 to :max_per_page, default :per_page) and `page` (optional, starts at 1).\n- `Accept-Language` decides the language of the names.",
+        'success' => '**200** with `data`: a list of `{ id, name, requires_license, can_carry_food }` in display order, plus `meta` and `links` for pages.',
+        'errors' => "- **422:** `per_page` is out of range.\n{$upgrade}\n{$serverError}",
+        'notes' => '- `requires_license` = false (a bicycle) means no plate number, no driving licence and no vehicle licence in the application form: hide those inputs.',
+    ],
+
+    'api.v1.client.tayar-profile.store' => [
+        'what' => 'Applies to be a tayar: the national ID number, the personal documents and the first vehicle, in one multipart request. It starts as `pending`.',
+        'who' => 'Any logged-in customer account (individual or business, not staff) without a tayar application yet.',
+        'request' => "Send `multipart/form-data`:\n- `national_id_number` (string, required): the 14 digits on the national ID card; Arabic digits and spaces are fine. The birth date in it (the first 7 digits) must be a real date, not in the future.\n- `national_id_front`, `national_id_back` and `criminal_record` (the فيش) (files, required): {$fileRule}.\n- `personal_photo` (file, required): {$imageRule}.\n- `driving_license` (file): required unless the vehicle type has `requires_license` = false.\n- `vehicle_type_id` (number, required): an `id` from **Get vehicle types**.\n- `plate_number` (string, up to 20 characters): required unless the vehicle type has `requires_license` = false.\n- `model` (up to 100 characters), `color` (up to 50 characters), `year` (1980 to next year): optional.\n- `vehicle_license` (file): required unless the vehicle type has `requires_license` = false.\n- `vehicle_photos[]` (files, required): 1 to 4 photos of the vehicle, each {$imageRule}.",
+        'success' => "**201** with `data`, the application: {$tayarProfileFields}. Show the \"waiting for review\" state.",
+        'errors' => "- **403:** the user already applied (\"You have already applied to be a tayar.\"), or one of the account checks below.\n- **422:** field errors, for example a national ID number that isn't 14 digits, has an impossible or future birth date, or is used by another application (\"This national ID number is already used in another tayar application.\"), a plate used by another vehicle, a missing document, more than 4 photos, or an inactive vehicle type.\n{$loggedOut}\n{$clientOnly}\n{$upgrade}\n{$serverError}",
+        'notes' => '- The tayar uploads its own national ID here, even if the account already sent one for the optional ID check. Every document is private: it is only reachable through the signed URLs in the responses.',
+    ],
+
+    'api.v1.client.tayar-profile.show' => [
+        'what' => 'Returns the logged-in user\'s tayar application with its review status.',
+        'who' => 'A logged-in customer account with a tayar application.',
+        'request' => '- No body.',
+        'success' => "**200** with `data`, the application: {$tayarProfileFields}.",
+        'errors' => "- **404:** no application yet: show **Become a tayar**.\n{$loggedOut}\n{$clientOnly}\n{$upgrade}\n{$serverError}",
+        'notes' => "- `pending` = waiting for review; `approved` = tayar mode is open; `rejected` = show `rejection_reason`, and allow changes from `can_reapply_at` (about :tayar_reapply_hours hours after the rejection).\n- Document `url`s expire after :signed_url_minutes minutes.",
+    ],
+
+    'api.v1.client.tayar-profile.update' => [
+        'what' => 'Changes the national ID number of the application (JSON).',
+        'who' => 'The logged-in user who owns the application.',
+        'request' => '- `national_id_number` (string, optional): same rules as the application.',
+        'success' => "**200** with `data`, the application: {$tayarProfileFields}.",
+        'errors' => "- **403:** no application yet, or one of the account checks below.\n{$reapplyLater}\n- **422:** field errors.\n{$loggedOut}\n{$clientOnly}\n{$upgrade}\n{$serverError}",
+        'notes' => "- A new number: {$backToReview} The same number changes nothing.",
+    ],
+
+    'api.v1.client.tayar-profile.documents.store' => [
+        'what' => 'Uploads or replaces one personal document of the application.',
+        'who' => 'The logged-in user who owns the application.',
+        'request' => "- Path `collection`: `national_id_front`, `national_id_back`, `criminal_record`, `personal_photo` or `driving_license`.\n- `file` (file, required, `multipart/form-data`): {$fileRule}; for `personal_photo`, {$imageRule}.",
+        'success' => "**200** with `data`, the application: {$tayarProfileFields}. The new file replaces the old one.",
+        'errors' => "- **404:** unknown document name in the path.\n- **403:** no application yet, or one of the account checks below.\n{$reapplyLater}\n- **422:** the file is missing, too big or of the wrong type.\n{$loggedOut}\n{$clientOnly}\n{$upgrade}\n{$serverError}",
+        'notes' => "- {$backToReview}",
+    ],
+
+    'api.v1.client.tayar-profile.vehicle.update' => [
+        'what' => 'Updates the vehicle details. Send only the fields that change (JSON, no files).',
+        'who' => 'The logged-in user who owns the application.',
+        'request' => "- Any of `vehicle_type_id`, `plate_number`, `model`, `color`, `year` (same rules as the application).\n- Moving to a vehicle type that needs a licence needs a plate, and the driving licence and the vehicle licence already uploaded: upload them first.",
+        'success' => "**200** with `data`, the application: {$tayarProfileFields}.",
+        'errors' => "- **403:** no application yet, or one of the account checks below.\n{$reapplyLater}\n- **422:** field errors, for example a plate used by another vehicle, a missing plate, or `errors.driving_license` / `errors.vehicle_license` when a licence must be uploaded first.\n{$loggedOut}\n{$clientOnly}\n{$upgrade}\n{$serverError}",
+        'notes' => "- Changing `vehicle_type_id` or `plate_number`: {$backToReview}\n- `model`, `color` and `year` can change without a new review.",
+    ],
+
+    'api.v1.client.tayar-profile.vehicle.documents.store' => [
+        'what' => 'Replaces the vehicle licence, or all the vehicle photos at once.',
+        'who' => 'The logged-in user who owns the application.',
+        'request' => "Send `multipart/form-data`:\n- Path `collection`: `vehicle_license` or `vehicle_photos`.\n- For `vehicle_license`: `file` (file, required): {$fileRule}.\n- For `vehicle_photos`: `files[]` (files, required): 1 to 4 photos, each {$imageRule}. They replace all the current photos.",
+        'success' => "**200** with `data`, the application: {$tayarProfileFields}.",
+        'errors' => "- **404:** unknown document name in the path.\n- **403:** no application yet, or one of the account checks below.\n{$reapplyLater}\n- **422:** a file is missing, too big or of the wrong type, or more than 4 photos.\n{$loggedOut}\n{$clientOnly}\n{$upgrade}\n{$serverError}",
+        'notes' => "- {$backToReview}",
+    ],
+
+    'api.v1.auth.mode.update' => [
+        'what' => 'Switches the app between client mode and tayar mode, and saves it so the app reopens in the same mode.',
+        'who' => 'Any logged-in user who is not blocked.',
+        'request' => '- `mode` (required): `client` or `tayar`.',
+        'success' => "**200** with `data`, the user: {$userFields}.",
+        'errors' => "- **403:** `tayar` needs an approved tayar application (\"Tayar mode is only available after your tayar application is approved.\").\n- **422:** an unknown `mode`.\n{$loggedOut}\n{$blocked}\n{$upgrade}\n{$serverError}",
+        'notes' => '- Switching to `client` while online sets the tayar offline and closes the work session.',
+    ],
+
+    'api.v1.tayar.online' => [
+        'what' => 'Goes online at the current position, with the active vehicle, and starts a work session.',
+        'who' => 'An approved tayar (active account, verified phone) in tayar mode, with an approved, active vehicle.',
+        'request' => '- `lat` (number, required): -90 to 90, up to 7 decimals.\n- `lng` (number, required): -180 to 180, up to 7 decimals.',
+        'success' => "**200** with `data`: {$workStatusFields}. Start the background location service.",
+        'errors' => "- **422:** `lat`/`lng` missing or out of range, or `errors.vehicle` = \"You need an approved vehicle to go online.\"\n- **403:** the app is in client mode (`message`: \"Switch to tayar mode before going online.\"): call **Switch mode** with `tayar` first.\n{$loggedOut}\n{$notTayar}\n{$upgrade}\n{$serverError}",
+        'notes' => '- Going online while already online keeps the same work session and only moves the position.',
+    ],
+
+    'api.v1.tayar.offline' => [
+        'what' => 'Goes offline and closes the work session.',
+        'who' => 'An approved tayar.',
+        'request' => '- No body.',
+        'success' => "**200** with `data`: {$workStatusFields} (`is_online` = false, `work_session` = null). Stop the background location service.",
+        'errors' => "{$loggedOut}\n{$notTayar}\n{$upgrade}\n{$serverError}",
+        'notes' => '- Going offline while offline also answers 200. The last position is kept.',
+    ],
+
+    'api.v1.tayar.location' => [
+        'what' => 'Sends the current position while online. The server keeps only the latest position, never a history.',
+        'who' => 'An approved tayar who is online.',
+        'request' => '- `lat` (number, required): -90 to 90, up to 7 decimals.\n- `lng` (number, required): -180 to 180, up to 7 decimals.',
+        'success' => '**204** with no body.',
+        'errors' => "- **422:** `lat`/`lng` missing or out of range, or `errors.status` = \"Go online before sending your location.\" (the tayar was set offline: show the offline state).\n- **429:** more than :tayar_location_per_minute updates in a minute. Wait for `Retry-After` seconds, then send only the latest position.\n{$loggedOut}\n{$notTayar}\n{$upgrade}\n{$serverError}",
+        'notes' => '- Send every 5 to 10 seconds while online (at most :tayar_location_per_minute a minute). A tayar with no location for :tayar_offline_minutes minutes is set offline by the server.',
+    ],
+
+    'api.v1.admin.tayar-applications.index' => [
+        'what' => 'Lists tayar applications for review, filtered by status, oldest first.',
+        'who' => 'Staff with `tayars.view` (support, ops, admin, super admin).',
+        'request' => "- Query `status` (optional): `pending` (default), `approved` or `rejected`.\n- Query `vehicle_type_id` (optional): only applications with this vehicle type.\n- Query `search` (optional, up to 100 characters): the same rules as **List users** (a full phone, 4 or more digits of a phone, or part of the name).\n- Query `per_page` (optional, 1 to :max_per_page, default :per_page) and `page`.",
+        'success' => "**200** with `data`: a list of applications, each with {$tayarAdminFields}. Plus `meta` and `links` for pages.",
+        'errors' => "- **422:** an unknown `status` or `per_page` out of range.\n{$loggedOut}\n{$staffOnly}\n{$serverError}",
+        'notes' => '- Open the Review details page with **Get tayar application**. The document `url`s expire after :signed_url_minutes minutes.',
+    ],
+
+    'api.v1.admin.tayar-applications.show' => [
+        'what' => 'Returns one tayar application with every document, the vehicle, and the review history.',
+        'who' => 'Staff with `tayars.view`.',
+        'request' => '- Path `tayarProfile`: the application `id`. No body.',
+        'success' => "**200** with `data`: {$tayarAdminDetailFields}.",
+        'errors' => "- **404:** no application with this id.\n{$loggedOut}\n{$staffOnly}\n{$serverError}",
+        'notes' => '- Call it again to refresh the document `url`s; they expire after :signed_url_minutes minutes.',
+    ],
+
+    'api.v1.admin.tayar-applications.approve' => [
+        'what' => 'Approves a pending tayar application and its vehicle, which becomes the active vehicle.',
+        'who' => 'Staff with `tayars.review` (ops, admin, super admin).',
+        'request' => '- Path `tayarProfile`: the application `id`. No body.',
+        'success' => "**200** with `data`: {$tayarAdminDetailFields} (`status` = `approved`). Remove it from the pending tab.",
+        'errors' => "- **404:** no application with this id.\n- **422:** the application is not pending any more (`errors.status`): reload the list.\n{$loggedOut}\n{$staffOnly} Staff (except super admins) can't review their own application.\n{$serverError}",
+        'notes' => '- The tayar can switch to tayar mode and go online at once.',
+    ],
+
+    'api.v1.admin.tayar-applications.reject' => [
+        'what' => 'Rejects a pending tayar application with a reason the applicant sees.',
+        'who' => 'Staff with `tayars.review` (ops, admin, super admin).',
+        'request' => "- Path `tayarProfile`: the application `id`.\n- `reason` (string, required): up to 255 characters. Write it for the applicant: it is shown in their app.",
+        'success' => "**200** with `data`: {$tayarAdminDetailFields} (`status` = `rejected`, `rejection_reason`, `can_reapply_at`). Close the dialog and remove it from the pending tab.",
+        'errors' => "- **404:** no application with this id.\n- **422:** `errors.reason` (missing or too long) or `errors.status` (not pending any more: reload the list).\n{$loggedOut}\n{$staffOnly} Staff (except super admins) can't review their own application.\n{$serverError}",
+        'notes' => '- The applicant can fix the application :tayar_reapply_hours hours after the rejection; it then shows up as pending again.',
+    ],
+
+    'api.v1.admin.tayars.index' => [
+        'what' => 'Lists approved tayars, newest first, with filters.',
+        'who' => 'Staff with `tayars.view` (support, ops, admin, super admin).',
+        'request' => "- Query `is_online` (optional): `true` for tayars online now, `false` for offline.\n- Query `vehicle_type_id` (optional): only tayars with this vehicle type.\n- Query `blocked` (optional): `true` for blocked accounts, `false` for active ones.\n- Query `search` (optional): the same rules as **List users**.\n- Query `per_page` (optional, 1 to :max_per_page, default :per_page) and `page`.",
+        'success' => "**200** with `data`: a list of tayars, each with {$tayarAdminFields} (in the list, `documents` are left out). Plus `meta` and `links` for pages.",
+        'errors' => "- **422:** an invalid filter or `per_page` out of range.\n{$loggedOut}\n{$staffOnly}\n{$serverError}",
+        'notes' => '- Block or unblock a tayar from **Users › Block user** (`user.id` is the user id): a blocked tayar is out of tayar mode at once and is set offline within :tayar_offline_minutes minutes.',
+    ],
+
+    'api.v1.admin.tayars.show' => [
+        'what' => 'Returns one approved tayar: documents, vehicle, last position and the review history.',
+        'who' => 'Staff with `tayars.view`.',
+        'request' => '- Path `tayar`: the tayar profile `id` (from the list). No body.',
+        'success' => "**200** with `data`: {$tayarAdminDetailFields}.",
+        'errors' => "- **404:** no approved tayar with this id (pending and rejected applications are under **Tayar applications**).\n{$loggedOut}\n{$staffOnly}\n{$serverError}",
+        'notes' => '- `location.updated_at` shows how fresh the position is.',
+    ],
+
+    'api.v1.admin.vehicle-types.index' => [
+        'what' => 'Lists every vehicle type, active and inactive, in sort order.',
+        'who' => 'Staff with `vehicle_types.view` (support, ops, admin, super admin).',
+        'request' => "- Query `is_active` (optional): `true` for the Active tab, `false` for the Inactive tab; leave it out for all.\n- Query `search` (optional, up to 100 characters): part of the Arabic or English name, any letter case.\n- Query `per_page` (optional, 1 to :max_per_page, default :per_page) and `page`.",
+        'success' => "**200** with `data`: a list of vehicle types, each with {$vehicleTypeFields}. Plus `meta` and `links` for pages.",
+        'errors' => "- **422:** an invalid `is_active`, `search` too long or `per_page` out of range.\n{$loggedOut}\n{$staffOnly}\n{$serverError}",
+        'notes' => '- Show **Delete** only when `vehicles_count` is 0; otherwise offer **Deactivate**.',
+    ],
+
+    'api.v1.admin.vehicle-types.show' => [
+        'what' => 'Returns one vehicle type with its name in both languages, to fill the edit form.',
+        'who' => 'Staff with `vehicle_types.view`.',
+        'request' => '- Path `vehicleType`: the type `id`. No body.',
+        'success' => "**200** with `data`: {$vehicleTypeFields}.",
+        'errors' => "{$vehicleTypeNotFound}\n{$loggedOut}\n{$staffOnly}\n{$serverError}",
+    ],
+
+    'api.v1.admin.vehicle-types.store' => [
+        'what' => 'Creates a vehicle type.',
+        'who' => 'Staff with `vehicle_types.manage` (admin, super admin).',
+        'request' => "- `name.ar` and `name.en` (strings, both required): up to 100 characters each, as `{ \"name\": { \"ar\": \"سيارة\", \"en\": \"Car\" } }`.\n- `requires_license` (boolean, optional): default `true`; `false` for a bicycle (no plate, no licences).\n- `can_carry_food` (boolean, optional): default `true`.\n- `is_active` (boolean, optional): default `true`.\n- `sort_order` (number, optional): 0 to 65535. Left out, the type goes to the end of the list.",
+        'success' => "**201** with `data`, the new type: {$vehicleTypeFields}.",
+        'errors' => "- **422:** field errors. A name another type already uses (ignoring letter case) gets `errors[\"name.ar\"]` or `errors[\"name.en\"]` = \"Another vehicle type already has this name.\"\n{$loggedOut}\n{$staffOnly}\n{$serverError}",
+        'notes' => '- An active type shows up in the public **Get vehicle types** list at once.',
+    ],
+
+    'api.v1.admin.vehicle-types.update' => [
+        'what' => 'Updates a vehicle type. Send only the fields that change.',
+        'who' => 'Staff with `vehicle_types.manage` (admin, super admin).',
+        'request' => "- Path `vehicleType`: the type `id`.\n- Any of `name` (both `ar` and `en` when sent), `requires_license`, `can_carry_food`, `is_active`, `sort_order` (same rules as create).",
+        'success' => "**200** with `data`, the updated type: {$vehicleTypeFields}.",
+        'errors' => "{$vehicleTypeNotFound}\n- **422:** field errors, for example a name with one language only, or a name another type already uses (ignoring letter case).\n{$loggedOut}\n{$staffOnly}\n{$serverError}",
+        'notes' => '- Changing `requires_license` only affects new applications and vehicle changes; existing vehicles are not checked again.',
+    ],
+
+    'api.v1.admin.vehicle-types.activate' => [
+        'what' => 'Activates a vehicle type, so it shows in the public list again.',
+        'who' => 'Staff with `vehicle_types.manage` (admin, super admin).',
+        'request' => '- Path `vehicleType`: the type `id`. No body.',
+        'success' => "**200** with `data`, the type (`is_active` = true): {$vehicleTypeFields}. Move it to the Active tab.",
+        'errors' => "{$vehicleTypeNotFound}\n{$loggedOut}\n{$staffOnly}\n{$serverError}",
+        'notes' => '- Activating an active type also answers 200.',
+    ],
+
+    'api.v1.admin.vehicle-types.deactivate' => [
+        'what' => 'Deactivates a vehicle type: it leaves the public list, and new applications can\'t pick it.',
+        'who' => 'Staff with `vehicle_types.manage` (admin, super admin).',
+        'request' => '- Path `vehicleType`: the type `id`. No body.',
+        'success' => "**200** with `data`, the type (`is_active` = false): {$vehicleTypeFields}. Move it to the Inactive tab.",
+        'errors' => "{$vehicleTypeNotFound}\n{$loggedOut}\n{$staffOnly}\n{$serverError}",
+        'notes' => '- Existing vehicles keep the type. Use this instead of delete for a type that is in use.',
+    ],
+
+    'api.v1.admin.vehicle-types.destroy' => [
+        'what' => 'Deletes a vehicle type that no vehicle uses.',
+        'who' => 'Staff with `vehicle_types.manage` (admin, super admin).',
+        'request' => '- Path `vehicleType`: the type `id`. No body.',
+        'success' => '**204** with no body. Remove the row.',
+        'errors' => "{$vehicleTypeNotFound}\n- **422:** a vehicle uses the type: `errors.vehicle_type` = \"This vehicle type is used by vehicles, so it cannot be deleted. Deactivate it instead.\" Show it in the dialog with a **Deactivate** button.\n{$loggedOut}\n{$staffOnly}\n{$serverError}",
+        'notes' => '- Ask for confirmation first; a delete can\'t be undone.',
     ],
 
 ];

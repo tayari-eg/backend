@@ -3,17 +3,19 @@
 namespace App\Http\Requests\Concerns;
 
 use App\Domains\Accounts\Enums\Locale;
-use App\Domains\Accounts\Models\BusinessType;
+use App\Models\Concerns\HasTranslatedNameSearch;
 use Closure;
+use Illuminate\Database\Eloquent\Model;
 
-trait ValidatesBusinessTypeNames
+trait ValidatesUniqueTranslatedNames
 {
     /**
-     * Both names are required, and each must be unique in its language ignoring letter case (and the type being updated).
+     * Both names are required, and each must be unique in its language ignoring letter case (and the row being updated).
      *
+     * @param  class-string<Model>  $modelClass  a model using HasTranslatedNameSearch
      * @return array<string, mixed>
      */
-    protected function businessTypeNameRules(string $presence, ?int $ignoreId = null): array
+    protected function uniqueTranslatedNameRules(string $presence, string $modelClass, string $takenMessageKey, ?int $ignoreId = null): array
     {
         $rules = ['name' => [$presence, 'array:'.implode(',', Locale::values())]];
 
@@ -22,14 +24,14 @@ trait ValidatesBusinessTypeNames
                 'required_with:name',
                 'string',
                 'max:100',
-                function (string $attribute, mixed $value, Closure $fail) use ($locale, $ignoreId): void {
-                    $isTaken = is_string($value) && BusinessType::query()
+                function (string $attribute, mixed $value, Closure $fail) use ($modelClass, $locale, $ignoreId, $takenMessageKey): void {
+                    $isTaken = is_string($value) && $modelClass::query()
                         ->whereNameIs($locale, $value)
                         ->when($ignoreId !== null, fn ($query) => $query->whereKeyNot($ignoreId))
                         ->exists();
 
                     if ($isTaken) {
-                        $fail('admin.business_type_name_taken')->translate();
+                        $fail($takenMessageKey)->translate();
                     }
                 },
             ];

@@ -6,6 +6,9 @@ use App\Domains\Accounts\Enums\StaffPermission;
 use App\Domains\Accounts\Enums\StaffRole;
 use App\Domains\Accounts\Models\BusinessProfile;
 use App\Domains\Accounts\Models\BusinessType;
+use App\Domains\Tayars\Models\TayarProfile;
+use App\Domains\Tayars\Models\Vehicle;
+use App\Domains\Tayars\Models\VehicleType;
 use App\Models\User;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -42,6 +45,19 @@ class AdminRolePermissionsTest extends TestCase
         'api.v1.admin.users.show' => ['GET', 'customer', StaffPermission::UsersView],
         'api.v1.admin.users.block' => ['POST', 'customer', StaffPermission::UsersBlock],
         'api.v1.admin.users.unblock' => ['POST', 'customer', StaffPermission::UsersBlock],
+        'api.v1.admin.tayar-applications.index' => ['GET', null, StaffPermission::TayarsView],
+        'api.v1.admin.tayar-applications.show' => ['GET', 'tayarProfile', StaffPermission::TayarsView],
+        'api.v1.admin.tayar-applications.approve' => ['POST', 'tayarProfile', StaffPermission::TayarsReview],
+        'api.v1.admin.tayar-applications.reject' => ['POST', 'tayarProfile', StaffPermission::TayarsReview],
+        'api.v1.admin.tayars.index' => ['GET', null, StaffPermission::TayarsView],
+        'api.v1.admin.tayars.show' => ['GET', 'tayar', StaffPermission::TayarsView],
+        'api.v1.admin.vehicle-types.index' => ['GET', null, StaffPermission::VehicleTypesView],
+        'api.v1.admin.vehicle-types.show' => ['GET', 'vehicleType', StaffPermission::VehicleTypesView],
+        'api.v1.admin.vehicle-types.store' => ['POST', null, StaffPermission::VehicleTypesManage],
+        'api.v1.admin.vehicle-types.update' => ['PATCH', 'vehicleType', StaffPermission::VehicleTypesManage],
+        'api.v1.admin.vehicle-types.activate' => ['POST', 'vehicleType', StaffPermission::VehicleTypesManage],
+        'api.v1.admin.vehicle-types.deactivate' => ['POST', 'vehicleType', StaffPermission::VehicleTypesManage],
+        'api.v1.admin.vehicle-types.destroy' => ['DELETE', 'vehicleType', StaffPermission::VehicleTypesManage],
         'api.v1.admin.staff.index' => ['GET', null, StaffPermission::StaffManage],
         'api.v1.admin.staff.store' => ['POST', null, StaffPermission::StaffManage],
         'api.v1.admin.staff.role.update' => ['PUT', 'staff', StaffPermission::StaffManage],
@@ -72,6 +88,9 @@ class AdminRolePermissionsTest extends TestCase
             'businessType' => BusinessType::factory()->create(),
             'customer', 'user' => User::factory()->create(),
             'staff' => $this->createStaffUser(StaffRole::Support),
+            'tayarProfile' => TayarProfile::factory()->has(Vehicle::factory())->create(),
+            'tayar' => TayarProfile::factory()->approved()->create(),
+            'vehicleType' => VehicleType::factory()->create(),
             null => null,
         };
     }

@@ -20,10 +20,14 @@ class ResendOtpAction
         $user = User::query()->where('phone', $phone->value)->first();
 
         if ($user === null || ($purpose === OtpPurpose::VerifyPhone && $user->hasVerifiedPhone())) {
+            $this->sendOtp->matchSendTiming();
+
             return;
         }
 
         if ($this->sendOtp->secondsUntilResendAllowed($phone, $purpose) > 0) {
+            $this->sendOtp->matchSendTiming();
+
             return;
         }
 

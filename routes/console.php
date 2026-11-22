@@ -16,3 +16,5 @@ Schedule::command('queue:work --stop-when-empty --max-time=50 --tries=3')->every
     ->when(fn (): bool => config()->boolean('tayari.queue.work_from_scheduler', true));
 
 Schedule::command('model:prune', ['--model' => [OtpCode::class]])->daily();
+
+Schedule::command('tayars:set-stale-offline')->everyMinute()->withoutOverlapping(5);

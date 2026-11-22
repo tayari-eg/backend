@@ -170,6 +170,7 @@ return [
     'uuid' => 'The :attribute field must be a valid UUID.',
 
     'egyptian_mobile_number' => 'The :attribute field must be a valid Egyptian mobile number.',
+    'egyptian_national_id_number' => 'The :attribute field must be the 14 digits of an Egyptian national ID, with a real birth date.',
 
     /*
     |--------------------------------------------------------------------------
@@ -223,7 +224,7 @@ return [
         'links.*.url' => 'link',
         'national_id_front' => 'national ID front',
         'national_id_back' => 'national ID back',
-        'tax_register' => 'commercial register',
+        'commercial_register' => 'commercial register',
         'tax_card' => 'tax card',
         'file' => 'file',
         'reason' => 'reason',
@@ -238,6 +239,25 @@ return [
         'national_id_status' => 'national ID status',
         'business_profile_status' => 'business profile status',
         'role' => 'role',
+        'national_id_number' => 'national ID number',
+        'criminal_record' => 'criminal record',
+        'personal_photo' => 'personal photo',
+        'driving_license' => 'driving licence',
+        'vehicle_type_id' => 'vehicle type',
+        'plate_number' => 'plate number',
+        'model' => 'model',
+        'color' => 'colour',
+        'year' => 'year',
+        'vehicle_license' => 'vehicle licence',
+        'vehicle_photos' => 'vehicle photos',
+        'vehicle_photos.*' => 'vehicle photo',
+        'requires_license' => 'requires a licence',
+        'can_carry_food' => 'can carry food',
+        'lat' => 'latitude',
+        'lng' => 'longitude',
+        'mode' => 'mode',
+        'is_online' => 'online',
+        'blocked' => 'blocked',
     ],
 
 ];

@@ -10,10 +10,26 @@ use App\Domains\Accounts\Models\OtpCode;
 use App\Exceptions\OtpResendCooldownException;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Str;
 
 class SendOtpAction
 {
+    /**
+     * Hashed once per process with the configured cost; it holds nothing request-specific, so it is Octane-safe.
+     */
+    private static ?string $timingHash = null;
+
     public function __construct(private SmsSender $smsSender) {}
+
+    /**
+     * Spends about as long as a real send hashes its code, so a silent skip doesn't reveal whether a phone is registered.
+     */
+    public function matchSendTiming(): void
+    {
+        self::$timingHash ??= Hash::make(Str::random(32));
+
+        Hash::check(Str::random(32), self::$timingHash);
+    }
 
     /**
      * Replaces any open code for this phone and purpose, and sends the new one by SMS inside the request.

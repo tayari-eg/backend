@@ -132,7 +132,7 @@ return [
 
                 1. After login, if **Get my account** has `business_profile: null`, open the **Onboarding wizard**.
                 2. Wizard step 1, **Business details**: business type (from **Get business types**), name, description, average daily orders, tax registration number, and links.
-                3. Wizard step 2, **Documents**: national ID front and back (required), commercial register (السجل التجاري, `tax_register`) and tax card (البطاقة الضريبية, `tax_card`) (optional).
+                3. Wizard step 2, **Documents**: national ID front and back (required), commercial register (السجل التجاري, `commercial_register`) and tax card (البطاقة الضريبية, `tax_card`) (optional).
                 4. On **Finish**, send everything in one request → **Create business profile**.
                 5. **Business profile** page → **Get business profile**, with a status banner: pending, approved, or rejected with the reason.
                 6. **Edit business profile** page → **Update business profile** (no files). **Documents** page → **Upload document** per document.

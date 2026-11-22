@@ -16,8 +16,8 @@ return [
 
         - **Login:** Sanctum session cookie, like the website: **Get CSRF cookie**, then **Log in**.
         - **Postman setup:** open **Cookies › Domains Allowlist** and add the host of `{{appUrl}}` (for example `localhost`). Otherwise this folder's script can't read the `XSRF-TOKEN` cookie and requests answer **419**.
-        - **Permissions:** `business_profiles.view`, `business_profiles.review`, `national_ids.view`, `national_ids.review`, `business_types.view`, `business_types.manage`, `users.view`, `users.block`, `staff.manage`.
-        - **Roles:** `super_admin` (everything, and the only role with `staff.manage`); `admin` (everything except `staff.manage`); `ops` (view business types and users, block users, and review business profiles and national IDs); `support` (view only: business profiles, national IDs, business types and users).
+        - **Permissions:** `business_profiles.view`, `business_profiles.review`, `national_ids.view`, `national_ids.review`, `business_types.view`, `business_types.manage`, `users.view`, `users.block`, `staff.manage`, `tayars.view`, `tayars.review`, `vehicle_types.view`, `vehicle_types.manage`.
+        - **Roles:** `super_admin` (everything, and the only role with `staff.manage`); `admin` (everything except `staff.manage`); `ops` (view business types, vehicle types and users, block users, and review business profiles, national IDs and tayar applications); `support` (view only: business profiles, national IDs, business types, vehicle types, users and tayars).
         - Build the menu and buttons from `permissions` in **Get my account** only: hide what the user can't do. A super admin gets every permission in the list. `roles` is for display (for example the role badge in the top bar), never for access checks.
         MD,
 
@@ -241,7 +241,118 @@ return [
         ],
 
         [
-            'name' => '7. Account',
+            'name' => '7. Tayar applications review',
+            'description' => <<<'MD'
+                People who applied to deliver orders. Needs `tayars.view` to see, `tayars.review` to decide:
+
+                1. **Tayar applications** page with tabs **Pending**, **Approved**, **Rejected**, a vehicle type filter and a search box (name or phone) → **List tayar applications**, paged, oldest first.
+                2. Clicking a row opens the **Review details** page → **Get tayar application**: the national ID number, the personal documents (national ID, criminal record, personal photo, driving licence), the vehicle with its licence and photos, the applicant, and the history of earlier reviews.
+                3. **Approve** → **Approve tayar application**. The vehicle is approved with it.
+                4. **Reject** opens a dialog with a required reason → **Reject tayar application**. The applicant can fix the application :tayar_reapply_hours hours later.
+                5. After either, go back to the list; the application leaves the Pending tab.
+                MD,
+            'requests' => [
+                [
+                    'route' => 'api.v1.admin.tayar-applications.index',
+                    'name' => 'List tayar applications',
+                    'screen' => '**Tayar applications** page, on open, on tab change (`status`), on filter or search change and on page change.',
+                ],
+                [
+                    'route' => 'api.v1.admin.tayar-applications.show',
+                    'name' => 'Get tayar application',
+                    'screen' => '**Review details** page, on open (and to refresh expired document links).',
+                ],
+                [
+                    'route' => 'api.v1.admin.tayar-applications.approve',
+                    'name' => 'Approve tayar application',
+                    'screen' => '**Review details** page, when the staff member clicks **Approve** (confirm first).',
+                ],
+                [
+                    'route' => 'api.v1.admin.tayar-applications.reject',
+                    'name' => 'Reject tayar application',
+                    'screen' => '**Review details** page, when the staff member confirms the **Reject** dialog with a reason.',
+                ],
+            ],
+        ],
+
+        [
+            'name' => '8. Tayars',
+            'description' => <<<'MD'
+                Approved tayars. Needs `tayars.view`:
+
+                1. **Tayars** page with filters **Online now**, vehicle type and **Blocked**, and a search box → **List tayars**, paged, newest first.
+                2. Clicking a row opens the **Tayar details** page → **Get tayar**: documents, vehicle, the last position (`location`) and the review history.
+                3. **Block** and **Unblock** use the users endpoints (**Users › Block user / Unblock user**, with `user.id`) and need `users.block`. A blocked tayar is out of tayar mode at once.
+                MD,
+            'requests' => [
+                [
+                    'route' => 'api.v1.admin.tayars.index',
+                    'name' => 'List tayars',
+                    'screen' => '**Tayars** page, on open, on filter or search change and on page change.',
+                ],
+                [
+                    'route' => 'api.v1.admin.tayars.show',
+                    'name' => 'Get tayar',
+                    'screen' => '**Tayar details** page, on open.',
+                ],
+            ],
+        ],
+
+        [
+            'name' => '9. Vehicle types',
+            'description' => <<<'MD'
+                The vehicle types tayars pick from. Needs `vehicle_types.view` to see, `vehicle_types.manage` to change:
+
+                1. **Vehicle types** page with tabs **Active** and **Inactive** → **List vehicle types** with `is_active`, an optional `search`, paged, in sort order.
+                2. **Add** opens the form (Arabic name, English name, needs a licence, can carry food, active, sort order) → **Create vehicle type**.
+                3. **Edit** loads the type → **Get vehicle type**, then **Save** → **Update vehicle type**.
+                4. **Activate** / **Deactivate** on a row → **Activate vehicle type** / **Deactivate vehicle type**.
+                5. **Delete** opens a confirmation dialog → **Delete vehicle type**. A type used by vehicles can't be deleted: the dialog shows the "deactivate it instead" message with a **Deactivate** button. Offer **Delete** only when `vehicles_count` is 0.
+                MD,
+            'requests' => [
+                [
+                    'route' => 'api.v1.admin.vehicle-types.index',
+                    'name' => 'List vehicle types',
+                    'screen' => '**Vehicle types** page, on open, on tab change (`is_active`), on search and on page change.',
+                ],
+                [
+                    'route' => 'api.v1.admin.vehicle-types.show',
+                    'name' => 'Get vehicle type',
+                    'screen' => '**Edit vehicle type** form, on open.',
+                ],
+                [
+                    'route' => 'api.v1.admin.vehicle-types.store',
+                    'name' => 'Create vehicle type',
+                    'screen' => '**Add vehicle type** form, when the staff member clicks **Save**.',
+                    'next' => 'Close the form and reload the list.',
+                ],
+                [
+                    'route' => 'api.v1.admin.vehicle-types.update',
+                    'name' => 'Update vehicle type',
+                    'screen' => '**Edit vehicle type** form, when the staff member clicks **Save**.',
+                    'next' => 'Close the form and update the row.',
+                ],
+                [
+                    'route' => 'api.v1.admin.vehicle-types.activate',
+                    'name' => 'Activate vehicle type',
+                    'screen' => '**Vehicle types** page (Inactive tab), when the staff member clicks **Activate** on a row.',
+                ],
+                [
+                    'route' => 'api.v1.admin.vehicle-types.deactivate',
+                    'name' => 'Deactivate vehicle type',
+                    'screen' => '**Vehicle types** page (Active tab), when the staff member clicks **Deactivate** on a row, or **Deactivate** in the delete dialog.',
+                ],
+                [
+                    'route' => 'api.v1.admin.vehicle-types.destroy',
+                    'name' => 'Delete vehicle type',
+                    'screen' => '**Vehicle types** page, when the staff member confirms the **Delete** dialog.',
+                    'next' => 'Remove the row. On 422, keep the dialog open with the message and a **Deactivate** button.',
+                ],
+            ],
+        ],
+
+        [
+            'name' => '10. Account',
             'description' => <<<'MD'
                 1. **Get my account** on every panel load: who is logged in, `permissions` for the menu and buttons, and `roles` for display (a 401 means show the login page).
                 2. **Change password** page → **Change password**.

@@ -152,7 +152,7 @@ class ExportPostmanCollectionTest extends TestCase
         $this->assertSame([], $this->topFolder($collection, 'Changelog')['item']);
 
         $this->assertSame(
-            ['1. App start', '2. Sign up and login', '3. Account', '4. Push notifications', '5. Business profile', '6. National ID'],
+            ['1. App start', '2. Sign up and login', '3. Account', '4. Push notifications', '5. Business profile', '6. National ID', '7. Tayar mode · Become a tayar', '8. Tayar mode · Application status', '9. Tayar mode · Switch mode', '10. Tayar mode · Go online and offline', '11. Tayar mode · Location updates', '12. Tayar mode · Vehicle'],
             array_column($this->topFolder($collection, 'Flutter app')['item'], 'name'),
         );
         $this->assertSame(
@@ -160,7 +160,7 @@ class ExportPostmanCollectionTest extends TestCase
             array_column($this->topFolder($collection, 'React website')['item'], 'name'),
         );
         $this->assertSame(
-            ['1. Login', '2. Business profiles review', '3. National IDs review', '4. Users', '5. Business types', '6. Staff', '7. Account'],
+            ['1. Login', '2. Business profiles review', '3. National IDs review', '4. Users', '5. Business types', '6. Staff', '7. Tayar applications review', '8. Tayars', '9. Vehicle types', '10. Account'],
             array_column($this->topFolder($collection, 'React admin panel')['item'], 'name'),
         );
     }
@@ -255,13 +255,19 @@ class ExportPostmanCollectionTest extends TestCase
      */
     public static function invalidChangelogs(): array
     {
-        $entry = fn (string $version): array => ['version' => $version, 'date' => '2026-11-21', 'changes' => ['A change.']];
+        $entry = fn (string $version): array => ['version' => $version, 'date' => '2026-11-21', 'changes' => ['Docs: A change.']];
 
         return [
             'empty' => [[], 'changelog.php has no entries'],
             'not semver' => [[$entry('1.0')], 'version [1.0] is not a valid semver version'],
             'out of order' => [[$entry('1.0.0'), $entry('1.1.0')], 'version [1.1.0] comes after the lower version [1.0.0]'],
             'duplicate' => [[$entry('1.0.0'), $entry('1.0.0')], 'version [1.0.0] is used by more than one entry'],
+            'date not YYYY-MM-DD' => [[['version' => '1.0.0', 'date' => '21/11/2026', 'changes' => ['Docs: A change.']]], 'has the date [21/11/2026]: use a real date as YYYY-MM-DD'],
+            'impossible date' => [[['version' => '1.0.0', 'date' => '2026-02-30', 'changes' => ['Docs: A change.']]], 'has the date [2026-02-30]'],
+            'empty changes' => [[['version' => '1.0.0', 'date' => '2026-11-21', 'changes' => []]], 'version [1.0.0] needs changes'],
+            'changes not a list' => [[['version' => '1.0.0', 'date' => '2026-11-21', 'changes' => 'A change.']], 'version [1.0.0] needs changes'],
+            'line without a tag' => [[['version' => '1.0.0', 'date' => '2026-11-21', 'changes' => ['Docs: Tagged.', 'GET /api/v1/me — no tag.']]], 'version [1.0.0] has a line without a tag'],
+            'unknown tag' => [[['version' => '1.0.0', 'date' => '2026-11-21', 'changes' => ['Fixed: GET /api/v1/me — not a tag.']]], 'version [1.0.0] has a line without a tag'],
         ];
     }
 
@@ -273,6 +279,17 @@ class ExportPostmanCollectionTest extends TestCase
     {
         $this->export($this->docsWith('changelog', $changelog))
             ->expectsOutputToContain($problem)
+            ->assertFailed();
+    }
+
+    public function test_the_command_fails_when_a_placeholder_key_is_missing_from_env_example(): void
+    {
+        $envExample = self::DOCS_COPY_DIRECTORY.'/.env.example';
+        File::ensureDirectoryExists(base_path(self::DOCS_COPY_DIRECTORY));
+        File::put(base_path($envExample), preg_replace('/^OTP_RESEND_COOLDOWN_SECONDS=.*$/m', '', File::get(base_path('.env.example'))));
+
+        $this->export(['--env-example' => $envExample])
+            ->expectsOutputToContain('Placeholder [:otp_cooldown_seconds] needs OTP_RESEND_COOLDOWN_SECONDS')
             ->assertFailed();
     }
 

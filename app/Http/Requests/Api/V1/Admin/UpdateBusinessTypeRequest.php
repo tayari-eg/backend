@@ -2,12 +2,13 @@
 
 namespace App\Http\Requests\Api\V1\Admin;
 
-use App\Http\Requests\Concerns\ValidatesBusinessTypeNames;
+use App\Domains\Accounts\Models\BusinessType;
+use App\Http\Requests\Concerns\ValidatesUniqueTranslatedNames;
 use Illuminate\Foundation\Http\FormRequest;
 
 class UpdateBusinessTypeRequest extends FormRequest
 {
-    use ValidatesBusinessTypeNames;
+    use ValidatesUniqueTranslatedNames;
 
     public function authorize(): bool
     {
@@ -22,7 +23,7 @@ class UpdateBusinessTypeRequest extends FormRequest
     public function rules(): array
     {
         return [
-            ...$this->businessTypeNameRules('sometimes', $this->route('businessType')?->id),
+            ...$this->uniqueTranslatedNameRules('sometimes', BusinessType::class, 'admin.business_type_name_taken', $this->route('businessType')?->id),
             'is_active' => ['sometimes', 'boolean'],
             'sort_order' => ['sometimes', 'integer', 'min:0', 'max:65535'],
         ];

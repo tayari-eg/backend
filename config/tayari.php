@@ -112,6 +112,24 @@ return [
 
     /*
     |--------------------------------------------------------------------------
+    | Tayars
+    |--------------------------------------------------------------------------
+    |
+    | A tayar online with no location for offline_after_minutes is set offline
+    | by the scheduler. A rejected applicant may change the application again
+    | reapply_after_hours after the rejection.
+    |
+    */
+
+    'tayars' => [
+        'location_updates_per_minute' => (int) env('TAYAR_LOCATION_UPDATES_PER_MINUTE', 20),
+        'offline_after_minutes' => (int) env('TAYAR_OFFLINE_AFTER_MINUTES', 5),
+        'nearest_radius_km' => (float) env('TAYAR_NEAREST_RADIUS_KM', 5),
+        'reapply_after_hours' => (int) env('TAYAR_REAPPLY_AFTER_HOURS', 24),
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
     | Pagination
     |--------------------------------------------------------------------------
     */
