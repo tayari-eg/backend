@@ -15,6 +15,7 @@ return [
     'offer_unavailable' => 'This order is no longer available.',
     'offer_session_changed' => 'This offer was for a work session that has ended. Stay online to get new offers.',
     'tayar_busy' => 'Finish your current orders before accepting another one.',
+    'tayar_owes_cash' => 'Hand in the cash you collected before accepting new orders.',
     'wrong_step' => 'This order can\'t move to that step now.',
     'codes_not_sent' => 'The receiver\'s codes have not been sent yet. Try again in a minute.',
     'codes_locked' => 'Too many wrong codes. Ask the receiver to request new codes from the tracking link, or contact support.',

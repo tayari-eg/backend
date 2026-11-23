@@ -277,6 +277,30 @@ return [
             ],
         ],
 
+        [
+            'name' => '9. Wallet',
+            'description' => <<<'MD'
+                The business's money with Tayari (business accounts only; others get 403). Every order is cash for now: the tayar collects from the receiver and hands it to Tayari, and Tayari pays the business.
+
+                1. **Wallet** page → **Get my wallet**: `balance` (what Tayari owes the business; negative when it owes fees) and `payable_balance`.
+                2. A delivered order adds `goods_payout` (the goods value) and, when the business pays the shipping, takes `shipping_fee`. A cancellation after the free period takes `cancel_fee_charged`.
+                3. Tayari pays by transfer, recorded by staff (`payout` rows show the transfer `reference`). There is no withdrawal button yet.
+                4. **Transactions** table → **Get my wallet transactions**, newest first, with a **Load more** button using `cursor` = `meta.next_cursor` and a type filter. A row with an `order` links to the order page.
+                MD,
+            'requests' => [
+                [
+                    'route' => 'api.v1.client.wallet.show',
+                    'name' => 'Get my wallet',
+                    'screen' => '**Wallet** page, on open.',
+                ],
+                [
+                    'route' => 'api.v1.client.wallet.transactions',
+                    'name' => 'Get my wallet transactions',
+                    'screen' => '**Wallet** page, the transactions table: on open, on **Load more** and when the type filter changes.',
+                ],
+            ],
+        ],
+
     ],
 
 ];

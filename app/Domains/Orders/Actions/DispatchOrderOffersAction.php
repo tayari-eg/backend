@@ -13,6 +13,9 @@ use App\Domains\Pricing\Data\Distance;
 use App\Domains\Pricing\Data\GeoPoint;
 use App\Domains\Tayars\Models\TayarProfile;
 use App\Domains\Tayars\Models\TayarWorkSession;
+use App\Domains\Wallet\Enums\WalletType;
+use App\Domains\Wallet\Models\Wallet;
+use Brick\Math\BigDecimal;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
@@ -108,6 +111,11 @@ class DispatchOrderOffersAction
         $profiles = TayarProfile::query()
             ->nearestOnline((float) $order->pickup_lat, (float) $order->pickup_lng, $radiusKm)
             ->where('tayar_profiles.user_id', '!=', $order->sender_id)
+            // Tayars owing more cash than allowed get no new offers until they hand it in.
+            ->whereNotIn('tayar_profiles.user_id', Wallet::query()
+                ->select('user_id')
+                ->where('type', WalletType::Tayar)
+                ->where('balance', '<', (string) BigDecimal::of(config('tayari.wallet.max_cash_owed'))->negated()))
             ->whereNotIn('tayar_profiles.user_id', OrderOffer::query()
                 ->select('tayar_id')
                 ->where('order_id', $order->id)

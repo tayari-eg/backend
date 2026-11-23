@@ -9,7 +9,11 @@ use App\Domains\Orders\Models\Order;
 use App\Domains\Orders\Models\OrderOffer;
 use App\Domains\Tayars\Models\TayarProfile;
 use App\Domains\Tayars\Models\TayarWorkSession;
+use App\Domains\Wallet\Data\WalletSummary;
+use App\Domains\Wallet\Enums\WalletType;
+use App\Domains\Wallet\Models\Wallet;
 use App\Models\User;
+use Brick\Math\BigDecimal;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
 
@@ -20,10 +24,13 @@ class AcceptOfferAction
      * row, and the order's other open offers withdrawn; when this brings the tayar to the mode's limit, the tayar's open
      * offers on other orders are withdrawn too. Locks the order, then the tayar profile (so one tayar can't take two
      * orders at once), then the offers: a cancel locks the order first too, so whoever commits first wins. Accepting an
-     * offer already accepted by this tayar returns the order again while it is still pending with this tayar.
+     * offer already accepted by this tayar returns the order again while it is still pending with this tayar. The tayar's
+     * wallet is locked after the offer, to refuse a tayar owing more cash than tayari.wallet.max_cash_owed; the bulk
+     * withdrawals of the other open offers run after it, so their offer rows are locked after the wallet.
      *
      * @throws ValidationException (errors.offer) when the offer expired, the order is no longer available, the offer
-     *                             belongs to an older work session, or the tayar already holds as many orders as the mode allows
+     *                             belongs to an older work session, the tayar already holds as many orders as the mode
+     *                             allows, or the tayar owes too much cash
      */
     public function handle(OrderOffer $offer, User $tayar): Order
     {
@@ -59,6 +66,13 @@ class AcceptOfferAction
 
             if ($activeOrders >= $session->mode->code->maxActiveOrders()) {
                 return 'tayar_busy';
+            }
+
+            // Locked after the order, the tayar profile and the offer; the bulk offer withdrawals below come after it.
+            $wallet = Wallet::query()->where('user_id', $tayar->id)->where('type', WalletType::Tayar)->lockForUpdate()->first();
+
+            if ($wallet !== null && WalletSummary::owesTooMuchCash(BigDecimal::of((string) $wallet->balance))) {
+                return 'tayar_owes_cash';
             }
 
             $order->forceFill([

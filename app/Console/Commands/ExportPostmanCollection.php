@@ -105,6 +105,10 @@ class ExportPostmanCollection extends Command
         ':resend_codes_per_hour' => ['TRACKING_RESEND_CODES_PER_HOUR', 'tracking.resend_codes_per_hour'],
         ':tracking_per_minute' => ['TRACKING_REQUESTS_PER_MINUTE', 'tracking.requests_per_minute'],
         ':code_requests_per_minute' => ['TRACKING_CODE_REQUESTS_PER_MINUTE', 'tracking.code_requests_per_minute'],
+        ':max_cash_owed' => ['WALLET_MAX_CASH_OWED', 'wallet.max_cash_owed'],
+        ':signup_bonus' => ['WALLET_SIGNUP_BONUS', 'wallet.signup_bonus'],
+        ':bonus_unlock_delivered_orders' => ['WALLET_BONUS_UNLOCK_DELIVERED_ORDERS', 'wallet.bonus_unlock_delivered_orders'],
+        ':available_from_hour' => ['WALLET_AVAILABLE_FROM_HOUR', 'wallet.available_from_hour'],
         ':per_page' => [null, 'pagination.per_page'],
         ':max_per_page' => [null, 'pagination.max_per_page'],
     ];

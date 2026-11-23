@@ -177,6 +177,10 @@ return [
                 | `order_on_the_way` | the sender, when the receiver confirmed and the order is on the way | `order_id` | **Order details** (client mode) |
                 | `order_delivered` | the sender, when the receiver's delivery code was accepted | `order_id` | **Order details** (client mode) |
                 | `order_not_delivered` | the sender; also the tayar when staff close the order (receiver unreachable) | `order_id` | **Order details** (client mode) or **My order** (tayar mode) |
+                | `wallet_payout_recorded` | a tayar or business Tayari paid | `wallet_id`, `posting_id` | **Wallet** (tayar or client mode) |
+                | `wallet_cash_received` | a tayar whose cash hand-in staff recorded | `wallet_id`, `posting_id` | **Wallet** (tayar mode) |
+                | `wallet_adjusted` | the owner of a wallet staff adjusted, or whose payout or hand-in staff reversed | `wallet_id`, `posting_id` | **Wallet** (tayar or client mode) |
+                | `wallet_signup_bonus` | a newly approved tayar | `wallet_id`, `posting_id` | **Wallet** (tayar mode) |
                 - Android uses the default notification channel (no `channel_id` is sent). If the app later creates its own channel, the server can send its id.
 
                 **Handling it:**
@@ -531,7 +535,7 @@ return [
                 1. **My orders** screen: two tabs, Active and Past → **Get my orders** with `status` = `active` or `past`. Infinite scroll with `cursor` = `meta.next_cursor`.
                 2. **My order** screen → **Get my order**: the pickup (with `contact_phone`), the sender (`phone`, `business_name`), the receiver (`name`, `phone`), the drop-off and my earning. Call buttons for each phone while the order is active; once it is past, the phones are null and only the names show.
                 3. In the zone and area modes a tayar holds :max_active_orders accepted order at a time (long distance: up to :max_active_orders_long_distance); while at the limit, no new offers arrive.
-                4. An `order_cancelled` push means the sender or staff cancelled the order (`cancelled_by_type`): reload it, show it as cancelled and stop the trip. When the sender cancelled after the free period, `cancel_fee` shows what the sender owes the tayar (paid out later through the wallet).
+                4. An `order_cancelled` push means the sender or staff cancelled the order (`cancelled_by_type`): reload it, show it as cancelled and stop the trip. When the sender cancelled after the free period, `cancel_fee` shows what the sender owes the tayar (added to the tayar's wallet).
                 MD,
             'requests' => [
                 [
@@ -588,6 +592,55 @@ return [
                     'name' => 'Mark not delivered',
                     'screen' => '**Not delivered** dialog, when the tayar enters the refusal code and picks a reason.',
                     'next' => 'Show the order as not delivered and move it to the Past tab.',
+                ],
+            ],
+        ],
+
+        [
+            'name' => '18. Tayar mode · Wallet',
+            'description' => <<<'MD'
+                The tayar's money with Tayari. Every order is cash for now: the tayar collects `amount_to_collect` from the receiver and owes it to Tayari.
+
+                1. **Wallet** screen → **Get my wallet**: show `balance` big (green when Tayari owes the tayar, red when the tayar owes), with `payable_balance` (what Tayari can pay now) and `cash_to_hand_in` (cash to hand in).
+                2. A delivered order adds `delivery_earning` and takes `cash_collected`, so the balance goes negative while the tayar holds cash. When `blocked_from_offers` is true (owing more than EGP :max_cash_owed), show a banner "Hand in your cash to get new orders": no new offers arrive and accepting one answers 422. The tayar can still finish current orders and stay online.
+                3. Cash is handed in to Tayari outside the app (office or transfer); staff record it and the tayar gets a `wallet_cash_received` push. Payouts are made by staff too (`wallet_payout_recorded` push); there is no withdrawal button yet.
+                4. `locked_bonus`: the EGP :signup_bonus welcome bonus counts in the balance but can't be paid out until `bonus_unlock_delivered_orders` delivered orders. Earnings and bonuses can be paid out from :available_from_hour:00 Cairo time on the day they are earned (`available_at`).
+                5. **Transactions** list under the balance → **Get my wallet transactions**, newest first, infinite scroll with `cursor` = `meta.next_cursor`, with type filter chips. A row with an `order` opens **My order**. Reload the wallet and the list on any `wallet_*` push.
+                MD,
+            'requests' => [
+                [
+                    'route' => 'api.v1.tayar.wallet.show',
+                    'name' => 'Get my wallet',
+                    'screen' => '**Wallet** screen (tayar mode), on open, on pull to refresh and on any `wallet_*` push.',
+                ],
+                [
+                    'route' => 'api.v1.tayar.wallet.transactions',
+                    'name' => 'Get my wallet transactions',
+                    'screen' => '**Wallet** screen (tayar mode), the transactions list: on open, on scroll and when a type chip changes.',
+                ],
+            ],
+        ],
+
+        [
+            'name' => '19. Client mode · Wallet',
+            'description' => <<<'MD'
+                A business's money with Tayari (business accounts only; others get 403). Every order is cash for now: the tayar collects from the receiver and hands it to Tayari, and Tayari pays the business.
+
+                1. **Wallet** screen → **Get my wallet**: `balance` (what Tayari owes the business; negative when the business owes fees) and `payable_balance`.
+                2. A delivered order adds `goods_payout` (the goods value) and, when the business pays the shipping, takes `shipping_fee`. A cancellation after the free period takes `cancel_fee_charged`.
+                3. Tayari pays by transfer, recorded by staff (`payout`, with the transfer `reference`); the business gets a `wallet_payout_recorded` push. There is no withdrawal button yet.
+                4. **Transactions** list → **Get my wallet transactions**, newest first, infinite scroll with `cursor` = `meta.next_cursor`. A row with an `order` opens **Order details**.
+                MD,
+            'requests' => [
+                [
+                    'route' => 'api.v1.client.wallet.show',
+                    'name' => 'Get my business wallet',
+                    'screen' => '**Wallet** screen (client mode, business accounts), on open, on pull to refresh and on any `wallet_*` push.',
+                ],
+                [
+                    'route' => 'api.v1.client.wallet.transactions',
+                    'name' => 'Get my business wallet transactions',
+                    'screen' => '**Wallet** screen (client mode), the transactions list: on open and on scroll.',
                 ],
             ],
         ],

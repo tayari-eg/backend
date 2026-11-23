@@ -214,6 +214,28 @@ return [
 
     /*
     |--------------------------------------------------------------------------
+    | Wallet
+    |--------------------------------------------------------------------------
+    |
+    | Every order is cash for now: the tayar collects amount_to_collect and
+    | owes it to Tayari. A tayar owing more than max_cash_owed (net) gets no
+    | new offers until staff record the cash handed in. A newly approved
+    | tayar gets signup_bonus once; it can't be paid out until the tayar has
+    | bonus_unlock_delivered_orders delivered orders. Tayar earnings and
+    | bonuses can be paid out from available_from_hour (business time) on
+    | the day they are earned.
+    |
+    */
+
+    'wallet' => [
+        'max_cash_owed' => (string) env('WALLET_MAX_CASH_OWED', '3000.00'),
+        'signup_bonus' => (string) env('WALLET_SIGNUP_BONUS', '100.00'),
+        'bonus_unlock_delivered_orders' => (int) env('WALLET_BONUS_UNLOCK_DELIVERED_ORDERS', 5),
+        'available_from_hour' => (int) env('WALLET_AVAILABLE_FROM_HOUR', 23),
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
     | Pagination
     |--------------------------------------------------------------------------
     */

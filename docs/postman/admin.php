@@ -598,7 +598,7 @@ return [
                 1. **Orders** page: a table with status, sender, tayar, category, mode and date filters, and a search box (order code or phone) → **List orders**.
                 2. **Order details** page → **Get order**: the fee breakdown (the tayar earning and platform fee are estimates until a tayar accepts), the tayar and vehicle once accepted, and the status history with who made each change (no name = the system).
                 3. **Offers** tab on the order details page → **List order offers**: which tayars got the order in each round, and who accepted, rejected or let it expire.
-                4. **Cancel** button (only while `can_cancel` is true: before pickup, also after a tayar accepted) → a dialog with **Get cancel reasons** and a note → **Cancel order**. Cancelling an accepted order notifies the tayar and never records a fee; a sender who cancelled after the free period shows `cancel_fee` and `cancel_fee_owed_to` (recorded only, settled later by the wallet).
+                4. **Cancel** button (only while `can_cancel` is true: before pickup, also after a tayar accepted) → a dialog with **Get cancel reasons** and a note → **Cancel order**. Cancelling an accepted order notifies the tayar and never records a fee; a sender who cancelled after the free period shows `cancel_fee` and `cancel_fee_owed_to` (charged to the business's wallet and added to the tayar's).
                 5. **Close as not delivered** button (picked up or on the way; `orders.manage`): when the receiver can't be reached → a dialog with **Get not-delivered reasons** and a required note → **Close as not delivered**. The only status staff can force; the sender and the tayar are both notified.
                 6. **Resend receiver codes** button (picked up or on the way; `orders.manage`), for a receiver who lost the SMS or hit the lock-out (`receiver_codes.locked`). Staff never see the codes.
                 7. The status history shows where the tayar was for each step (`lat`, `lng`), and the pickup photos. Delivery does not check payment yet; receivers get codes only once a real SMS provider is configured.
@@ -645,6 +645,107 @@ return [
                     'name' => 'Cancel order',
                     'screen' => '**Order details** page, when the staff member confirms the **Cancel** dialog.',
                     'next' => 'Show the returned order: `status` = `cancelled` and the new history row.',
+                ],
+            ],
+        ],
+
+        [
+            'name' => '16. Wallets',
+            'description' => <<<'MD'
+                The ledger of every money movement between Tayari, businesses and tayars (`wallets.view` to see, `wallets.settle` for payouts and cash hand-ins, `wallets.adjust` for adjustments and reversals). Every order is cash for now: tayars collect from receivers and owe the cash to Tayari.
+
+                1. **Wallets** page: a table with type and **Owing** filters, a search box (phone or name) and sort by balance → **List wallets**. Tayari's own wallets have `type` = `system` (`revenue` = commission, `bonus_expense`, `adjustments`, `treasury` = money in Tayari's bank, shown as its mirror). All balances add up to zero.
+                2. **Wallet details** page → **Get wallet** (with `summary`) and **List wallet transactions** (newest first, **Load more** with `cursor`).
+                3. **Record payout** (tayar or business) or **Record cash handed in** (tayar) → a form with amount, reference and note → **Record settlement** with a new `idempotency_key` per form. The amount is capped at `summary.payable_balance` or `summary.cash_to_hand_in`. A tayar owing more than EGP :max_cash_owed gets no new offers until the cash is recorded.
+                4. **Adjust** (`wallets.adjust`) → a form with a signed amount, a reason from **List adjustment reasons** (`is_active` = true) and a required note → **Adjust wallet**.
+                5. **Reverse** on a transaction row (only while `posting.can_reverse`) → a dialog with a reason and a note → **Reverse posting**. Entries are never edited or deleted; order, fee and bonus entries are corrected with an adjustment.
+                MD,
+            'requests' => [
+                [
+                    'route' => 'api.v1.admin.wallets.index',
+                    'name' => 'List wallets',
+                    'screen' => '**Wallets** page, on open and when a filter, the search, the sort or the page changes.',
+                ],
+                [
+                    'route' => 'api.v1.admin.wallets.show',
+                    'name' => 'Get wallet',
+                    'screen' => '**Wallet details** page, on open and after every settlement, adjustment or reversal.',
+                ],
+                [
+                    'route' => 'api.v1.admin.wallets.transactions',
+                    'name' => 'List wallet transactions',
+                    'screen' => '**Wallet details** page, the transactions table: on open, on **Load more** and when the type filter changes.',
+                ],
+                [
+                    'route' => 'api.v1.admin.wallets.settlements.store',
+                    'name' => 'Record settlement',
+                    'screen' => '**Record payout** or **Record cash handed in** form on the wallet details page, when the staff member clicks **Save**.',
+                    'next' => 'Close the form and reload the wallet and its transactions.',
+                ],
+                [
+                    'route' => 'api.v1.admin.wallets.adjustments.store',
+                    'name' => 'Adjust wallet',
+                    'screen' => '**Adjust** form on the wallet details page, when the staff member clicks **Save**.',
+                    'next' => 'Close the form and reload the wallet and its transactions.',
+                ],
+                [
+                    'route' => 'api.v1.admin.wallet-postings.reverse',
+                    'name' => 'Reverse posting',
+                    'screen' => '**Reverse** dialog on a transaction row, when the staff member confirms.',
+                    'next' => 'Reload the wallet and its transactions.',
+                ],
+            ],
+        ],
+
+        [
+            'name' => '17. Wallet adjustment reasons',
+            'description' => <<<'MD'
+                The reasons staff pick for adjustments and reversals. Needs `wallets.view` to see, `wallets.adjust` to change:
+
+                1. **Adjustment reasons** page with tabs **Active** and **Inactive** → **List adjustment reasons** with `is_active`, an optional `search`, paged, in sort order.
+                2. **Add** opens the form (Arabic name, English name, active, sort order) → **Create adjustment reason**.
+                3. **Edit** loads the reason → **Get adjustment reason**, then **Save** → **Update adjustment reason**.
+                4. **Activate** / **Deactivate** on a row; the row moves to the other tab.
+                5. **Delete** (only when `postings_count` is 0) → **Delete adjustment reason**; a reason in use shows the "deactivate it instead" message.
+                MD,
+            'requests' => [
+                [
+                    'route' => 'api.v1.admin.wallet-adjustment-reasons.index',
+                    'name' => 'List adjustment reasons',
+                    'screen' => '**Adjustment reasons** page, on open, on tab change, on search and on page change; also the reason picker in the **Adjust** and **Reverse** dialogs (`is_active` = true).',
+                ],
+                [
+                    'route' => 'api.v1.admin.wallet-adjustment-reasons.show',
+                    'name' => 'Get adjustment reason',
+                    'screen' => '**Edit adjustment reason** form, on open.',
+                ],
+                [
+                    'route' => 'api.v1.admin.wallet-adjustment-reasons.store',
+                    'name' => 'Create adjustment reason',
+                    'screen' => '**Add adjustment reason** form, when the staff member clicks **Save**.',
+                    'next' => 'Close the form and reload the list.',
+                ],
+                [
+                    'route' => 'api.v1.admin.wallet-adjustment-reasons.update',
+                    'name' => 'Update adjustment reason',
+                    'screen' => '**Edit adjustment reason** form, when the staff member clicks **Save**.',
+                    'next' => 'Close the form and update the row.',
+                ],
+                [
+                    'route' => 'api.v1.admin.wallet-adjustment-reasons.activate',
+                    'name' => 'Activate adjustment reason',
+                    'screen' => '**Adjustment reasons** page (Inactive tab), when the staff member clicks **Activate** on a row.',
+                ],
+                [
+                    'route' => 'api.v1.admin.wallet-adjustment-reasons.deactivate',
+                    'name' => 'Deactivate adjustment reason',
+                    'screen' => '**Adjustment reasons** page (Active tab), when the staff member clicks **Deactivate** on a row.',
+                ],
+                [
+                    'route' => 'api.v1.admin.wallet-adjustment-reasons.destroy',
+                    'name' => 'Delete adjustment reason',
+                    'screen' => '**Adjustment reasons** page, when the staff member confirms the **Delete** dialog.',
+                    'next' => 'Remove the row. On 422, keep the dialog open with the message and a **Deactivate** button.',
                 ],
             ],
         ],

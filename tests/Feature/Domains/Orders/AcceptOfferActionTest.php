@@ -15,6 +15,9 @@ use App\Domains\Orders\Models\OrderReason;
 use App\Domains\Tayars\Actions\GoOfflineAction;
 use App\Domains\Tayars\Data\WorkSessionSettings;
 use App\Domains\Tayars\Models\TayarProfile;
+use App\Domains\Wallet\Enums\TransactionType;
+use App\Domains\Wallet\Enums\WalletType;
+use App\Domains\Wallet\Models\Wallet;
 use App\Models\User;
 use Illuminate\Database\Events\QueryExecuted;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -168,6 +171,20 @@ class AcceptOfferActionTest extends TestCase
         $this->assertSame(OfferStatus::Offered, $this->offer->refresh()->status);
     }
 
+    public function test_a_tayar_owing_more_cash_than_allowed_is_refused_and_at_the_limit_may_accept(): void
+    {
+        config(['tayari.wallet.max_cash_owed' => '3000.00']);
+        $wallet = Wallet::ensureFor($this->tayar->user_id, WalletType::Tayar);
+        $this->postToWallet($wallet, '-3000.01', TransactionType::CashCollected);
+
+        $this->assertRefused('tayar_owes_cash');
+        $this->assertSame(OfferStatus::Offered, $this->offer->refresh()->status);
+
+        $this->postToWallet($wallet, '0.01', TransactionType::CashHandedIn);
+
+        $this->assertSame(OrderStatus::Pending, $this->accept()->status);
+    }
+
     public function test_reaching_the_limit_withdraws_the_tayars_other_offers_and_the_next_sweep_offers_that_order_to_others(): void
     {
         $orderB = Order::factory()->create();
@@ -209,7 +226,7 @@ class AcceptOfferActionTest extends TestCase
         $this->assertSame(OfferStatus::Accepted, $this->offer->refresh()->status);
     }
 
-    public function test_it_locks_the_order_then_the_tayar_profile_then_the_offer(): void
+    public function test_it_locks_the_order_then_the_tayar_profile_then_the_offer_then_the_wallet(): void
     {
         $lockedTables = [];
         DB::listen(function (QueryExecuted $query) use (&$lockedTables): void {
@@ -220,6 +237,6 @@ class AcceptOfferActionTest extends TestCase
 
         $this->accept();
 
-        $this->assertSame(['orders', 'tayar_profiles', 'order_offers'], $lockedTables);
+        $this->assertSame(['orders', 'tayar_profiles', 'order_offers', 'wallets'], $lockedTables);
     }
 }

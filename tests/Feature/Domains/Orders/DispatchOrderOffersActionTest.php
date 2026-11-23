@@ -16,6 +16,9 @@ use App\Domains\Tayars\Models\TayarProfile;
 use App\Domains\Tayars\Models\TayarWorkSession;
 use App\Domains\Tayars\Models\Vehicle;
 use App\Domains\Tayars\Models\VehicleType;
+use App\Domains\Wallet\Enums\TransactionType;
+use App\Domains\Wallet\Enums\WalletType;
+use App\Domains\Wallet\Models\Wallet;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Event;
 use Tests\TestCase;
@@ -141,6 +144,20 @@ class DispatchOrderOffersActionTest extends TestCase
         $order = Order::factory()->forSender($tayar->user()->firstOrFail())->create();
 
         $this->assertSame([], $this->dispatch($order));
+    }
+
+    public function test_a_tayar_owing_more_cash_than_allowed_gets_no_offers(): void
+    {
+        config(['tayari.wallet.max_cash_owed' => '3000.00']);
+        $owing = $this->tayarAt('0.1');
+        $atTheLimit = $this->tayarAt('1');
+        $this->postToWallet(Wallet::ensureFor($owing->user_id, WalletType::Tayar), '-3000.01', TransactionType::CashCollected);
+        $this->postToWallet(Wallet::ensureFor($atTheLimit->user_id, WalletType::Tayar), '-3000.00', TransactionType::CashCollected);
+        $order = Order::factory()->create();
+
+        $this->dispatch($order);
+
+        $this->assertSame([$atTheLimit->user_id], $this->offeredTayarIds($order));
     }
 
     public function test_an_area_order_goes_only_to_tayars_whose_own_area_holds_both_points(): void

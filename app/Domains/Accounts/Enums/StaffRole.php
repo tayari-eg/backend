@@ -38,6 +38,8 @@ enum StaffRole: string
                 StaffPermission::PricingRulesView,
                 StaffPermission::OrdersView,
                 StaffPermission::OrdersManage,
+                StaffPermission::WalletsView,
+                StaffPermission::WalletsSettle,
             ],
             self::Support => [
                 StaffPermission::BusinessTypesView,
@@ -51,6 +53,7 @@ enum StaffRole: string
                 StaffPermission::AreasView,
                 StaffPermission::PricingRulesView,
                 StaffPermission::OrdersView,
+                StaffPermission::WalletsView,
             ],
         };
     }

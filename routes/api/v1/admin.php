@@ -16,6 +16,9 @@ use App\Http\Controllers\Api\V1\Admin\TayarApplicationReviewController;
 use App\Http\Controllers\Api\V1\Admin\TayarController;
 use App\Http\Controllers\Api\V1\Admin\UserController;
 use App\Http\Controllers\Api\V1\Admin\VehicleTypeController;
+use App\Http\Controllers\Api\V1\Admin\WalletAdjustmentReasonController;
+use App\Http\Controllers\Api\V1\Admin\WalletController;
+use App\Http\Controllers\Api\V1\Admin\WalletPostingController;
 use Illuminate\Support\Facades\Route;
 
 Route::middleware(['auth:sanctum', 'staff'])->group(function (): void {
@@ -154,6 +157,28 @@ Route::middleware(['auth:sanctum', 'staff'])->group(function (): void {
         Route::post('orders/{order}/cancel', [OrderController::class, 'cancel'])->name('orders.cancel');
         Route::post('orders/{order}/not-delivered', [OrderController::class, 'notDelivered'])->name('orders.not-delivered');
         Route::post('orders/{order}/resend-codes', [OrderController::class, 'resendCodes'])->name('orders.resend-codes');
+    });
+
+    Route::middleware('permission:'.StaffPermission::WalletsView->value)->group(function (): void {
+        Route::get('wallets', [WalletController::class, 'index'])->name('wallets.index');
+        Route::get('wallets/{wallet}', [WalletController::class, 'show'])->name('wallets.show');
+        Route::get('wallets/{wallet}/transactions', [WalletController::class, 'transactions'])->name('wallets.transactions');
+        Route::get('wallet-adjustment-reasons', [WalletAdjustmentReasonController::class, 'index'])->name('wallet-adjustment-reasons.index');
+        Route::get('wallet-adjustment-reasons/{walletAdjustmentReason}', [WalletAdjustmentReasonController::class, 'show'])->name('wallet-adjustment-reasons.show');
+    });
+
+    Route::post('wallets/{wallet}/settlements', [WalletController::class, 'settle'])
+        ->middleware('permission:'.StaffPermission::WalletsSettle->value)
+        ->name('wallets.settlements.store');
+
+    Route::middleware('permission:'.StaffPermission::WalletsAdjust->value)->group(function (): void {
+        Route::post('wallets/{wallet}/adjustments', [WalletController::class, 'adjust'])->name('wallets.adjustments.store');
+        Route::post('wallet-postings/{walletPosting}/reverse', [WalletPostingController::class, 'reverse'])->name('wallet-postings.reverse');
+        Route::post('wallet-adjustment-reasons', [WalletAdjustmentReasonController::class, 'store'])->name('wallet-adjustment-reasons.store');
+        Route::patch('wallet-adjustment-reasons/{walletAdjustmentReason}', [WalletAdjustmentReasonController::class, 'update'])->name('wallet-adjustment-reasons.update');
+        Route::post('wallet-adjustment-reasons/{walletAdjustmentReason}/activate', [WalletAdjustmentReasonController::class, 'activate'])->name('wallet-adjustment-reasons.activate');
+        Route::post('wallet-adjustment-reasons/{walletAdjustmentReason}/deactivate', [WalletAdjustmentReasonController::class, 'deactivate'])->name('wallet-adjustment-reasons.deactivate');
+        Route::delete('wallet-adjustment-reasons/{walletAdjustmentReason}', [WalletAdjustmentReasonController::class, 'destroy'])->name('wallet-adjustment-reasons.destroy');
     });
 
     Route::middleware('permission:'.StaffPermission::StaffManage->value)->group(function (): void {

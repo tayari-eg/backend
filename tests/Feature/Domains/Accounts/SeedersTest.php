@@ -25,7 +25,13 @@ use App\Domains\Tayars\Enums\TayarStatus;
 use App\Domains\Tayars\Enums\VehicleStatus;
 use App\Domains\Tayars\Models\TayarProfile;
 use App\Domains\Tayars\Models\VehicleType;
+use App\Domains\Wallet\Enums\SystemWallet;
+use App\Domains\Wallet\Enums\WalletType;
+use App\Domains\Wallet\Models\Wallet;
+use App\Domains\Wallet\Models\WalletAdjustmentReason;
+use App\Domains\Wallet\Models\WalletPosting;
 use App\Models\User;
+use Brick\Math\BigDecimal;
 use Database\Seeders\BusinessTypeSeeder;
 use Database\Seeders\DatabaseSeeder;
 use Database\Seeders\DemoDataSeeder;
@@ -33,6 +39,7 @@ use Database\Seeders\ModeSeeder;
 use Database\Seeders\OrderReasonSeeder;
 use Database\Seeders\RolesAndPermissionsSeeder;
 use Database\Seeders\SuperAdminSeeder;
+use Database\Seeders\SystemWalletSeeder;
 use Database\Seeders\VehicleTypeSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
@@ -55,8 +62,8 @@ class SeedersTest extends TestCase
         $this->assertSame(['admin', 'ops', 'super_admin', 'support'], Role::query()->where('guard_name', 'web')->orderBy('name')->pluck('name')->all());
         $this->assertSame($this->permissionNames(StaffRole::Admin), $this->rolePermissions('admin'));
         $this->assertNotContains(StaffPermission::StaffManage->value, $this->rolePermissions('admin'));
-        $this->assertSame(['areas.view', 'business_profiles.review', 'business_profiles.view', 'business_types.view', 'categories.view', 'modes.view', 'national_ids.review', 'national_ids.view', 'orders.manage', 'orders.view', 'pricing_rules.view', 'tayars.review', 'tayars.view', 'users.block', 'users.view', 'vehicle_types.view'], $this->rolePermissions('ops'));
-        $this->assertSame(['areas.view', 'business_profiles.view', 'business_types.view', 'categories.view', 'modes.view', 'national_ids.view', 'orders.view', 'pricing_rules.view', 'tayars.view', 'users.view', 'vehicle_types.view'], $this->rolePermissions('support'));
+        $this->assertSame(['areas.view', 'business_profiles.review', 'business_profiles.view', 'business_types.view', 'categories.view', 'modes.view', 'national_ids.review', 'national_ids.view', 'orders.manage', 'orders.view', 'pricing_rules.view', 'tayars.review', 'tayars.view', 'users.block', 'users.view', 'vehicle_types.view', 'wallets.settle', 'wallets.view'], $this->rolePermissions('ops'));
+        $this->assertSame(['areas.view', 'business_profiles.view', 'business_types.view', 'categories.view', 'modes.view', 'national_ids.view', 'orders.view', 'pricing_rules.view', 'tayars.view', 'users.view', 'vehicle_types.view', 'wallets.view'], $this->rolePermissions('support'));
         $this->assertContains(StaffPermission::PricingRulesManage->value, $this->rolePermissions('admin'));
         $this->assertContains(StaffPermission::OrdersManage->value, $this->rolePermissions('admin'));
         $this->assertContains(StaffPermission::TayarsReview->value, $this->rolePermissions('admin'));
@@ -186,7 +193,20 @@ class SeedersTest extends TestCase
         $this->assertTrue(OrderReason::query()->ofType(OrderReasonType::NotDelivered)->where('name->en', 'The receiver can\'t be reached')->exists());
     }
 
-    public function test_the_database_seeder_runs_all_six(): void
+    public function test_the_system_wallets_are_seeded_once_and_a_second_run_changes_nothing(): void
+    {
+        $this->seed(SystemWalletSeeder::class);
+        Wallet::query()->where('system_code', SystemWallet::Treasury)->update(['balance' => '-50.00']);
+        $before = Wallet::query()->orderBy('id')->get()->toArray();
+
+        $this->seed(SystemWalletSeeder::class);
+
+        $this->assertSame(array_map(fn (SystemWallet $code): string => $code->value, SystemWallet::cases()), Wallet::query()->orderBy('id')->pluck('system_code')->map(fn (SystemWallet $code): string => $code->value)->all());
+        $this->assertSame($before, Wallet::query()->orderBy('id')->get()->toArray());
+        $this->assertSame([WalletType::System], Wallet::query()->distinct()->pluck('type')->all());
+    }
+
+    public function test_the_database_seeder_runs_all_eight(): void
     {
         config(['tayari.super_admin' => ['name' => 'Owner', 'phone' => '01012345678', 'password' => 'owner-secret']]);
 
@@ -197,6 +217,8 @@ class SeedersTest extends TestCase
         $this->assertDatabaseCount('vehicle_types', 4);
         $this->assertDatabaseCount('modes', 3);
         $this->assertDatabaseCount('order_reasons', 10);
+        $this->assertSame(count(SystemWallet::cases()), Wallet::query()->where('type', WalletType::System)->count());
+        $this->assertSame(['Correction', 'Compensation', 'Penalty', 'Other'], WalletAdjustmentReason::query()->orderBy('sort_order')->get()->map(fn (WalletAdjustmentReason $reason): string => $reason->getTranslation('name', 'en'))->all());
         $this->assertTrue(User::query()->sole()->hasRole(StaffRole::SuperAdmin->value));
     }
 
@@ -307,14 +329,15 @@ class SeedersTest extends TestCase
         $this->assertSame(['local'], DB::table('media')->distinct()->pluck('disk')->all());
 
         // The approved business has an order looking for a tayar (area mode, offered to the online demo tayar), a
-        // cancelled food order (zone mode, nobody to offer it to) and an order the demo tayar accepted (area mode).
+        // cancelled food order (zone mode, nobody to offer it to), an order the demo tayar accepted (area mode) and an
+        // order the demo tayar delivered (area mode).
         $orders = Order::query()->with(['mode', 'statusHistories', 'cancelReason', 'offers', 'media'])->orderBy('id')->get();
-        $this->assertSame(array_fill(0, 3, $businesses[0]->user_id), $orders->pluck('sender_id')->all());
-        $this->assertSame([OrderStatus::LookingForTayar, OrderStatus::Cancelled, OrderStatus::Ongoing], $orders->pluck('status')->all());
-        $this->assertSame([ModeCode::Area, ModeCode::Zone, ModeCode::Area], $orders->map(fn (Order $order): ModeCode => $order->mode->code)->all());
-        $this->assertSame(['0.00', '10.00', '0.00'], $orders->pluck('food_extra')->all());
+        $this->assertSame(array_fill(0, 4, $businesses[0]->user_id), $orders->pluck('sender_id')->all());
+        $this->assertSame([OrderStatus::LookingForTayar, OrderStatus::Cancelled, OrderStatus::Ongoing, OrderStatus::Delivered], $orders->pluck('status')->all());
+        $this->assertSame([ModeCode::Area, ModeCode::Zone, ModeCode::Area, ModeCode::Area], $orders->map(fn (Order $order): ModeCode => $order->mode->code)->all());
+        $this->assertSame(['0.00', '10.00', '0.00', '0.00'], $orders->pluck('food_extra')->all());
         $this->assertSame(ShippingPaidBy::Receiver, $orders[0]->shipping_paid_by);
-        $this->assertSame([1, 2, 4], $orders->map(fn (Order $order): int => $order->statusHistories->count())->all());
+        $this->assertSame([1, 2, 4, 5], $orders->map(fn (Order $order): int => $order->statusHistories->count())->all());
         // Picked up, then on the way: the receiver's codes went out (hashes only) and the photo is stored.
         $this->assertNotNull($orders[2]->delivery_code_hash);
         $this->assertNotNull($orders[2]->codes_sent_at);
@@ -329,6 +352,16 @@ class SeedersTest extends TestCase
         $this->assertSame([], $orders[1]->offers->all());
         $this->assertSame([[$demoTayar->user_id, OfferStatus::Accepted]], $orders[2]->offers->map(fn (OrderOffer $offer): array => [$offer->tayar_id, $offer->status])->all());
         $this->assertSame([$demoTayar->user_id, $demoTayar->current_work_session_id], [$orders[2]->tayar_id, $orders[2]->work_session_id]);
+        $this->assertSame([], $orders[3]->offers->all());
+        $this->assertSame($demoTayar->user_id, $orders[3]->tayar_id);
+
+        // Wallets: the signup bonus, order 4's delivery (cash, shipping paid by the receiver), EGP 500 cash handed in
+        // and a EGP 300 payout to the business; every balance adds up to zero.
+        $this->assertSame(['signup_bonus', 'order_delivered', 'cash_handed_in', 'payout'], WalletPosting::query()->orderBy('id')->pluck('type')->map->value->all());
+        $tayarBalance = BigDecimal::of('100.00')->plus((string) $orders[3]->tayar_earning)->minus((string) $orders[3]->amount_to_collect)->plus('500.00');
+        $this->assertSame((string) $tayarBalance->toScale(2), Wallet::ensureFor($demoTayar->user_id, WalletType::Tayar)->balance);
+        $this->assertSame('500.00', Wallet::ensureFor($businesses[0]->user_id, WalletType::Business)->balance);
+        $this->assertSame('0.00', (string) BigDecimal::of((string) Wallet::query()->sum('balance'))->toScale(2));
     }
 
     public function test_running_the_demo_data_seeder_twice_creates_nothing_twice(): void
@@ -352,8 +385,10 @@ class SeedersTest extends TestCase
         $this->assertDatabaseCount('vehicle_types', 4);
         $this->assertDatabaseCount('business_types', 10);
         $this->assertDatabaseCount('order_reasons', 10);
-        $this->assertDatabaseCount('orders', 3);
-        $this->assertDatabaseCount('order_status_histories', 7);
+        $this->assertDatabaseCount('orders', 4);
+        $this->assertDatabaseCount('order_status_histories', 12);
+        $this->assertDatabaseCount('wallet_postings', 4);
+        $this->assertDatabaseCount('wallet_adjustment_reasons', 4);
         $this->assertDatabaseCount('order_offers', 2);
         $this->assertDatabaseCount('tayar_work_sessions', 1);
     }

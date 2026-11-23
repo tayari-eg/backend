@@ -14,6 +14,8 @@ use App\Domains\Pricing\Models\PricingRule;
 use App\Domains\Tayars\Models\TayarProfile;
 use App\Domains\Tayars\Models\Vehicle;
 use App\Domains\Tayars\Models\VehicleType;
+use App\Domains\Wallet\Models\Wallet;
+use App\Domains\Wallet\Models\WalletAdjustmentReason;
 use App\Models\User;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -94,6 +96,22 @@ class AdminRolePermissionsTest extends TestCase
         'api.v1.admin.orders.index' => ['GET', null, StaffPermission::OrdersView],
         'api.v1.admin.orders.show' => ['GET', 'order', StaffPermission::OrdersView],
         'api.v1.admin.orders.cancel' => ['POST', 'order', StaffPermission::OrdersManage],
+        'api.v1.admin.orders.offers.index' => ['GET', 'order', StaffPermission::OrdersView],
+        'api.v1.admin.orders.not-delivered' => ['POST', 'order', StaffPermission::OrdersManage],
+        'api.v1.admin.orders.resend-codes' => ['POST', 'order', StaffPermission::OrdersManage],
+        'api.v1.admin.wallets.index' => ['GET', null, StaffPermission::WalletsView],
+        'api.v1.admin.wallets.show' => ['GET', 'wallet', StaffPermission::WalletsView],
+        'api.v1.admin.wallets.transactions' => ['GET', 'wallet', StaffPermission::WalletsView],
+        'api.v1.admin.wallets.settlements.store' => ['POST', 'wallet', StaffPermission::WalletsSettle],
+        'api.v1.admin.wallets.adjustments.store' => ['POST', 'wallet', StaffPermission::WalletsAdjust],
+        'api.v1.admin.wallet-postings.reverse' => ['POST', 'walletPosting', StaffPermission::WalletsAdjust],
+        'api.v1.admin.wallet-adjustment-reasons.index' => ['GET', null, StaffPermission::WalletsView],
+        'api.v1.admin.wallet-adjustment-reasons.show' => ['GET', 'walletAdjustmentReason', StaffPermission::WalletsView],
+        'api.v1.admin.wallet-adjustment-reasons.store' => ['POST', null, StaffPermission::WalletsAdjust],
+        'api.v1.admin.wallet-adjustment-reasons.update' => ['PATCH', 'walletAdjustmentReason', StaffPermission::WalletsAdjust],
+        'api.v1.admin.wallet-adjustment-reasons.activate' => ['POST', 'walletAdjustmentReason', StaffPermission::WalletsAdjust],
+        'api.v1.admin.wallet-adjustment-reasons.deactivate' => ['POST', 'walletAdjustmentReason', StaffPermission::WalletsAdjust],
+        'api.v1.admin.wallet-adjustment-reasons.destroy' => ['DELETE', 'walletAdjustmentReason', StaffPermission::WalletsAdjust],
         'api.v1.admin.staff.index' => ['GET', null, StaffPermission::StaffManage],
         'api.v1.admin.staff.store' => ['POST', null, StaffPermission::StaffManage],
         'api.v1.admin.staff.role.update' => ['PUT', 'staff', StaffPermission::StaffManage],
@@ -132,6 +150,9 @@ class AdminRolePermissionsTest extends TestCase
             'area' => Area::factory()->create(),
             'pricingRule' => PricingRule::factory()->create(),
             'order' => Order::factory()->create(),
+            'wallet' => Wallet::factory()->create(),
+            'walletPosting' => $this->postToWallet(Wallet::factory()->create(), '10.00'),
+            'walletAdjustmentReason' => WalletAdjustmentReason::factory()->create(),
             null => null,
         };
     }
