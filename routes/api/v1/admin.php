@@ -152,6 +152,8 @@ Route::middleware(['auth:sanctum', 'staff'])->group(function (): void {
 
     Route::middleware('permission:'.StaffPermission::OrdersManage->value)->group(function (): void {
         Route::post('orders/{order}/cancel', [OrderController::class, 'cancel'])->name('orders.cancel');
+        Route::post('orders/{order}/not-delivered', [OrderController::class, 'notDelivered'])->name('orders.not-delivered');
+        Route::post('orders/{order}/resend-codes', [OrderController::class, 'resendCodes'])->name('orders.resend-codes');
     });
 
     Route::middleware('permission:'.StaffPermission::StaffManage->value)->group(function (): void {

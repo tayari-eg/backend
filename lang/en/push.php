@@ -27,4 +27,24 @@ return [
         'body' => 'Order :code was cancelled. Do not pick it up.',
     ],
 
+    'order_picked_up' => [
+        'title' => 'Order picked up',
+        'body' => 'The tayar picked up order :code. The receiver gets the delivery code by SMS.',
+    ],
+
+    'order_on_the_way' => [
+        'title' => 'On the way',
+        'body' => 'The receiver confirmed, and order :code is on the way.',
+    ],
+
+    'order_delivered' => [
+        'title' => 'Order delivered',
+        'body' => 'Order :code was delivered.',
+    ],
+
+    'order_not_delivered' => [
+        'title' => 'Order not delivered',
+        'body' => 'Order :code was not delivered. Open it to see why.',
+    ],
+
 ];

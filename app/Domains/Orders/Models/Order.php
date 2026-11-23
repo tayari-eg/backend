@@ -6,6 +6,7 @@ use App\Domains\Catalog\Models\Category;
 use App\Domains\Catalog\Models\Mode;
 use App\Domains\Orders\Enums\OrderCanceller;
 use App\Domains\Orders\Enums\OrderStatus;
+use App\Domains\Orders\Enums\ReceiverCode;
 use App\Domains\Orders\Enums\ShippingPaidBy;
 use App\Domains\Tayars\Models\TayarWorkSession;
 use App\Models\User;
@@ -15,6 +16,7 @@ use Carbon\CarbonImmutable;
 use Carbon\CarbonInterface;
 use Database\Factories\OrderFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
+use Illuminate\Database\Eloquent\Attributes\Hidden;
 use Illuminate\Database\Eloquent\Attributes\Scope;
 use Illuminate\Database\Eloquent\Attributes\UseFactory;
 use Illuminate\Database\Eloquent\Builder;
@@ -23,9 +25,17 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
+use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Str;
+use LogicException;
+use Spatie\MediaLibrary\HasMedia;
+use Spatie\MediaLibrary\InteractsWithMedia;
+use Spatie\MediaLibrary\MediaCollections\Models\Collections\MediaCollection;
+use Spatie\MediaLibrary\MediaCollections\Models\Media;
 
 /**
- * One pickup and one drop-off. The fee columns are a snapshot of the pricing at creation.
+ * One pickup and one drop-off. The fee columns are a snapshot of the pricing at creation. The receiver's delivery and
+ * refusal codes exist only as hashes, hidden from every serialization.
  */
 #[Fillable([
     'idempotency_key', 'category_id', 'mode_id', 'details',
@@ -36,11 +46,21 @@ use Illuminate\Database\Eloquent\SoftDeletes;
     'distance_km', 'base_fare', 'price_per_km', 'distance_fare', 'minimum_fare', 'food_extra',
     'shipping_fee', 'tayar_share_percent', 'tayar_earning', 'platform_fee',
 ])]
+#[Hidden(['delivery_code_hash', 'refusal_code_hash'])]
 #[UseFactory(OrderFactory::class)]
-class Order extends Model
+class Order extends Model implements HasMedia
 {
     /** @use HasFactory<OrderFactory> */
-    use HasFactory, SoftDeletes;
+    use HasFactory, InteractsWithMedia, SoftDeletes;
+
+    public const string PICKUP_PHOTOS = 'pickup_photos';
+
+    public const int MAX_PICKUP_PHOTOS = 4;
+
+    /**
+     * Base62 characters for the receiver's tracking link: about 238 bits, so it can't be guessed.
+     */
+    public const int TRACKING_TOKEN_LENGTH = 40;
 
     public const string CODE_PREFIX = 'TY-';
 
@@ -93,9 +113,95 @@ class Order extends Model
             'cancelled_at' => 'datetime',
             'cancelled_by' => 'integer',
             'cancel_reason_id' => 'integer',
+            'code_attempts' => 'integer',
+            'codes_sent_at' => 'datetime',
+            'codes_expire_at' => 'datetime',
+            'picked_up_at' => 'datetime',
+            'receiver_confirmed_at' => 'datetime',
+            'delivered_at' => 'datetime',
+            'not_delivered_at' => 'datetime',
+            'not_delivered_reason_id' => 'integer',
             'cancel_fee' => 'decimal:2',
             'cancel_fee_owed_to_tayar_id' => 'integer',
         ];
+    }
+
+    public function registerMediaCollections(): void
+    {
+        $this->addMediaCollection(self::PICKUP_PHOTOS)->useDisk(config('tayari.media.private_disk'));
+    }
+
+    /**
+     * The pickup photos, each pointing back to this order, so MediaPolicy decides on it without a query per photo.
+     *
+     * @return MediaCollection<int, Media>
+     */
+    public function pickupPhotos(): MediaCollection
+    {
+        return $this->getMedia(self::PICKUP_PHOTOS)->each(fn (Media $media): Media => $media->setRelation('model', $this));
+    }
+
+    /**
+     * Moves the order to the next status with its columns, and writes the history row with where the tayar was. Call it
+     * on the locked row, inside the caller's transaction.
+     *
+     * @param  array<string, mixed>  $attributes
+     *
+     * @throws LogicException when OrderStatus doesn't allow the move
+     */
+    public function moveTo(OrderStatus $next, array $attributes, ?int $changedBy, ?string $note = null, ?float $lat = null, ?float $lng = null): void
+    {
+        if (! $this->status->canTransitionTo($next)) {
+            throw new LogicException("Order {$this->id} can't move from {$this->status->value} to {$next->value}.");
+        }
+
+        $from = $this->status;
+        $this->forceFill(['status' => $next, ...$attributes])->save();
+
+        $this->statusHistories()->create([
+            'from_status' => $from,
+            'to_status' => $next,
+            'changed_by' => $changedBy,
+            'note' => $note,
+            'lat' => $lat,
+            'lng' => $lng,
+        ]);
+    }
+
+    public static function newTrackingToken(): string
+    {
+        return Str::random(self::TRACKING_TOKEN_LENGTH);
+    }
+
+    /**
+     * The receiver's tracking page on the website.
+     */
+    public function trackingUrl(): string
+    {
+        return str_replace('{token}', (string) $this->tracking_token, config('tayari.tracking.url'));
+    }
+
+    /**
+     * Why the receiver's codes can't be checked now, as an orders.* message key, or null when they can.
+     */
+    public function receiverCodesProblem(): ?string
+    {
+        return match (true) {
+            $this->delivery_code_hash === null || $this->refusal_code_hash === null => 'codes_not_sent',
+            $this->code_attempts >= config()->integer('tayari.tracking.code_max_attempts') => 'codes_locked',
+            $this->codes_expire_at === null || $this->codes_expire_at->isPast() => 'codes_expired',
+            default => null,
+        };
+    }
+
+    public function matchesReceiverCode(ReceiverCode $code, #[\SensitiveParameter] string $plainCode): bool
+    {
+        return Hash::check($plainCode, (string) $this->getAttribute($code->hashColumn()));
+    }
+
+    public function codeAttemptsLeft(): int
+    {
+        return max(0, config()->integer('tayari.tracking.code_max_attempts') - $this->code_attempts);
     }
 
     public static function newCode(): string
@@ -187,6 +293,14 @@ class Order extends Model
     public function offers(): HasMany
     {
         return $this->hasMany(OrderOffer::class);
+    }
+
+    /**
+     * @return BelongsTo<OrderReason, $this>
+     */
+    public function notDeliveredReason(): BelongsTo
+    {
+        return $this->belongsTo(OrderReason::class, 'not_delivered_reason_id');
     }
 
     /**

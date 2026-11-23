@@ -14,7 +14,7 @@ class StartWebSessionAction
     /**
      * Logs the user into the web guard behind Sanctum's SPA cookie, with a fresh session ID.
      */
-    public function handle(PhoneNumber $phone, string $password, Session $session): User
+    public function handle(PhoneNumber $phone, #[\SensitiveParameter] string $password, Session $session): User
     {
         $user = $this->resolveLoginUser->handle($phone, $password);
 

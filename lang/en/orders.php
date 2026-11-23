@@ -15,5 +15,13 @@ return [
     'offer_unavailable' => 'This order is no longer available.',
     'offer_session_changed' => 'This offer was for a work session that has ended. Stay online to get new offers.',
     'tayar_busy' => 'Finish your current orders before accepting another one.',
+    'wrong_step' => 'This order can\'t move to that step now.',
+    'codes_not_sent' => 'The receiver\'s codes have not been sent yet. Try again in a minute.',
+    'codes_locked' => 'Too many wrong codes. Ask the receiver to request new codes from the tracking link, or contact support.',
+    'codes_expired' => 'The receiver\'s codes have expired. Ask the receiver to request new codes from the tracking link.',
+    'code_wrong' => 'The code is wrong. :left attempts left.',
+    'codes_not_available' => 'Codes are only sent while the order is with the tayar.',
+    'cannot_close_not_delivered' => 'Only a picked-up or ongoing order can be closed as not delivered.',
+    'receiver_codes_sms' => 'Tayari: order :code from :sender is on its way. Give the tayar the delivery code :delivery when you receive it. Refuse the order only with the code :refusal. Track it: :url',
 
 ];

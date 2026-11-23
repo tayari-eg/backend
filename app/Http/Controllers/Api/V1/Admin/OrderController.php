@@ -3,13 +3,17 @@
 namespace App\Http\Controllers\Api\V1\Admin;
 
 use App\Domains\Orders\Actions\CancelOrderAction;
+use App\Domains\Orders\Actions\CloseUndeliveredOrderAction;
+use App\Domains\Orders\Actions\ResendReceiverCodesAction;
 use App\Domains\Orders\Models\Order;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Api\V1\Admin\CancelOrderRequest;
 use App\Http\Requests\Api\V1\Admin\ListOrdersRequest;
+use App\Http\Requests\Api\V1\Admin\MarkNotDeliveredRequest;
 use App\Http\Resources\Api\V1\Admin\OrderResource;
 use App\Models\User;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
+use Illuminate\Http\Response;
 
 class OrderController extends Controller
 {
@@ -21,7 +25,7 @@ class OrderController extends Controller
     /**
      * @var list<string>
      */
-    private const array DETAIL_RELATIONS = ['sender.businessProfile', 'category', 'mode', 'tayar', 'workSession.vehicle.vehicleType', 'cancelFeeOwedTo', 'canceller', 'cancelReason', 'statusHistories.changer'];
+    private const array DETAIL_RELATIONS = ['sender.businessProfile', 'category', 'mode', 'tayar', 'workSession.vehicle.vehicleType', 'cancelFeeOwedTo', 'canceller', 'cancelReason', 'notDeliveredReason', 'media', 'statusHistories.changer'];
 
     /**
      * Every order, newest first, with filters and a search by order code or phone.
@@ -58,6 +62,26 @@ class OrderController extends Controller
     public function show(Order $order): OrderResource
     {
         return OrderResource::make($order->load(self::DETAIL_RELATIONS));
+    }
+
+    /**
+     * Close a picked-up or ongoing order as not delivered, without a code, when the receiver can't be reached.
+     */
+    public function notDelivered(MarkNotDeliveredRequest $request, Order $order, CloseUndeliveredOrderAction $closeUndeliveredOrder): OrderResource
+    {
+        $order = $closeUndeliveredOrder->handle($order, $request->user(), $request->notDeliveredReason(), $request->requiredNote());
+
+        return OrderResource::make($order->load(self::DETAIL_RELATIONS));
+    }
+
+    /**
+     * Send the receiver new delivery and refusal codes by SMS (after a lock-out or a lost SMS).
+     */
+    public function resendCodes(Order $order, ResendReceiverCodesAction $resendReceiverCodes): Response
+    {
+        $resendReceiverCodes->handle($order);
+
+        return response()->noContent();
     }
 
     /**

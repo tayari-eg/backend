@@ -213,6 +213,8 @@ return [
                 7. While `status` = `looking_for_tayar`, **Order details** shows "Looking for a tayar…" until `search_ends_at`, and calls **Get order** again every 10 seconds while the page is open.
                 8. When a tayar accepts (`status` = `pending`), show the `tayar` card: name, phone and the vehicle (`type`, `model`, `color`, `plate_number`). **Cancel order** stays until pickup: free until `free_cancel_until` (:free_cancel_seconds seconds), then the **Cancel** dialog shows the fee from `cancel_fee_now`, owed to the tayar.
                 9. `cancelled_by_type` = `system`: no tayar accepted in time. Show "No tayar found" with a **Send again** button that opens New order with the same details and a new `idempotency_key`.
+                10. From acceptance to delivery, **Order details** shows the tayar on a map from `tayar.location` (with how old `updated_at` is) and the steps: picked up (with the pickup photos), on the way, delivered or not delivered (with the reason). Reload every 10 to 15 seconds while the page is open. There is no ETA.
+                11. After pickup nobody can cancel. The receiver gets the codes and the tracking link by SMS (only once a real SMS provider is configured); a **Copy tracking link** button can build it from `tracking_token` (folder 8). Delivery does not check payment yet.
                 MD,
             'requests' => [
                 [
@@ -234,7 +236,7 @@ return [
                 [
                     'route' => 'api.v1.client.orders.show',
                     'name' => 'Get order',
-                    'screen' => '**Order details** page, on open, and every 10 seconds while the order is looking for a tayar.',
+                    'screen' => '**Order details** page, on open, every 10 seconds while the order is looking for a tayar, and every 10 to 15 seconds while it is accepted, picked up or on the way.',
                 ],
                 [
                     'route' => 'api.v1.public.order-reasons.index',
@@ -246,6 +248,31 @@ return [
                     'name' => 'Cancel order',
                     'screen' => '**Cancel order** dialog, when the user confirms.',
                     'next' => 'Show the order as cancelled and move it to the Past tab.',
+                ],
+            ],
+        ],
+
+        [
+            'name' => '8. Tracking page',
+            'description' => <<<'MD'
+                The receiver's public tracking page at `/track/{token}` (the link in the receiver's SMS; set the same URL in `TRACKING_URL` on the server). No login.
+
+                1. On open → **Get tracking**: the status, the business name, the tayar's first name and vehicle, and a map with the tayar's last position while the goods are on the way. Reload every 15 seconds while `is_finished` is false, and show how old `location.updated_at` is.
+                2. The codes are never shown on the page: the receiver has them in the SMS. While `can_resend_codes` is true, a **Send me new codes** button → **Resend codes** (at most :resend_codes_per_hour an hour for an order); the old codes stop working.
+                3. After the order ends, the page shows the final status without a position.
+                4. 404 means a wrong or broken link.
+                MD,
+            'requests' => [
+                [
+                    'route' => 'api.v1.public.tracking.show',
+                    'name' => 'Get tracking',
+                    'screen' => '**Tracking** page, on open and every 15 seconds until `is_finished`.',
+                ],
+                [
+                    'route' => 'api.v1.public.tracking.resend-codes',
+                    'name' => 'Resend codes',
+                    'screen' => '**Tracking** page, when the receiver taps **Send me new codes**.',
+                    'next' => 'Show "A new SMS is on its way".',
                 ],
             ],
         ],

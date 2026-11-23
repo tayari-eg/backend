@@ -17,7 +17,7 @@ class VerifyPhoneAction
      *
      * @throws ValidationException when the code is not accepted
      */
-    public function handle(PhoneNumber $phone, string $code): User
+    public function handle(PhoneNumber $phone, #[\SensitiveParameter] string $code): User
     {
         // The code is checked first, so an unknown phone gets the same error as a wrong code for a registered one.
         $this->verifyOtp->handle($phone, OtpPurpose::VerifyPhone, $code);

@@ -4,8 +4,10 @@ namespace Tests\Feature\Api\V1\Tayar;
 
 use App\Domains\Catalog\Models\Area;
 use App\Domains\Catalog\Models\Mode;
+use App\Domains\Orders\Models\Order;
 use App\Domains\Tayars\Models\TayarProfile;
 use App\Domains\Tayars\Models\TayarWorkSession;
+use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Laravel\Sanctum\Sanctum;
 use Tests\TestCase;
@@ -242,5 +244,20 @@ class WorkSessionTest extends TestCase
         $this->assertNotNull(TayarWorkSession::query()->find($wider)->ended_at);
         $this->assertNull(TayarWorkSession::query()->find($inArea)->ended_at);
         $this->assertSame(1, TayarWorkSession::query()->whereNull('ended_at')->count());
+    }
+
+    public function test_a_tayar_holding_an_accepted_picked_up_or_ongoing_order_cannot_go_offline(): void
+    {
+        foreach (['acceptedBy', 'pickedUpBy', 'onTheWayWith'] as $state) {
+            $tayar = $this->onlineTayar(30.0444, 31.2357);
+            Order::factory()->{$state}($tayar)->create();
+            Sanctum::actingAs(User::query()->findOrFail($tayar->user_id));
+
+            $this->postJson(route('api.v1.tayar.offline'), [], ['Accept-Language' => 'en'])
+                ->assertUnprocessable()
+                ->assertJsonPath('errors.status.0', 'Finish your orders before going offline or switching to client mode.');
+
+            $this->assertTrue($tayar->refresh()->is_online, $state);
+        }
     }
 }

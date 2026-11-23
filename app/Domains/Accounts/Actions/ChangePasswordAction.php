@@ -10,7 +10,7 @@ class ChangePasswordAction
     /**
      * Keeps the token used for this request and deletes the user's other tokens.
      */
-    public function handle(User $user, string $password, ?int $currentTokenId): void
+    public function handle(User $user, #[\SensitiveParameter] string $password, ?int $currentTokenId): void
     {
         DB::transaction(function () use ($user, $password, $currentTokenId): void {
             $user->forceFill(['password' => $password])->save();

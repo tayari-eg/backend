@@ -168,6 +168,77 @@ class OrderManagementTest extends TestCase
             ->assertJsonPath('data.cancel_fee_owed_to.id', $tayar->user_id);
     }
 
+    public function test_staff_close_a_picked_up_or_ongoing_order_as_not_delivered_and_both_sides_hear(): void
+    {
+        Queue::fake();
+        $tayar = $this->onlineTayar(30.0450, 31.2360);
+        UserDevice::factory()->for(User::query()->findOrFail($tayar->user_id))->create();
+        $reason = OrderReason::factory()->notDelivered()->create();
+
+        foreach ([Order::factory()->pickedUpBy($tayar)->create(), Order::factory()->onTheWayWith($tayar)->create()] as $order) {
+            UserDevice::factory()->for(User::query()->findOrFail($order->sender_id))->create();
+
+            $this->postJson(route('api.v1.admin.orders.not-delivered', $order), ['not_delivered_reason_id' => $reason->id, 'note' => 'Receiver unreachable.'])
+                ->assertOk()
+                ->assertJsonPath('data.status', 'not_delivered')
+                ->assertJsonPath('data.not_delivered_reason.id', $reason->id)
+                ->assertJsonPath('data.not_delivered_note', 'Receiver unreachable.')
+                ->assertJsonPath('data.status_history.0.changed_by.id', $this->staff->id)
+                ->assertJsonPath('data.status_history.0.lat', null);
+
+            $data = ['type' => 'order_not_delivered', 'order_id' => (string) $order->id];
+            foreach ([$order->sender_id, $tayar->user_id] as $userId) {
+                Queue::assertPushed(SendPushToDevice::class, fn (SendPushToDevice $job): bool => $job->userId === $userId && $job->data === $data);
+            }
+        }
+    }
+
+    public function test_closing_as_not_delivered_needs_a_reason_a_note_the_right_status_and_the_permission(): void
+    {
+        $tayar = $this->onlineTayar(30.0450, 31.2360);
+        $order = Order::factory()->pickedUpBy($tayar)->create();
+        $reason = OrderReason::factory()->notDelivered()->create();
+
+        $this->postJson(route('api.v1.admin.orders.not-delivered', $order), ['not_delivered_reason_id' => OrderReason::factory()->create()->id])
+            ->assertUnprocessable()
+            ->assertJsonValidationErrors(['not_delivered_reason_id', 'note']);
+        $this->postJson(route('api.v1.admin.orders.not-delivered', Order::factory()->acceptedBy($tayar)->create()), ['not_delivered_reason_id' => $reason->id, 'note' => 'x'])
+            ->assertUnprocessable()
+            ->assertJsonPath('errors.status.0', __('orders.cannot_close_not_delivered', locale: 'en'));
+
+        Sanctum::actingAs($this->createStaffUser(StaffRole::Support));
+        $this->postJson(route('api.v1.admin.orders.not-delivered', $order), ['not_delivered_reason_id' => $reason->id, 'note' => 'x'])->assertForbidden();
+        $this->postJson(route('api.v1.admin.orders.resend-codes', $order))->assertForbidden();
+
+        $this->assertSame(OrderStatus::PickedUp, $order->refresh()->status);
+    }
+
+    public function test_staff_resend_the_receiver_codes_and_see_the_timeline_with_positions_but_never_the_codes(): void
+    {
+        $tayar = $this->onlineTayar(30.0450, 31.2360);
+        $order = Order::factory()->acceptedBy($tayar)->create();
+        $order->moveTo(OrderStatus::PickedUp, ['picked_up_at' => now()], $tayar->user_id, lat: 30.0451, lng: 31.2361);
+        $codes = $this->sendReceiverCodes($order);
+
+        $this->postJson(route('api.v1.admin.orders.resend-codes', $order))->assertNoContent();
+
+        $response = $this->getJson(route('api.v1.admin.orders.show', $order))
+            ->assertOk()
+            ->assertJsonPath('data.status_history.0.to_status', 'picked_up')
+            ->assertJsonPath('data.status_history.0.lat', '30.0451000')
+            ->assertJsonPath('data.status_history.0.lng', '31.2361000')
+            ->assertJsonPath('data.receiver_codes.attempts', 0)
+            ->assertJsonPath('data.receiver_codes.locked', false)
+            ->assertJsonPath('data.tracking_token', $order->tracking_token);
+
+        $this->assertStringNotContainsString('code_hash', $response->getContent());
+        $this->assertStringNotContainsString($codes['delivery'], $response->getContent());
+
+        $this->postJson(route('api.v1.admin.orders.resend-codes', Order::factory()->create()))
+            ->assertUnprocessable()
+            ->assertJsonValidationErrors('status');
+    }
+
     public function test_staff_cannot_cancel_after_pickup(): void
     {
         $order = Order::factory()->withStatus(OrderStatus::PickedUp)->create();

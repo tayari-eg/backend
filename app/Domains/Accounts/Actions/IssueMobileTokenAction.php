@@ -13,7 +13,7 @@ class IssueMobileTokenAction
     /**
      * @return array{user: User, token: NewAccessToken}
      */
-    public function handle(PhoneNumber $phone, string $password, string $deviceName): array
+    public function handle(PhoneNumber $phone, #[\SensitiveParameter] string $password, string $deviceName): array
     {
         $user = $this->resolveLoginUser->handle($phone, $password);
 

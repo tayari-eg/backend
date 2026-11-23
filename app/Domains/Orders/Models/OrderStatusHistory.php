@@ -12,9 +12,9 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 /**
- * One status change of an order; never edited. changed_by null means the system.
+ * One status change of an order; never edited. changed_by null means the system; lat/lng is where the tayar was.
  */
-#[Fillable(['from_status', 'to_status', 'changed_by', 'note'])]
+#[Fillable(['from_status', 'to_status', 'changed_by', 'note', 'lat', 'lng'])]
 #[UseFactory(OrderStatusHistoryFactory::class)]
 class OrderStatusHistory extends Model
 {
@@ -33,6 +33,8 @@ class OrderStatusHistory extends Model
             'from_status' => OrderStatus::class,
             'to_status' => OrderStatus::class,
             'changed_by' => 'integer',
+            'lat' => 'decimal:7',
+            'lng' => 'decimal:7',
         ];
     }
 

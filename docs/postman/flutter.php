@@ -173,6 +173,10 @@ return [
                 | `order_accepted` | the sender, when a tayar accepts | `order_id` | **Order details** (client mode) |
                 | `order_no_tayar` | the sender, when no tayar accepted in time and the order was cancelled | `order_id` | **Order details** (client mode) |
                 | `order_cancelled` | the tayar of an accepted order the sender or staff cancelled | `order_id`, `cancelled_by_type` (`sender` or `staff`) | **My order** (tayar mode) |
+                | `order_picked_up` | the sender, when the tayar picked the order up | `order_id` | **Order details** (client mode) |
+                | `order_on_the_way` | the sender, when the receiver confirmed and the order is on the way | `order_id` | **Order details** (client mode) |
+                | `order_delivered` | the sender, when the receiver's delivery code was accepted | `order_id` | **Order details** (client mode) |
+                | `order_not_delivered` | the sender; also the tayar when staff close the order (receiver unreachable) | `order_id` | **Order details** (client mode) or **My order** (tayar mode) |
                 - Android uses the default notification channel (no `channel_id` is sent). If the app later creates its own channel, the server can send its id.
 
                 **Handling it:**
@@ -345,7 +349,7 @@ return [
                    - `requires_destination` → a **destination picker** on the map (address, lat, lng).
                 4. Read the GPS position → **Go online** with `mode_id` and the field the mode needs. Then start the background location service (**Location updates**).
                 5. **Change mode** while online → the same sheet, then **Go online** again with the new settings: the server ends the old work session and starts a new one. Same settings only move the position.
-                6. **Online** toggle off → **Go offline**, then stop the location service.
+                6. **Online** toggle off → **Go offline**, then stop the location service. While the tayar holds an accepted, picked-up or ongoing order, going offline (and switching to client mode) answers 422: keep working and keep the location service running.
                 7. `is_online` in **Get my account** (`tayar_profile.is_online`) tells the toggle state when the app opens; `work_session.mode` in the **Go online** response tells the current mode.
                 MD,
             'requests' => [
@@ -448,6 +452,8 @@ return [
                 7. While `status` = `looking_for_tayar`, **Order details** shows "Looking for a tayar…" until `search_ends_at`, and calls **Get order** again every 10 seconds while it is open (and when an `order_accepted` or `order_no_tayar` push arrives).
                 8. When a tayar accepts (`status` = `pending`), show the `tayar` card: name, a call button for `phone`, and the vehicle (`type`, `model`, `color`, `plate_number`). **Cancel order** stays until pickup: free until `free_cancel_until` (:free_cancel_seconds seconds), then the **Cancel** dialog shows the fee from `cancel_fee_now`, owed to the tayar.
                 9. `cancelled_by_type` = `system`: no tayar accepted in time. Show "No tayar found" with a **Send again** button that opens New order with the same details and a new `idempotency_key`.
+                10. From acceptance to delivery, **Order details** shows the tayar on a map from `tayar.location` (with how old `updated_at` is) and the steps: picked up (with the pickup photos), on the way, delivered or not delivered (with the reason). Poll **Get order** every 10 to 15 seconds while the screen is open, and on `order_picked_up`, `order_on_the_way`, `order_delivered` and `order_not_delivered` pushes. There is no ETA.
+                11. After pickup nobody can cancel. The receiver gets the codes and the tracking link by SMS (only once a real SMS provider is configured); a **Share tracking link** button can build it from `tracking_token`. Delivery does not check payment yet.
                 MD,
             'requests' => [
                 [
@@ -537,6 +543,51 @@ return [
                     'route' => 'api.v1.tayar.orders.show',
                     'name' => 'Get my order',
                     'screen' => '**My order** screen, on open and on an `order_cancelled` push.',
+                ],
+            ],
+        ],
+
+        [
+            'name' => '17. Tayar mode · Delivery',
+            'description' => <<<'MD'
+                The steps after accepting an order (folder 16 shows it). Every step sends the current GPS `lat`/`lng`.
+
+                1. **At the pickup:** photograph the items → **Confirm pickup** with 1 to 4 photos (multipart). The receiver then gets the delivery and refusal codes and the tracking link by SMS; `receiver_codes.sent_at` shows when. From now on nobody can cancel.
+                2. **Call the receiver.** When they confirm they are there today → **Receiver confirmed**: the order is on the way. Receiver unreachable or not there today: don't confirm; contact support, who closes the order as not delivered (you get an `order_not_delivered` push).
+                3. **At the drop-off:** the receiver reads out the delivery code → **Deliver** with `code`. If they refuse the order, they read out the refusal code → **Get not-delivered reasons**, then **Mark not delivered** with `code`, the reason and an optional note. Not delivered is final for now; contact support about returning the goods.
+                4. **Wrong codes:** both steps share :code_max_attempts tries; `receiver_codes.attempts_left` counts down. When `receiver_codes.problem` is `codes_locked` or `codes_expired`, ask the receiver to request new codes from their tracking link, or contact support.
+                5. While holding an order the tayar can't go offline or switch to client mode, and the server never sets them offline: keep the location service running, because the sender and the receiver see the last position.
+                6. Delivery does not check payment yet: the payment phase comes later. The receiver gets codes only once a real SMS provider is configured on the server.
+                MD,
+            'requests' => [
+                [
+                    'route' => 'api.v1.tayar.orders.pickup',
+                    'name' => 'Confirm pickup',
+                    'screen' => '**My order › Pickup** step, when the tayar taps **Confirm pickup** after taking the photos.',
+                    'next' => 'Show the **Call the receiver** step.',
+                ],
+                [
+                    'route' => 'api.v1.tayar.orders.receiver-confirmed',
+                    'name' => 'Receiver confirmed',
+                    'screen' => '**My order › Call the receiver** step, when the tayar taps **Receiver is there today**.',
+                    'next' => 'Show the drop-off on the map and the **Enter code** step.',
+                ],
+                [
+                    'route' => 'api.v1.tayar.orders.deliver',
+                    'name' => 'Deliver',
+                    'screen' => '**My order › Enter code** step, when the tayar enters the delivery code.',
+                    'next' => 'Show the order as delivered and move it to the Past tab.',
+                ],
+                [
+                    'route' => 'api.v1.public.order-reasons.index',
+                    'name' => 'Get not-delivered reasons',
+                    'screen' => '**Not delivered** dialog, on open (`type` = `not_delivered`).',
+                ],
+                [
+                    'route' => 'api.v1.tayar.orders.not-delivered',
+                    'name' => 'Mark not delivered',
+                    'screen' => '**Not delivered** dialog, when the tayar enters the refusal code and picks a reason.',
+                    'next' => 'Show the order as not delivered and move it to the Past tab.',
                 ],
             ],
         ],

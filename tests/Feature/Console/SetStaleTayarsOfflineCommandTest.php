@@ -2,6 +2,7 @@
 
 namespace Tests\Feature\Console;
 
+use App\Domains\Orders\Models\Order;
 use App\Domains\Tayars\Actions\GoOnlineAction;
 use App\Domains\Tayars\Models\TayarProfile;
 use App\Domains\Tayars\Models\TayarWorkSession;
@@ -38,5 +39,20 @@ class SetStaleTayarsOfflineCommandTest extends TestCase
 
         $this->assertNotNull($event);
         $this->assertSame('* * * * *', $event->expression);
+    }
+
+    public function test_a_stale_tayar_holding_an_order_stays_online(): void
+    {
+        config(['tayari.tayars.offline_after_minutes' => 5]);
+        $holding = $this->onlineTayar(30.0444, 31.2357);
+        Order::factory()->onTheWayWith($holding)->create();
+        $holding->forceFill(['location_updated_at' => now()->subMinutes(30)])->save();
+
+        $this->artisan('tayars:set-stale-offline')
+            ->expectsOutputToContain('0 tayar(s) set offline.')
+            ->assertSuccessful();
+
+        $this->assertTrue($holding->refresh()->is_online);
+        $this->assertNotNull($holding->current_work_session_id);
     }
 }

@@ -91,6 +91,7 @@ class CreateOrderAction
             $order = new Order($orderAttributes);
             $order->forceFill([
                 'code' => Order::newCode(),
+                'tracking_token' => Order::newTrackingToken(),
                 'sender_id' => $sender->id,
                 'status' => OrderStatus::LookingForTayar,
                 'price_accepted_at' => now(),

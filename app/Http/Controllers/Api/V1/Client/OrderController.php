@@ -20,7 +20,7 @@ class OrderController extends Controller
     /**
      * @var list<string>
      */
-    private const array RELATIONS = ['category', 'cancelReason', 'tayar', 'workSession.vehicle.vehicleType'];
+    private const array RELATIONS = ['category', 'cancelReason', 'notDeliveredReason', 'tayar.tayarProfile', 'workSession.vehicle.vehicleType', 'media'];
 
     /**
      * My orders, newest first: active (default) or past. Cursor pages.

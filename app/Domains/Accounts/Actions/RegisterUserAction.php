@@ -22,7 +22,7 @@ class RegisterUserAction
      *
      * @throws ValidationException when another request registered the same phone after validation
      */
-    public function handle(string $name, PhoneNumber $phone, string $password, RegisterAs $registerAs, Locale $locale): array
+    public function handle(string $name, PhoneNumber $phone, #[\SensitiveParameter] string $password, RegisterAs $registerAs, Locale $locale): array
     {
         try {
             // The transaction is a savepoint when nested, so a failed insert doesn't abort an outer PostgreSQL transaction.

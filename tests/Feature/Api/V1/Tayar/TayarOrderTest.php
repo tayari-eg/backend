@@ -7,6 +7,7 @@ use App\Domains\Orders\Models\Order;
 use App\Domains\Tayars\Models\TayarProfile;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Storage;
 use Laravel\Sanctum\Sanctum;
 use Tests\TestCase;
 
@@ -84,5 +85,21 @@ class TayarOrderTest extends TestCase
             ->assertJsonPath('data.mode.code', 'zone');
         $this->getJson(route('api.v1.tayar.orders.show', $theirs))->assertForbidden();
         $this->getJson(route('api.v1.tayar.orders.show', Order::factory()->create()))->assertForbidden();
+    }
+
+    public function test_my_orders_list_runs_the_same_queries_however_many_orders_and_photos_it_has(): void
+    {
+        Storage::fake('local');
+        $this->createPickedUpOrdersWithPhotos(Order::factory()->pickedUpBy($this->tayar), 2);
+        $this->getJson(route('api.v1.tayar.orders.index'))->assertOk();
+
+        $fewer = $this->countQueries(fn () => $this->getJson(route('api.v1.tayar.orders.index'))->assertOk()->assertJsonCount(2, 'data'));
+        $this->createPickedUpOrdersWithPhotos(Order::factory()->pickedUpBy($this->tayar), 3);
+        $more = $this->countQueries(fn () => $this->getJson(route('api.v1.tayar.orders.index'))
+            ->assertOk()
+            ->assertJsonCount(5, 'data')
+            ->assertJsonPath('data.0.pickup_photos.1.url', fn (?string $url): bool => $url !== null));
+
+        $this->assertSame($fewer, $more);
     }
 }

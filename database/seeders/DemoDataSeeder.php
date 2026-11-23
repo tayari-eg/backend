@@ -25,6 +25,8 @@ use App\Domains\Catalog\Models\Category;
 use App\Domains\Catalog\Models\Mode;
 use App\Domains\Orders\Actions\AcceptOfferAction;
 use App\Domains\Orders\Actions\CancelOrderAction;
+use App\Domains\Orders\Actions\ConfirmPickupAction;
+use App\Domains\Orders\Actions\ConfirmReceiverAction;
 use App\Domains\Orders\Actions\CreateOrderAction;
 use App\Domains\Orders\Actions\DispatchOrderOffersAction;
 use App\Domains\Orders\Enums\OrderCanceller;
@@ -175,7 +177,8 @@ class DemoDataSeeder extends Seeder
     /**
      * Orders of the approved business; the fixed idempotency keys make a second run find them instead of adding more.
      *
-     * The demo tayar accepts the third (accepted_by_demo_tayar), while the first stays looking for a tayar.
+     * The demo tayar accepts the third (accepted_by_demo_tayar) and brings it on the way, while the first stays looking
+     * for a tayar.
      *
      * @var list<array{idempotency_key: string, category: string, pickup_address: string, pickup: array{string, string}, dropoff_address: string, dropoff: array{string, string}, receiver_name: string, receiver_phone: string, goods_value: string, shipping_paid_by: ShippingPaidBy, details: string, cancel_reason: ?string, accepted_by_demo_tayar: bool}>
      */
@@ -296,7 +299,7 @@ class DemoDataSeeder extends Seeder
             $this->call(ModeSeeder::class);
         }
 
-        if (! OrderReason::query()->ofType(OrderReasonType::Cancel)->exists()) {
+        if (! OrderReason::query()->ofType(OrderReasonType::Cancel)->exists() || ! OrderReason::query()->ofType(OrderReasonType::NotDelivered)->exists()) {
             $this->call(OrderReasonSeeder::class);
         }
     }
@@ -499,6 +502,27 @@ class DemoDataSeeder extends Seeder
             if ($demoOrder['accepted_by_demo_tayar'] && $this->demoTayar !== null && $order->status === OrderStatus::LookingForTayar) {
                 $this->acceptAsDemoTayar($order);
             }
+
+            if ($demoOrder['accepted_by_demo_tayar'] && $this->demoTayar !== null) {
+                $this->bringOnTheWay($order->refresh());
+            }
+        }
+    }
+
+    /**
+     * The demo tayar picks the order up (placeholder photo) and the receiver confirms, so it is ongoing: the receiver's
+     * codes are made by the queued SendReceiverCodes job and, with the log SMS driver, appear in the log in local only.
+     */
+    private function bringOnTheWay(Order $order): void
+    {
+        ['lat' => $lat, 'lng' => $lng] = self::DEMO_TAYAR_ONLINE;
+
+        if ($order->status === OrderStatus::Pending && $order->tayar_id === $this->demoTayar->id) {
+            $order = app(ConfirmPickupAction::class)->handle($order, $this->demoTayar, [$this->placeholderFile('pickup-photo.png')], $lat, $lng);
+        }
+
+        if ($order->status === OrderStatus::PickedUp && $order->tayar_id === $this->demoTayar->id) {
+            app(ConfirmReceiverAction::class)->handle($order, $this->demoTayar, $lat, $lng);
         }
     }
 

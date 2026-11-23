@@ -7,6 +7,7 @@ use App\Http\Controllers\Api\V1\Public\CategoryController;
 use App\Http\Controllers\Api\V1\Public\MediaController;
 use App\Http\Controllers\Api\V1\Public\ModeController;
 use App\Http\Controllers\Api\V1\Public\OrderReasonController;
+use App\Http\Controllers\Api\V1\Public\TrackingController;
 use App\Http\Controllers\Api\V1\Public\VehicleTypeController;
 use App\Http\Middleware\EnsureAppVersionIsSupported;
 use Illuminate\Support\Facades\Route;
@@ -22,6 +23,15 @@ Route::get('categories', [CategoryController::class, 'index'])->name('categories
 Route::get('modes', [ModeController::class, 'index'])->name('modes.index');
 Route::get('areas', [AreaController::class, 'index'])->name('areas.index');
 Route::get('order-reasons', [OrderReasonController::class, 'index'])->name('order-reasons.index');
+
+Route::get('track/{trackingToken}', [TrackingController::class, 'show'])
+    ->middleware('throttle:tracking')
+    ->where('trackingToken', '[A-Za-z0-9]{40}')
+    ->name('tracking.show');
+Route::post('track/{trackingToken}/resend-codes', [TrackingController::class, 'resendCodes'])
+    ->middleware(['throttle:tracking', 'throttle:tracking-resend-codes'])
+    ->where('trackingToken', '[A-Za-z0-9]{40}')
+    ->name('tracking.resend-codes');
 
 // The signature is the access check: URLs are only handed out to users the MediaPolicy allows.
 Route::get('media/{media}', MediaController::class)->middleware('signed')->name('media.show');

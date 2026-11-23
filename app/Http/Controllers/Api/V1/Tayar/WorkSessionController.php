@@ -22,13 +22,13 @@ class WorkSessionController extends Controller
     }
 
     /**
-     * Go offline and close the work session.
+     * Go offline and close the work session; refused while holding an accepted, picked-up or ongoing order.
      */
     public function offline(Request $request, GoOfflineAction $goOffline): TayarWorkStatusResource
     {
         $profile = $request->user()->tayarProfile;
 
-        $goOffline->handle($profile);
+        $goOffline->handle($profile, refuseWhileHoldingOrders: true);
 
         return TayarWorkStatusResource::make($profile->refresh()->load(['currentWorkSession.mode', 'currentWorkSession.area']));
     }

@@ -33,4 +33,15 @@ class OrderReasonsTest extends TestCase
         $this->getJson(route('api.v1.public.order-reasons.index'))->assertUnprocessable()->assertJsonValidationErrors(['type']);
         $this->getJson(route('api.v1.public.order-reasons.index', ['type' => 'other']))->assertUnprocessable()->assertJsonValidationErrors(['type']);
     }
+
+    public function test_not_delivered_reasons_are_listed_apart_from_cancel_reasons(): void
+    {
+        $notDelivered = OrderReason::factory()->notDelivered()->create();
+        OrderReason::factory()->create();
+
+        $this->assertSame(
+            [$notDelivered->id],
+            collect($this->getJson(route('api.v1.public.order-reasons.index', ['type' => 'not_delivered']))->assertOk()->json('data'))->pluck('id')->all(),
+        );
+    }
 }

@@ -16,6 +16,7 @@ use App\Jobs\SendPushToDevice;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Queue;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 use Laravel\Sanctum\Sanctum;
 use Tests\TestCase;
@@ -320,7 +321,8 @@ class OrderTest extends TestCase
             ->assertJsonPath('data.tayar.vehicle.model', $vehicle->model)
             ->assertJsonPath('data.tayar.vehicle.color', $vehicle->color)
             ->assertJsonPath('data.tayar.vehicle.type', fn (?string $type): bool => $type !== null)
-            ->assertJsonMissingPath('data.tayar.location');
+            ->assertJsonPath('data.tayar.location.lat', '30.0450000')
+            ->assertJsonPath('data.tayar.location.lng', '31.2360000');
     }
 
     public function test_the_tayar_phone_is_gone_once_the_order_is_past_but_the_name_stays(): void
@@ -360,5 +362,22 @@ class OrderTest extends TestCase
         Sanctum::actingAs($this->createStaffUser());
 
         $this->getJson(route('api.v1.client.orders.index'))->assertForbidden();
+    }
+
+    public function test_my_orders_list_runs_the_same_queries_however_many_orders_and_photos_it_has(): void
+    {
+        Storage::fake('local');
+        $tayar = $this->onlineTayar(30.0450, 31.2360);
+        $this->createPickedUpOrdersWithPhotos(Order::factory()->forSender($this->sender)->pickedUpBy($tayar), 2);
+        $this->getJson(route('api.v1.client.orders.index'))->assertOk();
+
+        $fewer = $this->countQueries(fn () => $this->getJson(route('api.v1.client.orders.index'))->assertOk()->assertJsonCount(2, 'data'));
+        $this->createPickedUpOrdersWithPhotos(Order::factory()->forSender($this->sender)->pickedUpBy($tayar), 3);
+        $more = $this->countQueries(fn () => $this->getJson(route('api.v1.client.orders.index'))
+            ->assertOk()
+            ->assertJsonCount(5, 'data')
+            ->assertJsonPath('data.0.pickup_photos.1.url', fn (?string $url): bool => $url !== null));
+
+        $this->assertSame($fewer, $more);
     }
 }

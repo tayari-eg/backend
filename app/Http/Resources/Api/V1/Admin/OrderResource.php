@@ -6,6 +6,7 @@ use App\Domains\Accounts\Enums\Locale;
 use App\Domains\Orders\Enums\OrderCanceller;
 use App\Domains\Orders\Models\Order;
 use App\Domains\Orders\Models\OrderStatusHistory;
+use App\Http\Resources\Api\V1\MediaResource;
 use App\Models\User;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Http\Request;
@@ -99,17 +100,37 @@ class OrderResource extends JsonResource
                 'id' => $this->cancelReason->id,
                 'name' => self::translations($this->cancelReason, 'name'),
             ]),
+            'not_delivered_reason' => $this->whenLoaded('notDeliveredReason', fn (): ?array => $this->notDeliveredReason === null ? null : [
+                'id' => $this->notDeliveredReason->id,
+                'name' => self::translations($this->notDeliveredReason, 'name'),
+            ]),
+            'not_delivered_note' => $this->not_delivered_note,
+            'pickup_photos' => $this->whenLoaded('media', fn () => MediaResource::collection($this->pickupPhotos())),
+            'tracking_token' => $this->tracking_token,
+            // Never the codes: only whether they can be checked, for support.
+            'receiver_codes' => [
+                'sent_at' => $this->codes_sent_at?->toIso8601ZuluString(),
+                'expire_at' => $this->codes_expire_at?->toIso8601ZuluString(),
+                'attempts' => $this->code_attempts,
+                'locked' => $this->codeAttemptsLeft() === 0,
+            ],
             'status_history' => $this->whenLoaded('statusHistories', fn (): array => $this->statusHistories
                 ->map(fn (OrderStatusHistory $history): array => [
                     'from_status' => $history->from_status,
                     'to_status' => $history->to_status,
                     'changed_by' => self::person($history->changer),
                     'note' => $history->note,
+                    'lat' => $history->lat,
+                    'lng' => $history->lng,
                     'created_at' => $history->created_at?->toIso8601ZuluString(),
                 ])
                 ->all()),
             'price_accepted_at' => $this->price_accepted_at?->toIso8601ZuluString(),
             'accepted_at' => $this->accepted_at?->toIso8601ZuluString(),
+            'picked_up_at' => $this->picked_up_at?->toIso8601ZuluString(),
+            'receiver_confirmed_at' => $this->receiver_confirmed_at?->toIso8601ZuluString(),
+            'delivered_at' => $this->delivered_at?->toIso8601ZuluString(),
+            'not_delivered_at' => $this->not_delivered_at?->toIso8601ZuluString(),
             'cancelled_at' => $this->cancelled_at?->toIso8601ZuluString(),
             'created_at' => $this->created_at?->toIso8601ZuluString(),
             'updated_at' => $this->updated_at?->toIso8601ZuluString(),

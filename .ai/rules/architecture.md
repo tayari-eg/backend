@@ -31,6 +31,7 @@ Approved folders outside `app/Domains` and the HTTP side folders:
 - `app/Contracts`: interfaces for swappable infrastructure, e.g. `SmsSender`.
 - `app/Services/Sms`: the SMS drivers behind `SmsSender`, picked by `config('tayari.sms.driver')`.
 - `app/Services/Push`: the push senders behind `PushSender` (`FcmPushSender`, or `LogPushSender` when `config('services.firebase.credentials')` is empty or unreadable).
+- `app/Services/Sentry`: Sentry hooks registered in `config/sentry.php`, e.g. `ScrubSensitiveEventData` (`before_send`), which removes codes, OTPs, passwords, tokens and the Authorization and Cookie headers from every event.
 - `app/Jobs`: queued jobs (`php artisan make:job`), e.g. `SendPushToDevice`.
 
 ## API versioning

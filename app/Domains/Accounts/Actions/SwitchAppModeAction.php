@@ -8,6 +8,7 @@ use App\Domains\Tayars\Models\TayarProfile;
 use App\Models\User;
 use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Validation\ValidationException;
 
 class SwitchAppModeAction
 {
@@ -19,6 +20,8 @@ class SwitchAppModeAction
      * takes the same lock), so going online can't slip in between saving the mode and going offline.
      *
      * @throws AuthorizationException when switching to tayar mode without an approved application
+     * @throws ValidationException (errors.status) when switching to client mode while holding an accepted, picked-up or
+     *                             ongoing order
      */
     public function handle(User $user, AppMode $mode): User
     {
@@ -32,7 +35,7 @@ class SwitchAppModeAction
             $user->forceFill(['last_mode' => $mode])->save();
 
             if ($mode === AppMode::Client && $tayarProfile !== null) {
-                $this->goOffline->handle($tayarProfile);
+                $this->goOffline->handle($tayarProfile, refuseWhileHoldingOrders: true);
             }
         });
 

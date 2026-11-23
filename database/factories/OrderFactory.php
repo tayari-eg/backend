@@ -31,6 +31,7 @@ class OrderFactory extends Factory
     {
         return [
             'code' => Order::newCode(),
+            'tracking_token' => Order::newTrackingToken(),
             'sender_id' => fn (): int => BusinessProfile::factory()->approved()->create()->user_id,
             'idempotency_key' => (string) Str::uuid(),
             'category_id' => fn (): int => Category::factory()->childOf(Category::factory()->create())->create()->id,
@@ -110,6 +111,28 @@ class OrderFactory extends Factory
             'tayar_id' => $profile->user_id,
             'work_session_id' => $profile->current_work_session_id,
             'accepted_at' => now(),
+        ]);
+    }
+
+    /**
+     * Picked up by the tayar (no codes yet: run SendReceiverCodes for them).
+     */
+    public function pickedUpBy(TayarProfile $profile): static
+    {
+        return $this->acceptedBy($profile)->state(fn (array $attributes) => [
+            'status' => OrderStatus::PickedUp,
+            'picked_up_at' => now(),
+        ]);
+    }
+
+    /**
+     * On the way: picked up and the receiver confirmed (no codes yet: run SendReceiverCodes for them).
+     */
+    public function onTheWayWith(TayarProfile $profile): static
+    {
+        return $this->pickedUpBy($profile)->state(fn (array $attributes) => [
+            'status' => OrderStatus::Ongoing,
+            'receiver_confirmed_at' => now(),
         ]);
     }
 
