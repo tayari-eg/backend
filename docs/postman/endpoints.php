@@ -50,6 +50,14 @@ $workStatusFields = '`is_online`, `work_session` (`id`, `vehicle_id`, `mode` (`i
 $notTayar = '- **403:** not an approved tayar (`message`: "Tayar mode is only available after your tayar application is approved."), the account is blocked, or the phone is not verified. Leave tayar mode and show the application status.';
 $reapplyLater = '- **422:** `errors.status` = "You can change your application again from …" while a rejected application still has to wait until `can_reapply_at`.';
 $backToReview = 'An approved or rejected application goes back to `pending` (and an online tayar goes offline): warn the user before saving.';
+$orderRouteFields = "- `category_id` (number, required): a subcategory from **Get categories** (one of a main category's `children`).\n- `pickup_lat`, `pickup_lng`, `dropoff_lat`, `dropoff_lng` (numbers, required): the points picked on the map, up to 7 decimals.";
+$orderFields = '`id`, `code` (the short code people see, e.g. `TY-7K3P9Q`), `status` (`looking_for_tayar` | `pending` | `picked_up` | `ongoing` | `delivered` | `not_delivered` | `cancelled`), `can_cancel`, `category` (`id`, `name`, `is_food`), `details`, `pickup` (`address`, `lat`, `lng`, `contact_phone`), `dropoff` (`address`, `lat`, `lng`), `receiver` (`name`, `phone`), `goods_value`, `shipping_paid_by` (`sender` | `receiver`), `amount_to_collect` (what the receiver pays: the goods value, plus the shipping fee when the receiver pays it), `distance_km`, `food_extra`, `shipping_fee`, `cancel_reason` (`id`, `name`, or null), `price_accepted_at`, `cancelled_at`, `created_at`, `updated_at`. Amounts are strings with two decimals, in EGP; coordinates are strings with 7 decimals';
+$adminOrderFields = '`id`, `code`, `status`, `can_cancel`, `sender` (`id`, `name`, `phone`, `business_name`), `category` (`id`, `name` with `ar` and `en`, `is_food`), `mode` (`id`, `code`, `name` with `ar` and `en`: the mode the order was priced in), `details`, `pickup` (`address`, `lat`, `lng`, `contact_phone`), `dropoff` (`address`, `lat`, `lng`), `receiver` (`name`, `phone`, `user_id` when the receiver has an account), `goods_value`, `shipping_paid_by`, `amount_to_collect`, `fee` (`distance_km`, `base_fare`, `price_per_km`, `distance_fare`, `minimum_fare`, `food_extra`, `shipping_fee`, `tayar_share_percent`, `tayar_earning`, `platform_fee`), `price_accepted_at`, `cancelled_at`, `created_at`, `updated_at`. Amounts are strings with two decimals, in EGP';
+$adminOrderDetailFields = "{$adminOrderFields}, plus `cancelled_by` (`id`, `name`, or null), `cancel_reason` (`id`, `name` with `ar` and `en`, or null) and `status_history` (every status change, oldest first: `from_status` (null for the first row), `to_status`, `changed_by` (`id`, `name`, or null for the system), `note`, `created_at`)";
+$orderNotFound = '- **404:** no order with this id.';
+$notApprovedBusiness = '- **403:** `message` explains why: only business accounts can send orders for now, or the business profile is not approved yet. Show the message with a link to the business profile page.';
+$routeErrors = '- **422:** `errors.route`: the pickup and drop-off are less than 100 m apart (in a straight line), the drop-off is more than :order_max_distance_km km (by road) from the pickup, Tayari does not deliver on this route yet, or a food order is too far (food only goes up to :order_zone_max_distance_km km, or inside one area). Show it on the map step.';
+$cancelReasonFields = "- `cancel_reason_id` (number, required): a reason from **Get cancel reasons**.\n- `note` (string, optional, up to 500 characters).";
 $otpCodeError = 'The same error for a wrong code, an expired code, a used code, a code with too many wrong tries (:otp_max_attempts per code) and an unknown phone: `errors.code` = "The code is wrong or has expired…". Show it under the code input and offer **Resend code**.';
 
 return [
@@ -871,7 +879,7 @@ return [
         'request' => "- Query `mode_id` (optional): the rules of one mode.\n- Query `vehicle_type_id` (optional): the rules for one vehicle type.\n- Query `is_active` (optional): `true` or `false`; leave it out for all.\n- Query `per_page` (optional, 1 to :max_per_page, default :per_page) and `page`.",
         'success' => "**200** with `data`: a list of pricing rules, each with {$pricingRuleFields}. Plus `meta` and `links` for pages.",
         'errors' => "- **422:** an invalid filter or `per_page` out of range.\n{$loggedOut}\n{$staffOnly}\n{$serverError}",
-        'notes' => "- The shipping fee will be: the larger of `minimum_fare` and `base_fare` + `price_per_km` × km, plus `food_extra` for food orders. The tayar gets `tayar_share_percent` of it and Tayari keeps the rest. Prices are only stored for now; orders use them in a later release.\n- A rule with a `vehicle_type` is for that type; the rule with `vehicle_type` null is for every other vehicle in the mode.",
+        'notes' => "- The shipping fee will be: the larger of `minimum_fare` and `base_fare` + `price_per_km` × km, plus `food_extra` for food orders. The tayar gets `tayar_share_percent` of it and Tayari keeps the rest. New orders are priced with the mode's rule for every vehicle (`vehicle_type` null); a rule for one vehicle type doesn't change the price a customer sees.\n- A rule with a `vehicle_type` is for that type; the rule with `vehicle_type` null is for every other vehicle in the mode.",
     ],
 
     'api.v1.admin.pricing-rules.show' => [
@@ -924,6 +932,86 @@ return [
         'success' => '**204** with no body. Remove the row.',
         'errors' => "{$pricingRuleNotFound}\n{$loggedOut}\n{$staffOnly}\n{$serverError}",
         'notes' => '- Ask for confirmation first; a delete can\'t be undone. Orders keep the fee they were given.',
+    ],
+
+    'api.v1.public.order-reasons.index' => [
+        'what' => 'Lists the active reasons of one type, in display order, for the cancel dialog.',
+        'who' => 'Anyone, no login.',
+        'request' => "- Query `type` (required): `cancel`.\n- Query `per_page` (optional, 1 to :max_per_page, default :per_page) and `page` (optional, starts at 1).\n- `Accept-Language` decides the language of the names.",
+        'success' => '**200** with `data`: a list of `{ id, name }` in display order, plus `meta` and `links` for pages.',
+        'errors' => "- **422:** `type` is missing or unknown, or `per_page` is out of range.\n{$upgrade}\n{$serverError}",
+        'notes' => '- Send the chosen `id` as `cancel_reason_id` in **Cancel order**. Load the list when the cancel dialog opens.',
+    ],
+
+    'api.v1.client.orders.estimate' => [
+        'what' => 'Prices a trip before the order is created. Nothing is saved.',
+        'who' => 'An approved business account (individual customers come later).',
+        'request' => $orderRouteFields,
+        'success' => '**200** with `data`: `{ distance_km, food_extra, shipping_fee }`, strings with two decimals (km and EGP). Show `shipping_fee` as the price, and keep it to send with **Create order**.',
+        'errors' => "- **422:** field errors.\n{$routeErrors}\n{$loggedOut}\n{$notApprovedBusiness}\n{$upgrade}\n{$serverError}",
+        'notes' => "- The price is the larger of the minimum fare and the base fare + price per km × distance, plus a food extra for food categories. The distance is the straight line times a road factor, so it is a little longer than on the map.\n- The customer never picks a mode: Tayari picks it from the trip.\n- Call it again whenever the category or a point changes.",
+    ],
+
+    'api.v1.client.orders.store' => [
+        'what' => 'Creates an order at the price from **Estimate price**. The order starts in `looking_for_tayar`.',
+        'who' => 'An approved business account (individual customers come later).',
+        'request' => "- `idempotency_key` (string, required): a UUID made once when the order form opens, and sent again on every retry of the same order.\n{$orderRouteFields}\n- `details` (string, optional, up to 2000 characters): what is in the package.\n- `pickup_address`, `dropoff_address` (strings, required, up to 255 characters).\n- `pickup_contact_phone` (string, optional): someone to call at the pickup, if not the sender; any Egyptian mobile format.\n- `receiver_name` (string, required, up to 255 characters) and `receiver_phone` (string, required, any Egyptian mobile format).\n- `goods_value` (required): the price of the goods the receiver pays, 0 to 1000000, up to 2 decimals.\n- `shipping_paid_by` (required): `sender` or `receiver`.\n- `shipping_fee` (required): the `shipping_fee` from **Estimate price**, as shown to the user.",
+        'success' => "**201** with `data`, the new order: {$orderFields}. **200** with the same order when this `idempotency_key` already made one (a double tap or a retry).",
+        'errors' => "- **422:** field errors. When the price changed since the estimate: `errors.shipping_fee` = \"The shipping price is now 45.00 EGP. Check the new price and confirm again.\" Show the new price and ask the user to confirm again (send the new `shipping_fee` with the same `idempotency_key`). When the order this `idempotency_key` made was deleted: `errors.idempotency_key` = \"This request key belongs to a deleted order. Use a new request key.\" Make a new key and send again.\n{$routeErrors}\n{$loggedOut}\n{$notApprovedBusiness}\n{$upgrade}\n{$serverError}",
+        'notes' => "- Disable the **Send** button while the request runs, but keep the same `idempotency_key` for retries: the server never creates two orders for one key. Make a new key only for a new order.\n- Phones come back as `+201XXXXXXXXX`.",
+    ],
+
+    'api.v1.client.orders.index' => [
+        'what' => 'Lists my orders, newest first: the Active tab or the Past tab.',
+        'who' => 'The sender (an active, verified client account).',
+        'request' => "- Query `status` (optional): `active` (default: looking for a tayar, pending, picked up, ongoing) or `past` (delivered, not delivered, cancelled).\n- Query `per_page` (optional, 1 to :max_per_page, default :per_page).\n- Query `cursor` (optional): `meta.next_cursor` from the previous page.",
+        'success' => "**200** with `data`: a list of orders, each with {$orderFields}. Plus `meta` (`path`, `per_page`, `next_cursor`, `prev_cursor`) and `links` (`first`, `last`, `prev`, `next`).",
+        'errors' => "- **422:** an invalid `status`, `per_page` or `cursor`.\n{$loggedOut}\n{$clientOnly}\n{$upgrade}\n{$serverError}",
+        'notes' => "- This list uses **cursor pages**, not page numbers: for infinite scroll, send `cursor` = `meta.next_cursor` until it is null. There is no total.\n- Pull to refresh starts again without `cursor`.",
+    ],
+
+    'api.v1.client.orders.show' => [
+        'what' => 'Returns one of my orders.',
+        'who' => 'The sender of the order.',
+        'request' => '- Path `order`: the order `id`. No body.',
+        'success' => "**200** with `data`: {$orderFields}.",
+        'errors' => "{$orderNotFound}\n- **403:** the order belongs to someone else.\n{$loggedOut}\n{$clientOnly}\n{$upgrade}\n{$serverError}",
+        'notes' => '- Show **Cancel order** only when `can_cancel` is true.',
+    ],
+
+    'api.v1.client.orders.cancel' => [
+        'what' => 'Cancels one of my orders before a tayar accepts it.',
+        'who' => 'The sender of the order.',
+        'request' => "- Path `order`: the order `id`.\n{$cancelReasonFields}",
+        'success' => "**200** with `data`, the order (`status` = `cancelled`, `can_cancel` = false): {$orderFields}.",
+        'errors' => "{$orderNotFound}\n- **422:** field errors, or `errors.status` = \"This order can no longer be cancelled.\" when a tayar already accepted it (reload the order).\n- **403:** the order belongs to someone else.\n{$loggedOut}\n{$clientOnly}\n{$upgrade}\n{$serverError}",
+        'notes' => '- Ask for confirmation in a dialog with the reasons from **Get cancel reasons** and an optional note.',
+    ],
+
+    'api.v1.admin.orders.index' => [
+        'what' => 'Lists every order, newest first, with filters and search.',
+        'who' => 'Staff with `orders.view` (support, ops, admin, super admin).',
+        'request' => "- Query `status` (optional): one order status, e.g. `looking_for_tayar` or `cancelled`.\n- Query `sender_id`, `category_id`, `mode_id` (optional numbers).\n- Query `created_from`, `created_to` (optional, `YYYY-MM-DD`): business days in Cairo time, both included.\n- Query `search` (optional, up to 100 characters): an order code (`TY-7K3P9Q` or `7k3p9q`), or a full phone number matched against the receiver's and the sender's phone.\n- Query `per_page` (optional, 1 to :max_per_page, default :per_page) and `page`.",
+        'success' => "**200** with `data`: a list of orders, each with {$adminOrderFields}. Plus `meta` and `links` for pages.",
+        'errors' => "- **422:** an invalid filter, `created_to` before `created_from`, `search` too long or `per_page` out of range.\n{$loggedOut}\n{$staffOnly}\n{$serverError}",
+        'notes' => '- `fee.tayar_earning` and `fee.platform_fee` are estimates from the general pricing rule until a tayar accepts the order.',
+    ],
+
+    'api.v1.admin.orders.show' => [
+        'what' => 'Returns one order with its fee breakdown and its full status history.',
+        'who' => 'Staff with `orders.view`.',
+        'request' => '- Path `order`: the order `id`. No body.',
+        'success' => "**200** with `data`: {$adminOrderDetailFields}.",
+        'errors' => "{$orderNotFound}\n{$loggedOut}\n{$staffOnly}\n{$serverError}",
+    ],
+
+    'api.v1.admin.orders.cancel' => [
+        'what' => 'Cancels an order before a tayar accepts it, for example at the sender\'s request.',
+        'who' => 'Staff with `orders.manage` (ops, admin, super admin).',
+        'request' => "- Path `order`: the order `id`.\n{$cancelReasonFields}",
+        'success' => "**200** with `data`, the order (`status` = `cancelled`): {$adminOrderDetailFields}. The last `status_history` row names the staff member.",
+        'errors' => "{$orderNotFound}\n- **422:** field errors, or `errors.status` = \"This order can no longer be cancelled.\" when a tayar already accepted it.\n{$loggedOut}\n{$staffOnly}\n{$serverError}",
+        'notes' => '- Ask for confirmation first, with the reasons from **Get cancel reasons**.',
     ],
 
 ];

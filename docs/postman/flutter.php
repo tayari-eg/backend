@@ -21,7 +21,7 @@ return [
 
         - **Login:** Bearer token from **Sign up and login › Log in**. Its script saves the token to `{{token}}`, and every request in this folder sends it.
         - **Headers:** this folder adds `X-Platform: {{platform}}` (`android` by default; set `ios` in the environment) and `X-App-Version: {{appVersion}}`.
-        - Build the folders in order: app start, sign up and login, account, push notifications, then the business and national ID screens, then the **Tayar mode** folders, then **Client mode · Categories**.
+        - Build the folders in order: app start, sign up and login, account, push notifications, then the business and national ID screens, then the **Tayar mode** folders, then **Client mode · Categories** and **Client mode · Orders**.
         - **Reopening the app:** `last_mode` in **Get my account** says which mode to open (`tayar` only works while `tayar_profile.status` is `approved`).
 
         ## Onboarding
@@ -410,7 +410,7 @@ return [
         [
             'name' => '13. Client mode · Categories',
             'description' => <<<'MD'
-                The category picker for a new order (the order screens come in the next release):
+                The category picker for a new order (the rest of the New order flow is in **14. Client mode · Orders**):
 
                 1. **New order › Category** step → **Get categories**: main categories with `icon_url`, each with its `children`.
                 2. The sender picks a main category, then one of its subcategories: the order is placed in the subcategory.
@@ -422,6 +422,54 @@ return [
                     'route' => 'api.v1.public.categories.index',
                     'name' => 'Get categories',
                     'screen' => '**New order › Category** step, on open.',
+                ],
+            ],
+        ],
+
+        [
+            'name' => '14. Client mode · Orders',
+            'description' => <<<'MD'
+                Sending and following orders, for **approved business accounts** (`next_step` = `ready`; individual customers come later). Other accounts get **403** with a message: show it with a link to the business profile.
+
+                1. **New order** flow: category (**Get categories**, folder 13) → pickup and drop-off on the map → **Estimate price** (call it again whenever the category or a point changes) → receiver, goods value, who pays the shipping, details → **Create order** with the `shipping_fee` the user saw.
+                2. Make one `idempotency_key` (UUID) when the New order screen opens and keep it for every retry of **Create order**. A 200 means the order already existed: open it as if it were new.
+                3. A 422 on `shipping_fee` means the price changed: show the new price from the message, ask again, and send the new `shipping_fee` with the same key.
+                4. **My orders** screen: two tabs, Active and Past → **Get my orders** with `status` = `active` or `past`. Infinite scroll with `cursor` = `meta.next_cursor`.
+                5. **Order details** → **Get order**. Show **Cancel order** while `can_cancel` is true.
+                6. **Cancel** dialog → **Get cancel reasons**, then **Cancel order** with the picked reason and an optional note.
+                MD,
+            'requests' => [
+                [
+                    'route' => 'api.v1.client.orders.estimate',
+                    'name' => 'Estimate price',
+                    'screen' => '**New order › Price** step, after both points are on the map, and again when the category or a point changes.',
+                ],
+                [
+                    'route' => 'api.v1.client.orders.store',
+                    'name' => 'Create order',
+                    'screen' => '**New order › Confirm** step, when the user taps **Send order**.',
+                    'next' => 'Open **Order details** for the returned order (201 or 200).',
+                ],
+                [
+                    'route' => 'api.v1.client.orders.index',
+                    'name' => 'Get my orders',
+                    'screen' => '**My orders** screen, Active and Past tabs, on open, on pull to refresh and on scroll.',
+                ],
+                [
+                    'route' => 'api.v1.client.orders.show',
+                    'name' => 'Get order',
+                    'screen' => '**Order details** screen, on open.',
+                ],
+                [
+                    'route' => 'api.v1.public.order-reasons.index',
+                    'name' => 'Get cancel reasons',
+                    'screen' => '**Cancel order** dialog, on open (`type` = `cancel`).',
+                ],
+                [
+                    'route' => 'api.v1.client.orders.cancel',
+                    'name' => 'Cancel order',
+                    'screen' => '**Cancel order** dialog, when the user confirms.',
+                    'next' => 'Show the order as cancelled and move it to the Past tab.',
                 ],
             ],
         ],

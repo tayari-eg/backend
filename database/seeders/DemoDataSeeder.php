@@ -23,7 +23,14 @@ use App\Domains\Catalog\Enums\ModeCode;
 use App\Domains\Catalog\Models\Area;
 use App\Domains\Catalog\Models\Category;
 use App\Domains\Catalog\Models\Mode;
+use App\Domains\Orders\Actions\CancelOrderAction;
+use App\Domains\Orders\Actions\CreateOrderAction;
+use App\Domains\Orders\Enums\OrderReasonType;
+use App\Domains\Orders\Enums\ShippingPaidBy;
+use App\Domains\Orders\Models\OrderReason;
+use App\Domains\Pricing\Actions\CalculateShippingFeeAction;
 use App\Domains\Pricing\Actions\CreatePricingRuleAction;
+use App\Domains\Pricing\Data\GeoPoint;
 use App\Domains\Pricing\Models\PricingRule;
 use App\Domains\Tayars\Actions\ApproveTayarApplicationAction;
 use App\Domains\Tayars\Actions\RejectTayarApplicationAction;
@@ -158,6 +165,24 @@ class DemoDataSeeder extends Seeder
     private array $summary = [];
 
     /**
+     * Orders of the approved business; the fixed idempotency keys make a second run find them instead of adding more.
+     *
+     * @var list<array{idempotency_key: string, category: string, pickup_address: string, pickup: array{string, string}, dropoff_address: string, dropoff: array{string, string}, receiver_name: string, receiver_phone: string, goods_value: string, shipping_paid_by: ShippingPaidBy, details: string, cancel_reason: ?string}>
+     */
+    private const array ORDERS = [
+        ['idempotency_key' => '6f1c2a8e-0d1b-4c3e-9a51-000000000001', 'category' => 'Electronics',
+            'pickup_address' => 'Abbas El Akkad St, Nasr City', 'pickup' => ['30.0561000', '31.3402000'],
+            'dropoff_address' => 'Makram Ebeid St, Nasr City', 'dropoff' => ['30.0606000', '31.3456000'],
+            'receiver_name' => 'Demo Receiver One', 'receiver_phone' => '01000000020', 'goods_value' => '1500.00',
+            'shipping_paid_by' => ShippingPaidBy::Receiver, 'details' => 'A boxed phone charger. Handle with care.', 'cancel_reason' => null],
+        ['idempotency_key' => '6f1c2a8e-0d1b-4c3e-9a51-000000000002', 'category' => 'Meals',
+            'pickup_address' => 'Talaat Harb St, Downtown', 'pickup' => ['30.0480000', '31.2390000'],
+            'dropoff_address' => '26th of July St, Zamalek', 'dropoff' => ['30.0617000', '31.2194000'],
+            'receiver_name' => 'Demo Receiver Two', 'receiver_phone' => '01000000021', 'goods_value' => '240.00',
+            'shipping_paid_by' => ShippingPaidBy::Sender, 'details' => 'Two lunch boxes.', 'cancel_reason' => 'I no longer need the order'],
+    ];
+
+    /**
      * Every demo phone, as written in the docs (local format).
      *
      * @return list<string>
@@ -235,6 +260,10 @@ class DemoDataSeeder extends Seeder
 
         if (Mode::query()->count() < count(ModeCode::cases())) {
             $this->call(ModeSeeder::class);
+        }
+
+        if (! OrderReason::query()->ofType(OrderReasonType::Cancel)->exists()) {
+            $this->call(OrderReasonSeeder::class);
         }
     }
 
@@ -360,7 +389,47 @@ class DemoDataSeeder extends Seeder
             $profile = app(RejectBusinessProfileAction::class)->handle($profile, $reviewer, $business['reason']);
         }
 
+        if ($business['status'] === VerificationStatus::Approved) {
+            $this->seedOrders($user);
+        }
+
         $this->addToSummary('business', $user, $profile->verification_status->value);
+    }
+
+    /**
+     * Priced and created through the order Actions, so the fee follows the demo pricing rules; one is then cancelled.
+     */
+    private function seedOrders(User $sender): void
+    {
+        foreach (self::ORDERS as $demoOrder) {
+            $category = Category::query()->whereNotNull('parent_id')->whereNameIs('en', $demoOrder['category'])->firstOrFail();
+            $pickup = new GeoPoint(...$demoOrder['pickup']);
+            $dropoff = new GeoPoint(...$demoOrder['dropoff']);
+            $quote = app(CalculateShippingFeeAction::class)->handle($pickup, $dropoff, $category);
+
+            $order = app(CreateOrderAction::class)->handle($sender, [
+                'idempotency_key' => $demoOrder['idempotency_key'],
+                'category_id' => $category->id,
+                'details' => $demoOrder['details'],
+                'pickup_address' => $demoOrder['pickup_address'],
+                'pickup_lat' => $pickup->lat,
+                'pickup_lng' => $pickup->lng,
+                'pickup_contact_phone' => null,
+                'dropoff_address' => $demoOrder['dropoff_address'],
+                'dropoff_lat' => $dropoff->lat,
+                'dropoff_lng' => $dropoff->lng,
+                'receiver_name' => $demoOrder['receiver_name'],
+                'receiver_phone' => PhoneNumber::from($demoOrder['receiver_phone'])->value,
+                'goods_value' => $demoOrder['goods_value'],
+                'shipping_paid_by' => $demoOrder['shipping_paid_by']->value,
+                'shipping_fee' => (string) $quote->shippingFee,
+            ]);
+
+            if ($demoOrder['cancel_reason'] !== null && $order->canBeCancelled()) {
+                $reason = OrderReason::query()->ofType(OrderReasonType::Cancel)->where('name->en', $demoOrder['cancel_reason'])->firstOrFail();
+                app(CancelOrderAction::class)->handle($order, $sender, $reason, 'Demo order cancelled by the business.');
+            }
+        }
     }
 
     /**

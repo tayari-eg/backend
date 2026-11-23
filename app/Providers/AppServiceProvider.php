@@ -10,6 +10,8 @@ use App\Domains\Accounts\Models\BusinessProfile;
 use App\Domains\Accounts\Policies\BusinessProfilePolicy;
 use App\Domains\Accounts\Policies\MediaPolicy;
 use App\Domains\Accounts\Policies\UserPolicy;
+use App\Domains\Orders\Models\Order;
+use App\Domains\Orders\Policies\OrderPolicy;
 use App\Domains\Tayars\Models\TayarProfile;
 use App\Domains\Tayars\Policies\TayarProfilePolicy;
 use App\Http\ClientContext;
@@ -66,6 +68,7 @@ class AppServiceProvider extends ServiceProvider
         Gate::policy(User::class, UserPolicy::class);
         Gate::policy(Media::class, MediaPolicy::class);
         Gate::policy(TayarProfile::class, TayarProfilePolicy::class);
+        Gate::policy(Order::class, OrderPolicy::class);
 
         // Admin customer routes never reach staff and staff routes never reach customers (404). Bound here, not in
         // the route file, so the scopes still apply when routes are cached.

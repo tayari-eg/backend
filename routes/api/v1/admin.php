@@ -8,6 +8,7 @@ use App\Http\Controllers\Api\V1\Admin\CategoryController;
 use App\Http\Controllers\Api\V1\Admin\CategoryIconController;
 use App\Http\Controllers\Api\V1\Admin\ModeController;
 use App\Http\Controllers\Api\V1\Admin\NationalIdReviewController;
+use App\Http\Controllers\Api\V1\Admin\OrderController;
 use App\Http\Controllers\Api\V1\Admin\PricingRuleController;
 use App\Http\Controllers\Api\V1\Admin\StaffController;
 use App\Http\Controllers\Api\V1\Admin\TayarApplicationReviewController;
@@ -140,6 +141,15 @@ Route::middleware(['auth:sanctum', 'staff'])->group(function (): void {
         Route::post('pricing-rules/{pricingRule}/activate', [PricingRuleController::class, 'activate'])->name('pricing-rules.activate');
         Route::post('pricing-rules/{pricingRule}/deactivate', [PricingRuleController::class, 'deactivate'])->name('pricing-rules.deactivate');
         Route::delete('pricing-rules/{pricingRule}', [PricingRuleController::class, 'destroy'])->name('pricing-rules.destroy');
+    });
+
+    Route::middleware('permission:'.StaffPermission::OrdersView->value)->group(function (): void {
+        Route::get('orders', [OrderController::class, 'index'])->name('orders.index');
+        Route::get('orders/{order}', [OrderController::class, 'show'])->name('orders.show');
+    });
+
+    Route::middleware('permission:'.StaffPermission::OrdersManage->value)->group(function (): void {
+        Route::post('orders/{order}/cancel', [OrderController::class, 'cancel'])->name('orders.cancel');
     });
 
     Route::middleware('permission:'.StaffPermission::StaffManage->value)->group(function (): void {

@@ -87,6 +87,8 @@ class ExportPostmanCollection extends Command
         ':tayar_reapply_hours' => ['TAYAR_REAPPLY_AFTER_HOURS', 'tayars.reapply_after_hours'],
         ':zone_min_radius_km' => ['TAYAR_ZONE_MIN_RADIUS_KM', 'tayars.zone_min_radius_km'],
         ':zone_max_radius_km' => ['TAYAR_ZONE_MAX_RADIUS_KM', 'tayars.zone_max_radius_km'],
+        ':order_zone_max_distance_km' => ['ORDER_ZONE_MAX_DISTANCE_KM', 'orders.zone_max_distance_km'],
+        ':order_max_distance_km' => ['ORDER_MAX_DISTANCE_KM', 'orders.max_distance_km'],
         ':per_page' => [null, 'pagination.per_page'],
         ':max_per_page' => [null, 'pagination.max_per_page'],
     ];
@@ -122,6 +124,22 @@ class ExportPostmanCollection extends Command
         'year' => 2020,
         'lat' => 30.0444,
         'lng' => 31.2357,
+        'idempotency_key' => '00000000-0000-4000-8000-000000000000',
+        'category_id' => 1,
+        'details' => 'Example package details',
+        'pickup_address' => 'Example pickup address',
+        'pickup_lat' => 30.0444,
+        'pickup_lng' => 31.2357,
+        'pickup_contact_phone' => '+201000000000',
+        'dropoff_address' => 'Example drop-off address',
+        'dropoff_lat' => 30.0626,
+        'dropoff_lng' => 31.2497,
+        'receiver_name' => 'Example Receiver',
+        'receiver_phone' => '+201000000000',
+        'goods_value' => '150.00',
+        'shipping_fee' => '40.00',
+        'cancel_reason_id' => 1,
+        'note' => 'Example note.',
     ];
 
     /**

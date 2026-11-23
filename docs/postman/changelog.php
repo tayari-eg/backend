@@ -29,6 +29,26 @@
 return [
 
     [
+        'version' => '1.7.0',
+        'date' => '2026-11-23',
+        'changes' => [
+            'Added: GET /api/v1/order-reasons — lists the active reasons of one type (type=cancel) in display order (id, name), for the cancel dialog; no login. Apps: Website, Flutter client mode, Admin panel.',
+            'Added: POST /api/v1/client/orders/estimate — prices a trip (category_id, pickup and drop-off lat/lng) without creating an order: distance_km, food_extra and shipping_fee; approved business accounts only (403 otherwise), errors.route when the pickup and drop-off are less than 100 m apart (straight line), the trip is too long, not served, or too far for food. Apps: Website, Flutter client mode.',
+            'Added: POST /api/v1/client/orders — creates an order in looking_for_tayar at the shipping_fee from the estimate (422 errors.shipping_fee when the price changed, errors.route as in the estimate, errors.idempotency_key when the order that key made was deleted); a required idempotency_key (UUID) makes a double tap or retry return the same order with 200 instead of a second one (201); approved business accounts only. Apps: Website, Flutter client mode.',
+            'Added: GET /api/v1/client/orders — my orders, newest first, status=active (default) or past, with cursor pages (cursor, meta.next_cursor). Apps: Website, Flutter client mode.',
+            'Added: GET /api/v1/client/orders/{order} — one of my orders, with can_cancel; 403 for someone else\'s order. Apps: Website, Flutter client mode.',
+            'Added: POST /api/v1/client/orders/{order}/cancel — cancels my order before a tayar accepts it, with cancel_reason_id and an optional note; 422 errors.status once it can no longer be cancelled. Apps: Website, Flutter client mode.',
+            'Added: GET /api/v1/admin/orders — every order, newest first, with status, sender_id, category_id, mode_id, created_from and created_to (Cairo business days) filters and a search by order code or phone, with the fee breakdown (orders.view). Apps: Admin panel.',
+            'Added: GET /api/v1/admin/orders/{order} — one order with its fee breakdown, cancel details and full status history with who made each change (orders.view). Apps: Admin panel.',
+            'Added: POST /api/v1/admin/orders/{order}/cancel — cancels an order before a tayar accepts it, with cancel_reason_id and an optional note (orders.manage: ops, admin, super admin). Apps: Admin panel.',
+            'Changed: GET /api/v1/auth/me — permissions can now include orders.view (support, ops, admin) and orders.manage (ops, admin), to show the Orders menu and the Cancel button. Apps: Admin panel.',
+            'Docs: Read me first — lists with cursor pages are explained, and the demo accounts section notes the approved business\'s two demo orders (one looking for a tayar, one cancelled). Apps: Website, Admin panel, Flutter client mode.',
+            'Docs: GET /api/v1/categories — the Categories folders now point to the new Orders folders (Website 7. Orders, Flutter 14. Client mode · Orders). Apps: Website, Flutter client mode.',
+            'Docs: GET /api/v1/admin/pricing-rules — the notes now say new orders are priced with the mode\'s rule for every vehicle. Apps: Admin panel.',
+        ],
+    ],
+
+    [
         'version' => '1.6.0',
         'date' => '2026-11-23',
         'changes' => [

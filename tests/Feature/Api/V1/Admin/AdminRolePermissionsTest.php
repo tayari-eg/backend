@@ -9,6 +9,7 @@ use App\Domains\Accounts\Models\BusinessType;
 use App\Domains\Catalog\Models\Area;
 use App\Domains\Catalog\Models\Category;
 use App\Domains\Catalog\Models\Mode;
+use App\Domains\Orders\Models\Order;
 use App\Domains\Pricing\Models\PricingRule;
 use App\Domains\Tayars\Models\TayarProfile;
 use App\Domains\Tayars\Models\Vehicle;
@@ -90,6 +91,9 @@ class AdminRolePermissionsTest extends TestCase
         'api.v1.admin.pricing-rules.activate' => ['POST', 'pricingRule', StaffPermission::PricingRulesManage],
         'api.v1.admin.pricing-rules.deactivate' => ['POST', 'pricingRule', StaffPermission::PricingRulesManage],
         'api.v1.admin.pricing-rules.destroy' => ['DELETE', 'pricingRule', StaffPermission::PricingRulesManage],
+        'api.v1.admin.orders.index' => ['GET', null, StaffPermission::OrdersView],
+        'api.v1.admin.orders.show' => ['GET', 'order', StaffPermission::OrdersView],
+        'api.v1.admin.orders.cancel' => ['POST', 'order', StaffPermission::OrdersManage],
         'api.v1.admin.staff.index' => ['GET', null, StaffPermission::StaffManage],
         'api.v1.admin.staff.store' => ['POST', null, StaffPermission::StaffManage],
         'api.v1.admin.staff.role.update' => ['PUT', 'staff', StaffPermission::StaffManage],
@@ -127,6 +131,7 @@ class AdminRolePermissionsTest extends TestCase
             'mode' => Mode::factory()->create(),
             'area' => Area::factory()->create(),
             'pricingRule' => PricingRule::factory()->create(),
+            'order' => Order::factory()->create(),
             null => null,
         };
     }
