@@ -5,10 +5,13 @@ namespace Tests\Feature\Domains\Accounts;
 use App\Domains\Accounts\Enums\StaffPermission;
 use App\Domains\Accounts\Enums\StaffRole;
 use App\Domains\Accounts\Models\BusinessType;
+use App\Domains\Catalog\Enums\ModeCode;
+use App\Domains\Catalog\Models\Mode;
 use App\Domains\Tayars\Models\VehicleType;
 use App\Models\User;
 use Database\Seeders\BusinessTypeSeeder;
 use Database\Seeders\DatabaseSeeder;
+use Database\Seeders\ModeSeeder;
 use Database\Seeders\RolesAndPermissionsSeeder;
 use Database\Seeders\SuperAdminSeeder;
 use Database\Seeders\VehicleTypeSeeder;
@@ -30,8 +33,9 @@ class SeedersTest extends TestCase
         $this->assertSame(['admin', 'ops', 'super_admin', 'support'], Role::query()->where('guard_name', 'web')->orderBy('name')->pluck('name')->all());
         $this->assertSame($this->permissionNames(StaffRole::Admin), $this->rolePermissions('admin'));
         $this->assertNotContains(StaffPermission::StaffManage->value, $this->rolePermissions('admin'));
-        $this->assertSame(['business_profiles.review', 'business_profiles.view', 'business_types.view', 'national_ids.review', 'national_ids.view', 'tayars.review', 'tayars.view', 'users.block', 'users.view', 'vehicle_types.view'], $this->rolePermissions('ops'));
-        $this->assertSame(['business_profiles.view', 'business_types.view', 'national_ids.view', 'tayars.view', 'users.view', 'vehicle_types.view'], $this->rolePermissions('support'));
+        $this->assertSame(['areas.view', 'business_profiles.review', 'business_profiles.view', 'business_types.view', 'categories.view', 'modes.view', 'national_ids.review', 'national_ids.view', 'pricing_rules.view', 'tayars.review', 'tayars.view', 'users.block', 'users.view', 'vehicle_types.view'], $this->rolePermissions('ops'));
+        $this->assertSame(['areas.view', 'business_profiles.view', 'business_types.view', 'categories.view', 'modes.view', 'national_ids.view', 'pricing_rules.view', 'tayars.view', 'users.view', 'vehicle_types.view'], $this->rolePermissions('support'));
+        $this->assertContains(StaffPermission::PricingRulesManage->value, $this->rolePermissions('admin'));
         $this->assertContains(StaffPermission::TayarsReview->value, $this->rolePermissions('admin'));
         $this->assertContains(StaffPermission::VehicleTypesManage->value, $this->rolePermissions('admin'));
         $this->assertSame([], $this->rolePermissions('super_admin'));
@@ -117,7 +121,32 @@ class SeedersTest extends TestCase
         $this->assertTrue($types->every(fn (VehicleType $type): bool => $type->can_carry_food && $type->is_active));
     }
 
-    public function test_the_database_seeder_runs_all_four(): void
+    public function test_the_three_modes_are_seeded_once_in_order_and_only_long_distance_refuses_food(): void
+    {
+        $this->seed(ModeSeeder::class);
+        $this->seed(ModeSeeder::class);
+
+        $modes = Mode::query()->orderBy('sort_order')->get();
+        $this->assertSame([ModeCode::LongDistance, ModeCode::Zone, ModeCode::Area], $modes->pluck('code')->all());
+        $this->assertSame([false, true, true], $modes->pluck('allows_food')->all());
+        $this->assertSame('منطقة', $modes->last()->getTranslation('name', 'ar'));
+        $this->assertTrue($modes->every(fn (Mode $mode): bool => $mode->is_active && $mode->getTranslation('description', 'en') !== ''));
+    }
+
+    public function test_running_the_mode_seeder_again_keeps_what_staff_changed(): void
+    {
+        $this->seed(ModeSeeder::class);
+        $zone = Mode::query()->where('code', ModeCode::Zone)->sole();
+        $zone->update(['name' => ['ar' => 'قريب', 'en' => 'Nearby'], 'is_active' => false]);
+
+        $this->seed(ModeSeeder::class);
+
+        $this->assertSame('Nearby', $zone->refresh()->getTranslation('name', 'en'));
+        $this->assertFalse($zone->is_active);
+        $this->assertDatabaseCount('modes', 3);
+    }
+
+    public function test_the_database_seeder_runs_all_five(): void
     {
         config(['tayari.super_admin' => ['name' => 'Owner', 'phone' => '01012345678', 'password' => 'owner-secret']]);
 
@@ -126,6 +155,7 @@ class SeedersTest extends TestCase
         $this->assertDatabaseCount('roles', count(StaffRole::cases()));
         $this->assertDatabaseCount('business_types', 10);
         $this->assertDatabaseCount('vehicle_types', 4);
+        $this->assertDatabaseCount('modes', 3);
         $this->assertTrue(User::query()->sole()->hasRole(StaffRole::SuperAdmin->value));
     }
 

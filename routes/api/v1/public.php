@@ -1,8 +1,11 @@
 <?php
 
 use App\Http\Controllers\Api\V1\Public\AppConfigController;
+use App\Http\Controllers\Api\V1\Public\AreaController;
 use App\Http\Controllers\Api\V1\Public\BusinessTypeController;
+use App\Http\Controllers\Api\V1\Public\CategoryController;
 use App\Http\Controllers\Api\V1\Public\MediaController;
+use App\Http\Controllers\Api\V1\Public\ModeController;
 use App\Http\Controllers\Api\V1\Public\VehicleTypeController;
 use App\Http\Middleware\EnsureAppVersionIsSupported;
 use Illuminate\Support\Facades\Route;
@@ -14,6 +17,9 @@ Route::get('app-config', AppConfigController::class)
 
 Route::get('business-types', [BusinessTypeController::class, 'index'])->name('business-types.index');
 Route::get('vehicle-types', [VehicleTypeController::class, 'index'])->name('vehicle-types.index');
+Route::get('categories', [CategoryController::class, 'index'])->name('categories.index');
+Route::get('modes', [ModeController::class, 'index'])->name('modes.index');
+Route::get('areas', [AreaController::class, 'index'])->name('areas.index');
 
 // The signature is the access check: URLs are only handed out to users the MediaPolicy allows.
 Route::get('media/{media}', MediaController::class)->middleware('signed')->name('media.show');

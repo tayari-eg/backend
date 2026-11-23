@@ -181,6 +181,24 @@ return [
             ],
         ],
 
+        [
+            'name' => '6. Categories',
+            'description' => <<<'MD'
+                The category picker for a new order (the order pages come in the next release):
+
+                1. **New order › Category** step → **Get categories**: main categories with `icon_url`, each with its `children`.
+                2. The user picks a main category, then one of its subcategories: the order is placed in the subcategory.
+                3. Load the list again when the user changes the language.
+                MD,
+            'requests' => [
+                [
+                    'route' => 'api.v1.public.categories.index',
+                    'name' => 'Get categories',
+                    'screen' => '**New order › Category** step, on open.',
+                ],
+            ],
+        ],
+
     ],
 
 ];

@@ -222,7 +222,7 @@ class TayarApplicationTest extends TestCase
 
     public function test_changing_the_national_id_number_sends_an_approved_tayar_back_to_review_and_offline(): void
     {
-        $profile = app(GoOnlineAction::class)->handle(TayarProfile::factory()->approved()->create(), 30.0444, 31.2357);
+        $profile = app(GoOnlineAction::class)->handle(TayarProfile::factory()->approved()->create(), 30.0444, 31.2357, $this->zoneWorkSessionSettings());
         $this->actingAsTayar($profile);
 
         $this->patchJson(route('api.v1.client.tayar-profile.update'), ['national_id_number' => '29001011234599'])

@@ -32,6 +32,10 @@ enum StaffRole: string
                 StaffPermission::TayarsView,
                 StaffPermission::TayarsReview,
                 StaffPermission::VehicleTypesView,
+                StaffPermission::CategoriesView,
+                StaffPermission::ModesView,
+                StaffPermission::AreasView,
+                StaffPermission::PricingRulesView,
             ],
             self::Support => [
                 StaffPermission::BusinessTypesView,
@@ -40,6 +44,10 @@ enum StaffRole: string
                 StaffPermission::NationalIdsView,
                 StaffPermission::TayarsView,
                 StaffPermission::VehicleTypesView,
+                StaffPermission::CategoriesView,
+                StaffPermission::ModesView,
+                StaffPermission::AreasView,
+                StaffPermission::PricingRulesView,
             ],
         };
     }

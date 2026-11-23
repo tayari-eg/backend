@@ -14,7 +14,7 @@ class LocationTest extends TestCase
 
     private function onlineTayar(): TayarProfile
     {
-        $profile = app(GoOnlineAction::class)->handle(TayarProfile::factory()->approved()->create(), 30.0444, 31.2357);
+        $profile = app(GoOnlineAction::class)->handle(TayarProfile::factory()->approved()->create(), 30.0444, 31.2357, $this->zoneWorkSessionSettings());
         Sanctum::actingAs($profile->user);
 
         return $profile;

@@ -16,8 +16,8 @@ return [
 
         - **Login:** Sanctum session cookie, like the website: **Get CSRF cookie**, then **Log in**.
         - **Postman setup:** open **Cookies › Domains Allowlist** and add the host of `{{appUrl}}` (for example `localhost`). Otherwise this folder's script can't read the `XSRF-TOKEN` cookie and requests answer **419**.
-        - **Permissions:** `business_profiles.view`, `business_profiles.review`, `national_ids.view`, `national_ids.review`, `business_types.view`, `business_types.manage`, `users.view`, `users.block`, `staff.manage`, `tayars.view`, `tayars.review`, `vehicle_types.view`, `vehicle_types.manage`.
-        - **Roles:** `super_admin` (everything, and the only role with `staff.manage`); `admin` (everything except `staff.manage`); `ops` (view business types, vehicle types and users, block users, and review business profiles, national IDs and tayar applications); `support` (view only: business profiles, national IDs, business types, vehicle types, users and tayars).
+        - **Permissions:** `business_profiles.view`, `business_profiles.review`, `national_ids.view`, `national_ids.review`, `business_types.view`, `business_types.manage`, `users.view`, `users.block`, `staff.manage`, `tayars.view`, `tayars.review`, `vehicle_types.view`, `vehicle_types.manage`, `categories.view`, `categories.manage`, `modes.view`, `modes.manage`, `areas.view`, `areas.manage`, `pricing_rules.view`, `pricing_rules.manage`.
+        - **Roles:** `super_admin` (everything, and the only role with `staff.manage`); `admin` (everything except `staff.manage`); `ops` (view business types, vehicle types, categories, modes, areas, pricing rules and users, block users, and review business profiles, national IDs and tayar applications); `support` (view only: business profiles, national IDs, business types, vehicle types, categories, modes, areas, pricing rules, users and tayars).
         - Build the menu and buttons from `permissions` in **Get my account** only: hide what the user can't do. A super admin gets every permission in the list. `roles` is for display (for example the role badge in the top bar), never for access checks.
         MD,
 
@@ -352,7 +352,218 @@ return [
         ],
 
         [
-            'name' => '10. Account',
+            'name' => '10. Categories',
+            'description' => <<<'MD'
+                The categories and subcategories senders pick for an order (two levels). Needs `categories.view` to see, `categories.manage` to change:
+
+                1. **Categories** page with tabs **Active** and **Inactive** → **List categories** with `main_only` = true, `is_active`, an optional `search`, paged, in sort order.
+                2. Open a main category → **List categories** with `parent_id` for its subcategories.
+                3. **Add** opens the form (Arabic name, English name, parent (none for a main category), food, active, sort order) → **Create category**, then **Upload category icon** when an icon was picked.
+                4. **Edit** loads the category → **Get category**, then **Save** → **Update category**. Changing the parent moves it; a category with subcategories can't move under another one.
+                5. **Icon**: pick an image → **Upload category icon** (jpg, png or webp); **Remove icon** → **Remove category icon**.
+                6. **Activate** / **Deactivate** on a row → **Activate category** / **Deactivate category**. A deactivated main category hides its subcategories from the apps.
+                7. **Delete** opens a confirmation dialog → **Delete category**. Offer **Delete** only when `children_count` is 0.
+                MD,
+            'requests' => [
+                [
+                    'route' => 'api.v1.admin.categories.index',
+                    'name' => 'List categories',
+                    'screen' => '**Categories** page, on open, on tab change (`is_active`), on search, on page change, and with `parent_id` when a main category is opened.',
+                ],
+                [
+                    'route' => 'api.v1.admin.categories.show',
+                    'name' => 'Get category',
+                    'screen' => '**Edit category** form, on open.',
+                ],
+                [
+                    'route' => 'api.v1.admin.categories.store',
+                    'name' => 'Create category',
+                    'screen' => '**Add category** form, when the staff member clicks **Save**.',
+                    'next' => 'Upload the picked icon with **Upload category icon**, then close the form and reload the list.',
+                ],
+                [
+                    'route' => 'api.v1.admin.categories.update',
+                    'name' => 'Update category',
+                    'screen' => '**Edit category** form, when the staff member clicks **Save**.',
+                    'next' => 'Close the form and update the row (reload the list when the parent changed).',
+                ],
+                [
+                    'route' => 'api.v1.admin.categories.icon.store',
+                    'name' => 'Upload category icon',
+                    'screen' => '**Add** / **Edit category** form, after picking an icon image.',
+                ],
+                [
+                    'route' => 'api.v1.admin.categories.icon.destroy',
+                    'name' => 'Remove category icon',
+                    'screen' => '**Edit category** form, when the staff member clicks **Remove icon**.',
+                ],
+                [
+                    'route' => 'api.v1.admin.categories.activate',
+                    'name' => 'Activate category',
+                    'screen' => '**Categories** page (Inactive tab), when the staff member clicks **Activate** on a row.',
+                ],
+                [
+                    'route' => 'api.v1.admin.categories.deactivate',
+                    'name' => 'Deactivate category',
+                    'screen' => '**Categories** page (Active tab), when the staff member clicks **Deactivate** on a row, or **Deactivate** in the delete dialog.',
+                ],
+                [
+                    'route' => 'api.v1.admin.categories.destroy',
+                    'name' => 'Delete category',
+                    'screen' => '**Categories** page, when the staff member confirms the **Delete** dialog.',
+                    'next' => 'Remove the row. On 422, keep the dialog open with the message and a **Deactivate** button.',
+                ],
+            ],
+        ],
+
+        [
+            'name' => '11. Modes',
+            'description' => <<<'MD'
+                The three fixed ways a tayar works: long distance, zone and area. Needs `modes.view` to see, `modes.manage` to change:
+
+                1. **Modes** page → **List modes** (no Add or Delete: modes are fixed).
+                2. **Edit** loads the mode → **Get mode** (names and description in both languages, food allowed, sort order), then **Save** → **Update mode**.
+                3. **Activate** / **Deactivate** on a row → **Activate mode** / **Deactivate mode**. A deactivated mode leaves the tayar app's mode picker; tayars already online in it keep working.
+                MD,
+            'requests' => [
+                [
+                    'route' => 'api.v1.admin.modes.index',
+                    'name' => 'List modes',
+                    'screen' => '**Modes** page, on open and on search.',
+                ],
+                [
+                    'route' => 'api.v1.admin.modes.show',
+                    'name' => 'Get mode',
+                    'screen' => '**Edit mode** form, on open.',
+                ],
+                [
+                    'route' => 'api.v1.admin.modes.update',
+                    'name' => 'Update mode',
+                    'screen' => '**Edit mode** form, when the staff member clicks **Save**.',
+                    'next' => 'Close the form and update the row.',
+                ],
+                [
+                    'route' => 'api.v1.admin.modes.activate',
+                    'name' => 'Activate mode',
+                    'screen' => '**Modes** page, when the staff member clicks **Activate** on a row.',
+                ],
+                [
+                    'route' => 'api.v1.admin.modes.deactivate',
+                    'name' => 'Deactivate mode',
+                    'screen' => '**Modes** page, when the staff member clicks **Deactivate** on a row.',
+                ],
+            ],
+        ],
+
+        [
+            'name' => '12. Areas',
+            'description' => <<<'MD'
+                The districts tayars pick in the area mode, each a centre point and a radius. Needs `areas.view` to see, `areas.manage` to change:
+
+                1. **Areas** page with tabs **Active** and **Inactive** → **List areas** with `is_active`, an optional `search`, paged, in sort order.
+                2. **Add** opens the form (Arabic and English name, Arabic and English city, the centre picked on a map, the radius in km with the circle drawn, active, sort order) → **Create area**.
+                3. **Edit** loads the area → **Get area**, then **Save** → **Update area**.
+                4. **Activate** / **Deactivate** on a row → **Activate area** / **Deactivate area**.
+                5. **Delete** opens a confirmation dialog → **Delete area**. Offer **Delete** only when `work_sessions_count` is 0.
+                MD,
+            'requests' => [
+                [
+                    'route' => 'api.v1.admin.areas.index',
+                    'name' => 'List areas',
+                    'screen' => '**Areas** page, on open, on tab change (`is_active`), on search and on page change.',
+                ],
+                [
+                    'route' => 'api.v1.admin.areas.show',
+                    'name' => 'Get area',
+                    'screen' => '**Edit area** form, on open.',
+                ],
+                [
+                    'route' => 'api.v1.admin.areas.store',
+                    'name' => 'Create area',
+                    'screen' => '**Add area** form, when the staff member clicks **Save**.',
+                    'next' => 'Close the form and reload the list.',
+                ],
+                [
+                    'route' => 'api.v1.admin.areas.update',
+                    'name' => 'Update area',
+                    'screen' => '**Edit area** form, when the staff member clicks **Save**.',
+                    'next' => 'Close the form and update the row.',
+                ],
+                [
+                    'route' => 'api.v1.admin.areas.activate',
+                    'name' => 'Activate area',
+                    'screen' => '**Areas** page (Inactive tab), when the staff member clicks **Activate** on a row.',
+                ],
+                [
+                    'route' => 'api.v1.admin.areas.deactivate',
+                    'name' => 'Deactivate area',
+                    'screen' => '**Areas** page (Active tab), when the staff member clicks **Deactivate** on a row, or **Deactivate** in the delete dialog.',
+                ],
+                [
+                    'route' => 'api.v1.admin.areas.destroy',
+                    'name' => 'Delete area',
+                    'screen' => '**Areas** page, when the staff member confirms the **Delete** dialog.',
+                    'next' => 'Remove the row. On 422, keep the dialog open with the message and a **Deactivate** button.',
+                ],
+            ],
+        ],
+
+        [
+            'name' => '13. Pricing rules',
+            'description' => <<<'MD'
+                How the shipping fee will be calculated, per mode and vehicle type. Needs `pricing_rules.view` to see, `pricing_rules.manage` to change:
+
+                1. **Pricing** page → **List pricing rules**, grouped by mode (filter with `mode_id`, `vehicle_type_id`, `is_active`).
+                2. **Add** opens the form (mode, vehicle type or "All vehicles", base fare, price per km, minimum fare, food extra, tayar share %, active) → **Create pricing rule**. One rule per mode and vehicle type: the form shows the "edit that rule instead" error otherwise.
+                3. **Edit** loads the rule → **Get pricing rule**, then **Save** → **Update pricing rule**.
+                4. **Activate** / **Deactivate** on a row → **Activate pricing rule** / **Deactivate pricing rule**.
+                5. **Delete** opens a confirmation dialog → **Delete pricing rule**.
+                6. Amounts are EGP strings with two decimals: show them as they come, never round them in the panel.
+                MD,
+            'requests' => [
+                [
+                    'route' => 'api.v1.admin.pricing-rules.index',
+                    'name' => 'List pricing rules',
+                    'screen' => '**Pricing** page, on open, on filter change and on page change.',
+                ],
+                [
+                    'route' => 'api.v1.admin.pricing-rules.show',
+                    'name' => 'Get pricing rule',
+                    'screen' => '**Edit pricing rule** form, on open.',
+                ],
+                [
+                    'route' => 'api.v1.admin.pricing-rules.store',
+                    'name' => 'Create pricing rule',
+                    'screen' => '**Add pricing rule** form, when the staff member clicks **Save**.',
+                    'next' => 'Close the form and reload the list.',
+                ],
+                [
+                    'route' => 'api.v1.admin.pricing-rules.update',
+                    'name' => 'Update pricing rule',
+                    'screen' => '**Edit pricing rule** form, when the staff member clicks **Save**.',
+                    'next' => 'Close the form and update the row.',
+                ],
+                [
+                    'route' => 'api.v1.admin.pricing-rules.activate',
+                    'name' => 'Activate pricing rule',
+                    'screen' => '**Pricing** page, when the staff member clicks **Activate** on a row.',
+                ],
+                [
+                    'route' => 'api.v1.admin.pricing-rules.deactivate',
+                    'name' => 'Deactivate pricing rule',
+                    'screen' => '**Pricing** page, when the staff member clicks **Deactivate** on a row.',
+                ],
+                [
+                    'route' => 'api.v1.admin.pricing-rules.destroy',
+                    'name' => 'Delete pricing rule',
+                    'screen' => '**Pricing** page, when the staff member confirms the **Delete** dialog.',
+                    'next' => 'Remove the row.',
+                ],
+            ],
+        ],
+
+        [
+            'name' => '14. Account',
             'description' => <<<'MD'
                 1. **Get my account** on every panel load: who is logged in, `permissions` for the menu and buttons, and `roles` for display (a 401 means show the login page).
                 2. **Change password** page → **Change password**.

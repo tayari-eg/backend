@@ -32,11 +32,21 @@ $customerNotFound = '- **404:** no customer with this id (staff accounts are 404
 $staffNotFound = '- **404:** no staff member with this id (customer accounts are 404 here too).';
 $vehicleTypeFields = '`id`, `name` (`ar` and `en`), `requires_license`, `can_carry_food`, `is_active`, `sort_order`, `vehicles_count` (how many vehicles use it), `created_at`, `updated_at`';
 $vehicleTypeNotFound = '- **404:** no vehicle type with this id.';
+$categoryFields = '`id`, `parent_id` (null for a main category), `parent` (`id`, `name` with `ar` and `en`, or null), `name` (`ar` and `en`), `is_food`, `is_active`, `sort_order`, `icon_url` (public image URL, or null), `children_count` (how many subcategories it has), `created_at`, `updated_at`';
+$categoryNotFound = '- **404:** no category with this id.';
+$modeFields = '`id`, `code` (`long_distance` | `zone` | `area`, never changes), `name` (`ar` and `en`), `description` (`ar` and `en`, or null), `allows_food`, `is_active`, `sort_order`, `work_sessions_count` (how many work sessions used it), `created_at`, `updated_at`';
+$modeNotFound = '- **404:** no mode with this id.';
+$areaFields = '`id`, `name` (`ar` and `en`), `city` (`ar` and `en`), `center` (`lat`, `lng`), `radius_km`, `is_active`, `sort_order`, `work_sessions_count` (how many work sessions used it), `created_at`, `updated_at`';
+$areaNotFound = '- **404:** no area with this id.';
+$pricingRuleFields = '`id`, `mode` (`id`, `code`, `name` with `ar` and `en`), `vehicle_type` (`id`, `name` with `ar` and `en`, or null for every vehicle), `base_fare`, `price_per_km`, `minimum_fare`, `food_extra` (or null), `tayar_share_percent`, `is_active`, `created_at`, `updated_at`. Amounts are strings with two decimals, in EGP (for example `"20.00"`)';
+$pricingRuleNotFound = '- **404:** no pricing rule with this id.';
+$bilingualName = '`name.ar` and `name.en` (strings, both required): up to 100 characters each, as `{ "name": { "ar": "…", "en": "…" } }`';
+$amountRule = 'a number with up to 2 decimals, 0 to 99999999.99';
 $vehicleFields = '`id`, `vehicle_type` (`id`, `name`, `requires_license`, `can_carry_food`), `plate_number`, `model`, `color`, `year`, `status` (`pending` | `approved` | `rejected`), `is_active`, `documents` (`vehicle_license`: a file or null; `vehicle_photos`: a list of files; each file with a signed `url`)';
 $tayarProfileFields = "`id`, `status` (`pending` | `approved` | `rejected`), `rejection_reason`, `can_reapply_at` (when a rejected applicant may change the application again, or null), `reviewed_at`, `national_id_number`, `is_online`, `location` (`lat`, `lng`, `updated_at`, or null), `documents` (`national_id_front`, `national_id_back`, `criminal_record` (the فيش), `personal_photo`, `driving_license`: each a file with a signed `url`, or null), `vehicle` ({$vehicleFields}), `created_at`, `updated_at`";
 $tayarAdminFields = "{$tayarProfileFields}, the applicant as `user` (`id`, `name`, `phone`, `status`)";
 $tayarAdminDetailFields = "{$tayarAdminFields}, `reviewed_by` (`id`, `name`, or null) and `reviews` (every approval and rejection, oldest first: `decision`, `reason`, `reviewed_by`, `created_at`)";
-$workStatusFields = '`is_online`, `work_session` (`id`, `vehicle_id`, `started_at`, or null when offline), `location` (`lat`, `lng`, `updated_at`, or null)';
+$workStatusFields = '`is_online`, `work_session` (`id`, `vehicle_id`, `mode` (`id`, `code`, `name`), `area` (`id`, `name`, or null), `radius_km` (or null), `destination` (`address`, `lat`, `lng`, or null), `started_at`; or null when offline), `location` (`lat`, `lng`, `updated_at`, or null)';
 $notTayar = '- **403:** not an approved tayar (`message`: "Tayar mode is only available after your tayar application is approved."), the account is blocked, or the phone is not verified. Leave tayar mode and show the application status.';
 $reapplyLater = '- **422:** `errors.status` = "You can change your application again from …" while a rejected application still has to wait until `can_reapply_at`.';
 $backToReview = 'An approved or rejected application goes back to `pending` (and an online tayar goes offline): warn the user before saving.';
@@ -503,12 +513,12 @@ return [
     ],
 
     'api.v1.tayar.online' => [
-        'what' => 'Goes online at the current position, with the active vehicle, and starts a work session.',
+        'what' => 'Goes online in a mode at the current position, with the active vehicle, and starts a work session.',
         'who' => 'An approved tayar (active account, verified phone) in tayar mode, with an approved, active vehicle.',
-        'request' => '- `lat` (number, required): -90 to 90, up to 7 decimals.\n- `lng` (number, required): -180 to 180, up to 7 decimals.',
+        'request' => "- `lat` (number, required): -90 to 90, up to 7 decimals.\n- `lng` (number, required): -180 to 180, up to 7 decimals.\n- `mode_id` (number, required): an active mode from **Get modes**.\n- `area_id` (number): required when the mode has `requires_area` (the area mode), from **Get areas**; refused for the other modes.\n- `radius_km` (number): required when the mode has `requires_radius` (the zone mode), :zone_min_radius_km to :zone_max_radius_km, up to 2 decimals; refused for the other modes.\n- `destination_address` (string, up to 255), `destination_lat` and `destination_lng` (numbers, up to 7 decimals): all three required when the mode has `requires_destination` (long distance); refused for the other modes.",
         'success' => "**200** with `data`: {$workStatusFields}. Start the background location service.",
-        'errors' => "- **422:** `lat`/`lng` missing or out of range, or `errors.vehicle` = \"You need an approved vehicle to go online.\"\n- **403:** the app is in client mode (`message`: \"Switch to tayar mode before going online.\"): call **Switch mode** with `tayar` first.\n{$loggedOut}\n{$notTayar}\n{$upgrade}\n{$serverError}",
-        'notes' => "- Going online while already online keeps the same work session and only moves the position.\n- A newly approved tayar is still in client mode: when `register_as` = `tayar`, `next_step` = `ready` and `last_mode` = `client`, call **Switch mode** with `tayar` once first.",
+        'errors' => "- **422:** a missing or out-of-range field, `mode_id` or `area_id` unknown or inactive, a field the picked mode doesn't take (`errors.<field>` = \"The … field is prohibited.\"), or `errors.vehicle` = \"You need an approved vehicle to go online.\"\n- **403:** the app is in client mode (`message`: \"Switch to tayar mode before going online.\"): call **Switch mode** with `tayar` first.\n{$loggedOut}\n{$notTayar}\n{$upgrade}\n{$serverError}",
+        'notes' => "- Going online again with the same mode and settings keeps the work session and only moves the position. Different settings (another mode, area, radius or destination) end the session and start a new one: use this to change the mode without going offline.\n- A newly approved tayar is still in client mode: when `register_as` = `tayar`, `next_step` = `ready` and `last_mode` = `client`, call **Switch mode** with `tayar` once first.",
     ],
 
     'api.v1.tayar.offline' => [
@@ -637,12 +647,283 @@ return [
     ],
 
     'api.v1.admin.vehicle-types.destroy' => [
-        'what' => 'Deletes a vehicle type that no vehicle uses.',
+        'what' => 'Deletes a vehicle type that no vehicle and no pricing rule uses.',
         'who' => 'Staff with `vehicle_types.manage` (admin, super admin).',
         'request' => '- Path `vehicleType`: the type `id`. No body.',
         'success' => '**204** with no body. Remove the row.',
-        'errors' => "{$vehicleTypeNotFound}\n- **422:** a vehicle uses the type: `errors.vehicle_type` = \"This vehicle type is used by vehicles, so it cannot be deleted. Deactivate it instead.\" Show it in the dialog with a **Deactivate** button.\n{$loggedOut}\n{$staffOnly}\n{$serverError}",
+        'errors' => "{$vehicleTypeNotFound}\n- **422:** a vehicle uses the type: `errors.vehicle_type` = \"This vehicle type is used by vehicles, so it cannot be deleted. Deactivate it instead.\" Show it in the dialog with a **Deactivate** button.\n- **422:** a pricing rule uses the type: `errors.vehicle_type` = \"This vehicle type is used by pricing rules, so it cannot be deleted. Delete those rules or deactivate the type instead.\"\n{$loggedOut}\n{$staffOnly}\n{$serverError}",
         'notes' => '- Ask for confirmation first; a delete can\'t be undone.',
+    ],
+
+    'api.v1.public.categories.index' => [
+        'what' => 'Lists the active main categories, each with its active subcategories, for the category picker of a new order.',
+        'who' => 'Anyone, no login.',
+        'request' => "- Query `per_page` (optional, 1 to :max_per_page, default :per_page) and `page` (optional, starts at 1). Pages count main categories.\n- `Accept-Language` decides the language of the names.",
+        'success' => '**200** with `data`: a list of main categories `{ id, name, is_food, icon_url, children }` in display order, where `children` is a list of `{ id, name, is_food, icon_url }`. Plus `meta` and `links` for pages.',
+        'errors' => "- **422:** `per_page` is out of range.\n{$upgrade}\n{$serverError}",
+        'notes' => "- An order is placed in a subcategory: the user picks a main category, then one of its `children`.\n- A main category with no active subcategory is left out.\n- `icon_url` is a public image URL (or null: show a default icon).",
+    ],
+
+    'api.v1.public.modes.index' => [
+        'what' => 'Lists the active modes a tayar can work in, with what **Go online** needs for each.',
+        'who' => 'Anyone, no login.',
+        'request' => "- Query `per_page` (optional, 1 to :max_per_page, default :per_page) and `page` (optional, starts at 1).\n- `Accept-Language` decides the language of the names.",
+        'success' => '**200** with `data`: a list of `{ id, code, name, description, allows_food, requires_area, requires_radius, requires_destination, radius_km }` in display order, plus `meta` and `links` for pages. `radius_km` is `{ min, max }` for the zone mode, null otherwise.',
+        'errors' => "- **422:** `per_page` is out of range.\n{$upgrade}\n{$serverError}",
+        'notes' => "- `code` is `long_distance`, `zone` or `area`. Build the next step from the `requires_*` flags, not from the code: `requires_area` → the area picker (**Get areas**), `requires_radius` → a radius slider from `radius_km.min` to `radius_km.max`, `requires_destination` → a destination picker on the map.\n- `description` is the short note to show under each choice.",
+    ],
+
+    'api.v1.public.areas.index' => [
+        'what' => 'Lists the active areas (districts) for the area mode picker.',
+        'who' => 'Anyone, no login.',
+        'request' => "- Query `per_page` (optional, 1 to :max_per_page, default :per_page) and `page` (optional, starts at 1).\n- `Accept-Language` decides the language of the names.",
+        'success' => '**200** with `data`: a list of `{ id, name, city, center: { lat, lng }, radius_km }` in display order, plus `meta` and `links` for pages.',
+        'errors' => "- **422:** `per_page` is out of range.\n{$upgrade}\n{$serverError}",
+        'notes' => '- Draw each area as a circle (`center`, `radius_km`) on the map. Send the chosen `id` as `area_id` in **Go online**.',
+    ],
+
+    'api.v1.admin.categories.index' => [
+        'what' => 'Lists every category, main categories and subcategories, active and inactive, in sort order.',
+        'who' => 'Staff with `categories.view` (support, ops, admin, super admin).',
+        'request' => "- Query `main_only` (optional): `true` for main categories only.\n- Query `parent_id` (optional): the subcategories of one main category.\n- Query `is_active` (optional): `true` for the Active tab, `false` for the Inactive tab; leave it out for all.\n- Query `is_food` (optional): `true` or `false`.\n- Query `search` (optional, up to 100 characters): part of the Arabic or English name, any letter case.\n- Query `per_page` (optional, 1 to :max_per_page, default :per_page) and `page`.",
+        'success' => "**200** with `data`: a list of categories, each with {$categoryFields}. Plus `meta` and `links` for pages.",
+        'errors' => "- **422:** an invalid filter, `search` too long or `per_page` out of range.\n{$loggedOut}\n{$staffOnly}\n{$serverError}",
+        'notes' => '- Show **Delete** only when `children_count` is 0; otherwise offer **Deactivate**.',
+    ],
+
+    'api.v1.admin.categories.show' => [
+        'what' => 'Returns one category with its name in both languages, its parent and its icon, to fill the edit form.',
+        'who' => 'Staff with `categories.view`.',
+        'request' => '- Path `category`: the category `id`. No body.',
+        'success' => "**200** with `data`: {$categoryFields}.",
+        'errors' => "{$categoryNotFound}\n{$loggedOut}\n{$staffOnly}\n{$serverError}",
+    ],
+
+    'api.v1.admin.categories.store' => [
+        'what' => 'Creates a main category, or a subcategory of a main category.',
+        'who' => 'Staff with `categories.manage` (admin, super admin).',
+        'request' => "- {$bilingualName}. Each name must be unique among the categories under the same parent (ignoring letter case).\n- `parent_id` (number, optional): a main category; leave it out (or null) for a main category.\n- `is_food` (boolean, optional): left out, a subcategory takes its parent's value and a main category is `false`.\n- `is_active` (boolean, optional): default `true`.\n- `sort_order` (number, optional): 0 to 65535. Left out, it goes to the end of its list.",
+        'success' => "**201** with `data`, the new category: {$categoryFields}. Then upload the icon with **Upload category icon**.",
+        'errors' => "- **422:** field errors. A name a sibling already uses gets `errors[\"name.ar\"]` or `errors[\"name.en\"]` = \"Another category under the same parent already has this name.\"; a subcategory as `parent_id` gets `errors.parent_id` = \"The parent must be a main category: a subcategory cannot have its own subcategories.\"\n{$loggedOut}\n{$staffOnly}\n{$serverError}",
+        'notes' => '- Two levels only: main categories and their subcategories.',
+    ],
+
+    'api.v1.admin.categories.update' => [
+        'what' => 'Updates or moves a category. Send only the fields that change.',
+        'who' => 'Staff with `categories.manage` (admin, super admin).',
+        'request' => "- Path `category`: the category `id`.\n- Any of `name` (both `ar` and `en` when sent), `parent_id` (a main category, or null to make it a main category), `is_food`, `is_active`, `sort_order` (same rules as create).",
+        'success' => "**200** with `data`, the updated category: {$categoryFields}.",
+        'errors' => "{$categoryNotFound}\n- **422:** field errors; `errors.parent_id` when the new parent is a subcategory or the category itself, or = \"This category has subcategories, so it cannot be moved under another category.\"; `errors[\"name.ar\"]` / `errors[\"name.en\"]` when a category under the new parent already has the name.\n{$loggedOut}\n{$staffOnly}\n{$serverError}",
+    ],
+
+    'api.v1.admin.categories.activate' => [
+        'what' => 'Activates a category, so it shows in the public list again.',
+        'who' => 'Staff with `categories.manage` (admin, super admin).',
+        'request' => '- Path `category`: the category `id`. No body.',
+        'success' => "**200** with `data`, the category (`is_active` = true): {$categoryFields}. Move it to the Active tab.",
+        'errors' => "{$categoryNotFound}\n{$loggedOut}\n{$staffOnly}\n{$serverError}",
+        'notes' => '- Activating an active category also answers 200.',
+    ],
+
+    'api.v1.admin.categories.deactivate' => [
+        'what' => 'Deactivates a category: it leaves the public list. A deactivated main category hides its subcategories too.',
+        'who' => 'Staff with `categories.manage` (admin, super admin).',
+        'request' => '- Path `category`: the category `id`. No body.',
+        'success' => "**200** with `data`, the category (`is_active` = false): {$categoryFields}. Move it to the Inactive tab.",
+        'errors' => "{$categoryNotFound}\n{$loggedOut}\n{$staffOnly}\n{$serverError}",
+        'notes' => '- Use this instead of delete for a category that has subcategories.',
+    ],
+
+    'api.v1.admin.categories.destroy' => [
+        'what' => 'Deletes a category that has no subcategories, with its icon.',
+        'who' => 'Staff with `categories.manage` (admin, super admin).',
+        'request' => '- Path `category`: the category `id`. No body.',
+        'success' => '**204** with no body. Remove the row.',
+        'errors' => "{$categoryNotFound}\n- **422:** it has subcategories: `errors.category` = \"This category has subcategories, so it cannot be deleted. Delete or move them first, or deactivate it instead.\" Show it in the dialog with a **Deactivate** button.\n{$loggedOut}\n{$staffOnly}\n{$serverError}",
+        'notes' => '- Ask for confirmation first; a delete can\'t be undone.',
+    ],
+
+    'api.v1.admin.categories.icon.store' => [
+        'what' => 'Uploads the category icon, or replaces the current one.',
+        'who' => 'Staff with `categories.manage` (admin, super admin).',
+        'request' => "- Path `category`: the category `id`.\n- Multipart form: `icon` (file, required): {$imageRule}. SVG is not accepted.",
+        'success' => "**200** with `data`, the category with the new `icon_url`: {$categoryFields}.",
+        'errors' => "{$categoryNotFound}\n- **422:** `icon` missing, not an image, or too big.\n{$loggedOut}\n{$staffOnly}\n{$serverError}",
+        'notes' => '- This is a POST with a multipart body (not PATCH). The icon is public: anyone with `icon_url` can open it.',
+    ],
+
+    'api.v1.admin.categories.icon.destroy' => [
+        'what' => 'Removes the category icon.',
+        'who' => 'Staff with `categories.manage` (admin, super admin).',
+        'request' => '- Path `category`: the category `id`. No body.',
+        'success' => "**200** with `data`, the category (`icon_url` = null): {$categoryFields}.",
+        'errors' => "{$categoryNotFound}\n{$loggedOut}\n{$staffOnly}\n{$serverError}",
+        'notes' => '- Removing a missing icon also answers 200.',
+    ],
+
+    'api.v1.admin.modes.index' => [
+        'what' => 'Lists the three modes (long distance, zone, area), active and inactive, in sort order.',
+        'who' => 'Staff with `modes.view` (support, ops, admin, super admin).',
+        'request' => "- Query `is_active` (optional): `true` or `false`; leave it out for all.\n- Query `search` (optional, up to 100 characters): part of the Arabic or English name, any letter case.\n- Query `per_page` (optional, 1 to :max_per_page, default :per_page) and `page`.",
+        'success' => "**200** with `data`: a list of modes, each with {$modeFields}. Plus `meta` and `links` for pages.",
+        'errors' => "- **422:** an invalid `is_active`, `search` too long or `per_page` out of range.\n{$loggedOut}\n{$staffOnly}\n{$serverError}",
+        'notes' => '- Modes are fixed: there is no create or delete. Staff edit the names, description, food flag, order and active state.',
+    ],
+
+    'api.v1.admin.modes.show' => [
+        'what' => 'Returns one mode with its name and description in both languages, to fill the edit form.',
+        'who' => 'Staff with `modes.view`.',
+        'request' => '- Path `mode`: the mode `id`. No body.',
+        'success' => "**200** with `data`: {$modeFields}.",
+        'errors' => "{$modeNotFound}\n{$loggedOut}\n{$staffOnly}\n{$serverError}",
+    ],
+
+    'api.v1.admin.modes.update' => [
+        'what' => 'Updates a mode. Send only the fields that change; the code never changes.',
+        'who' => 'Staff with `modes.manage` (admin, super admin).',
+        'request' => "- Path `mode`: the mode `id`.\n- Any of: {$bilingualName}, unique among modes; `description.ar` and `description.en` (strings, both when sent, up to 500 characters each); `allows_food` (boolean); `is_active` (boolean); `sort_order` (0 to 65535).",
+        'success' => "**200** with `data`, the updated mode: {$modeFields}.",
+        'errors' => "{$modeNotFound}\n- **422:** field errors, for example a description with one language only, or `errors[\"name.ar\"]` / `errors[\"name.en\"]` = \"Another mode already has this name.\"\n{$loggedOut}\n{$staffOnly}\n{$serverError}",
+    ],
+
+    'api.v1.admin.modes.activate' => [
+        'what' => 'Activates a mode: tayars can pick it again when going online.',
+        'who' => 'Staff with `modes.manage` (admin, super admin).',
+        'request' => '- Path `mode`: the mode `id`. No body.',
+        'success' => "**200** with `data`, the mode (`is_active` = true): {$modeFields}.",
+        'errors' => "{$modeNotFound}\n{$loggedOut}\n{$staffOnly}\n{$serverError}",
+        'notes' => '- Activating an active mode also answers 200.',
+    ],
+
+    'api.v1.admin.modes.deactivate' => [
+        'what' => 'Deactivates a mode: it leaves the tayar\'s mode picker and new **Go online** requests in it are refused.',
+        'who' => 'Staff with `modes.manage` (admin, super admin).',
+        'request' => '- Path `mode`: the mode `id`. No body.',
+        'success' => "**200** with `data`, the mode (`is_active` = false): {$modeFields}.",
+        'errors' => "{$modeNotFound}\n{$loggedOut}\n{$staffOnly}\n{$serverError}",
+        'notes' => '- Tayars already online in the mode keep working until they go offline.',
+    ],
+
+    'api.v1.admin.areas.index' => [
+        'what' => 'Lists every area, active and inactive, in sort order.',
+        'who' => 'Staff with `areas.view` (support, ops, admin, super admin).',
+        'request' => "- Query `is_active` (optional): `true` for the Active tab, `false` for the Inactive tab; leave it out for all.\n- Query `search` (optional, up to 100 characters): part of the Arabic or English name, any letter case.\n- Query `per_page` (optional, 1 to :max_per_page, default :per_page) and `page`.",
+        'success' => "**200** with `data`: a list of areas, each with {$areaFields}. Plus `meta` and `links` for pages.",
+        'errors' => "- **422:** an invalid `is_active`, `search` too long or `per_page` out of range.\n{$loggedOut}\n{$staffOnly}\n{$serverError}",
+        'notes' => '- Show **Delete** only when `work_sessions_count` is 0; otherwise offer **Deactivate**.',
+    ],
+
+    'api.v1.admin.areas.show' => [
+        'what' => 'Returns one area with its name and city in both languages, to fill the edit form.',
+        'who' => 'Staff with `areas.view`.',
+        'request' => '- Path `area`: the area `id`. No body.',
+        'success' => "**200** with `data`: {$areaFields}.",
+        'errors' => "{$areaNotFound}\n{$loggedOut}\n{$staffOnly}\n{$serverError}",
+    ],
+
+    'api.v1.admin.areas.store' => [
+        'what' => 'Creates an area: a district drawn as a centre point and a radius.',
+        'who' => 'Staff with `areas.manage` (admin, super admin).',
+        'request' => "- {$bilingualName}, unique among areas (ignoring letter case).\n- `city.ar` and `city.en` (strings, both required): up to 100 characters each.\n- `center_lat` (number, required): -90 to 90, up to 7 decimals. `center_lng` (number, required): -180 to 180, up to 7 decimals.\n- `radius_km` (number, required): 0.5 to 50, up to 2 decimals.\n- `is_active` (boolean, optional): default `true`.\n- `sort_order` (number, optional): 0 to 65535. Left out, the area goes to the end of the list.",
+        'success' => "**201** with `data`, the new area: {$areaFields}.",
+        'errors' => "- **422:** field errors. A name another area already uses gets `errors[\"name.ar\"]` or `errors[\"name.en\"]` = \"Another area already has this name.\"\n{$loggedOut}\n{$staffOnly}\n{$serverError}",
+        'notes' => '- Pick the centre on a map and show the circle while the radius changes.',
+    ],
+
+    'api.v1.admin.areas.update' => [
+        'what' => 'Updates an area. Send only the fields that change.',
+        'who' => 'Staff with `areas.manage` (admin, super admin).',
+        'request' => "- Path `area`: the area `id`.\n- Any of `name`, `city` (both `ar` and `en` when sent), `center_lat`, `center_lng`, `radius_km`, `is_active`, `sort_order` (same rules as create).",
+        'success' => "**200** with `data`, the updated area: {$areaFields}.",
+        'errors' => "{$areaNotFound}\n- **422:** field errors, for example a name or city with one language only, or a name another area already uses.\n{$loggedOut}\n{$staffOnly}\n{$serverError}",
+    ],
+
+    'api.v1.admin.areas.activate' => [
+        'what' => 'Activates an area, so it shows in the tayar\'s area picker again.',
+        'who' => 'Staff with `areas.manage` (admin, super admin).',
+        'request' => '- Path `area`: the area `id`. No body.',
+        'success' => "**200** with `data`, the area (`is_active` = true): {$areaFields}. Move it to the Active tab.",
+        'errors' => "{$areaNotFound}\n{$loggedOut}\n{$staffOnly}\n{$serverError}",
+        'notes' => '- Activating an active area also answers 200.',
+    ],
+
+    'api.v1.admin.areas.deactivate' => [
+        'what' => 'Deactivates an area: it leaves the area picker, and new **Go online** requests in it are refused.',
+        'who' => 'Staff with `areas.manage` (admin, super admin).',
+        'request' => '- Path `area`: the area `id`. No body.',
+        'success' => "**200** with `data`, the area (`is_active` = false): {$areaFields}. Move it to the Inactive tab.",
+        'errors' => "{$areaNotFound}\n{$loggedOut}\n{$staffOnly}\n{$serverError}",
+        'notes' => '- Tayars already online in the area keep working until they go offline. Use this instead of delete for an area that has been used.',
+    ],
+
+    'api.v1.admin.areas.destroy' => [
+        'what' => 'Deletes an area no work session has used.',
+        'who' => 'Staff with `areas.manage` (admin, super admin).',
+        'request' => '- Path `area`: the area `id`. No body.',
+        'success' => '**204** with no body. Remove the row.',
+        'errors' => "{$areaNotFound}\n- **422:** a work session used the area: `errors.area` = \"Tayars have worked in this area, so it cannot be deleted. Deactivate it instead.\" Show it in the dialog with a **Deactivate** button.\n{$loggedOut}\n{$staffOnly}\n{$serverError}",
+        'notes' => '- Ask for confirmation first; a delete can\'t be undone.',
+    ],
+
+    'api.v1.admin.pricing-rules.index' => [
+        'what' => 'Lists the pricing rules, active and inactive, by mode.',
+        'who' => 'Staff with `pricing_rules.view` (support, ops, admin, super admin).',
+        'request' => "- Query `mode_id` (optional): the rules of one mode.\n- Query `vehicle_type_id` (optional): the rules for one vehicle type.\n- Query `is_active` (optional): `true` or `false`; leave it out for all.\n- Query `per_page` (optional, 1 to :max_per_page, default :per_page) and `page`.",
+        'success' => "**200** with `data`: a list of pricing rules, each with {$pricingRuleFields}. Plus `meta` and `links` for pages.",
+        'errors' => "- **422:** an invalid filter or `per_page` out of range.\n{$loggedOut}\n{$staffOnly}\n{$serverError}",
+        'notes' => "- The shipping fee will be: the larger of `minimum_fare` and `base_fare` + `price_per_km` × km, plus `food_extra` for food orders. The tayar gets `tayar_share_percent` of it and Tayari keeps the rest. Prices are only stored for now; orders use them in a later release.\n- A rule with a `vehicle_type` is for that type; the rule with `vehicle_type` null is for every other vehicle in the mode.",
+    ],
+
+    'api.v1.admin.pricing-rules.show' => [
+        'what' => 'Returns one pricing rule, to fill the edit form.',
+        'who' => 'Staff with `pricing_rules.view`.',
+        'request' => '- Path `pricingRule`: the rule `id`. No body.',
+        'success' => "**200** with `data`: {$pricingRuleFields}.",
+        'errors' => "{$pricingRuleNotFound}\n{$loggedOut}\n{$staffOnly}\n{$serverError}",
+    ],
+
+    'api.v1.admin.pricing-rules.store' => [
+        'what' => 'Creates a pricing rule for a mode, for one vehicle type or for every vehicle.',
+        'who' => 'Staff with `pricing_rules.manage` (admin, super admin).',
+        'request' => "- `mode_id` (number, required): a mode from **List modes**.\n- `vehicle_type_id` (number, optional): a vehicle type; leave it out (or null) for every vehicle.\n- `base_fare`, `price_per_km`, `minimum_fare` (required): {$amountRule}, in EGP.\n- `food_extra` (optional, or null): {$amountRule}, in EGP.\n- `tayar_share_percent` (required): 0 to 100, up to 2 decimals.\n- `is_active` (boolean, optional): default `true`.",
+        'success' => "**201** with `data`, the new rule: {$pricingRuleFields}.",
+        'errors' => "- **422:** field errors. A mode that already has a rule for this vehicle type (or for every vehicle), active or not, gets `errors.vehicle_type_id` = \"This mode already has a pricing rule for this vehicle type. Edit that rule instead.\"\n{$loggedOut}\n{$staffOnly}\n{$serverError}",
+        'notes' => '- Send amounts as numbers or strings; they come back as strings with two decimals.',
+    ],
+
+    'api.v1.admin.pricing-rules.update' => [
+        'what' => 'Updates a pricing rule. Send only the fields that change.',
+        'who' => 'Staff with `pricing_rules.manage` (admin, super admin).',
+        'request' => "- Path `pricingRule`: the rule `id`.\n- Any of `mode_id`, `vehicle_type_id` (null for every vehicle), `base_fare`, `price_per_km`, `minimum_fare`, `food_extra` (null removes it), `tayar_share_percent`, `is_active` (same rules as create).",
+        'success' => "**200** with `data`, the updated rule: {$pricingRuleFields}.",
+        'errors' => "{$pricingRuleNotFound}\n- **422:** field errors, or `errors.vehicle_type_id` when another rule already has the new mode and vehicle type.\n{$loggedOut}\n{$staffOnly}\n{$serverError}",
+    ],
+
+    'api.v1.admin.pricing-rules.activate' => [
+        'what' => 'Activates a pricing rule.',
+        'who' => 'Staff with `pricing_rules.manage` (admin, super admin).',
+        'request' => '- Path `pricingRule`: the rule `id`. No body.',
+        'success' => "**200** with `data`, the rule (`is_active` = true): {$pricingRuleFields}.",
+        'errors' => "{$pricingRuleNotFound}\n{$loggedOut}\n{$staffOnly}\n{$serverError}",
+        'notes' => '- Activating an active rule also answers 200.',
+    ],
+
+    'api.v1.admin.pricing-rules.deactivate' => [
+        'what' => 'Deactivates a pricing rule without deleting it.',
+        'who' => 'Staff with `pricing_rules.manage` (admin, super admin).',
+        'request' => '- Path `pricingRule`: the rule `id`. No body.',
+        'success' => "**200** with `data`, the rule (`is_active` = false): {$pricingRuleFields}.",
+        'errors' => "{$pricingRuleNotFound}\n{$loggedOut}\n{$staffOnly}\n{$serverError}",
+        'notes' => '- An inactive rule still counts for "one rule per mode and vehicle type": edit it instead of creating another.',
+    ],
+
+    'api.v1.admin.pricing-rules.destroy' => [
+        'what' => 'Deletes a pricing rule.',
+        'who' => 'Staff with `pricing_rules.manage` (admin, super admin).',
+        'request' => '- Path `pricingRule`: the rule `id`. No body.',
+        'success' => '**204** with no body. Remove the row.',
+        'errors' => "{$pricingRuleNotFound}\n{$loggedOut}\n{$staffOnly}\n{$serverError}",
+        'notes' => '- Ask for confirmation first; a delete can\'t be undone. Orders keep the fee they were given.',
     ],
 
 ];

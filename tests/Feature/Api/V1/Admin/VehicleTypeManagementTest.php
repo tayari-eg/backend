@@ -3,6 +3,7 @@
 namespace Tests\Feature\Api\V1\Admin;
 
 use App\Domains\Accounts\Enums\StaffRole;
+use App\Domains\Pricing\Models\PricingRule;
 use App\Domains\Tayars\Models\Vehicle;
 use App\Domains\Tayars\Models\VehicleType;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -228,6 +229,18 @@ class VehicleTypeManagementTest extends TestCase
         $this->deleteJson(route('api.v1.admin.vehicle-types.destroy', $type), [], ['Accept-Language' => 'ar'])
             ->assertUnprocessable()
             ->assertJsonPath('errors.vehicle_type.0', 'نوع المركبة هذا مستخدم في مركبات، لذلك لا يمكن حذفه. قم بإيقافه بدلًا من ذلك.');
+
+        $this->assertModelExists($type);
+    }
+
+    public function test_a_type_used_by_a_pricing_rule_is_not_deleted(): void
+    {
+        $type = VehicleType::factory()->create();
+        PricingRule::factory()->forVehicleType($type)->create();
+
+        $this->deleteJson(route('api.v1.admin.vehicle-types.destroy', $type), [], ['Accept-Language' => 'en'])
+            ->assertUnprocessable()
+            ->assertJsonPath('errors.vehicle_type.0', 'This vehicle type is used by pricing rules, so it cannot be deleted. Delete those rules or deactivate the type instead.');
 
         $this->assertModelExists($type);
     }

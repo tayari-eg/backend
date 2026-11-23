@@ -2,6 +2,7 @@
 
 namespace App\Domains\Tayars\Models;
 
+use App\Domains\Pricing\Models\PricingRule;
 use App\Models\Concerns\HasTranslatedNameSearch;
 use Database\Factories\VehicleTypeFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
@@ -44,6 +45,14 @@ class VehicleType extends Model
     public function vehicles(): HasMany
     {
         return $this->hasMany(Vehicle::class);
+    }
+
+    /**
+     * @return HasMany<PricingRule, $this>
+     */
+    public function pricingRules(): HasMany
+    {
+        return $this->hasMany(PricingRule::class);
     }
 
     /**

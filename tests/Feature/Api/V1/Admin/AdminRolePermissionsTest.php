@@ -6,6 +6,10 @@ use App\Domains\Accounts\Enums\StaffPermission;
 use App\Domains\Accounts\Enums\StaffRole;
 use App\Domains\Accounts\Models\BusinessProfile;
 use App\Domains\Accounts\Models\BusinessType;
+use App\Domains\Catalog\Models\Area;
+use App\Domains\Catalog\Models\Category;
+use App\Domains\Catalog\Models\Mode;
+use App\Domains\Pricing\Models\PricingRule;
 use App\Domains\Tayars\Models\TayarProfile;
 use App\Domains\Tayars\Models\Vehicle;
 use App\Domains\Tayars\Models\VehicleType;
@@ -58,6 +62,34 @@ class AdminRolePermissionsTest extends TestCase
         'api.v1.admin.vehicle-types.activate' => ['POST', 'vehicleType', StaffPermission::VehicleTypesManage],
         'api.v1.admin.vehicle-types.deactivate' => ['POST', 'vehicleType', StaffPermission::VehicleTypesManage],
         'api.v1.admin.vehicle-types.destroy' => ['DELETE', 'vehicleType', StaffPermission::VehicleTypesManage],
+        'api.v1.admin.categories.index' => ['GET', null, StaffPermission::CategoriesView],
+        'api.v1.admin.categories.show' => ['GET', 'category', StaffPermission::CategoriesView],
+        'api.v1.admin.categories.store' => ['POST', null, StaffPermission::CategoriesManage],
+        'api.v1.admin.categories.update' => ['PATCH', 'category', StaffPermission::CategoriesManage],
+        'api.v1.admin.categories.activate' => ['POST', 'category', StaffPermission::CategoriesManage],
+        'api.v1.admin.categories.deactivate' => ['POST', 'category', StaffPermission::CategoriesManage],
+        'api.v1.admin.categories.destroy' => ['DELETE', 'category', StaffPermission::CategoriesManage],
+        'api.v1.admin.categories.icon.store' => ['POST', 'category', StaffPermission::CategoriesManage],
+        'api.v1.admin.categories.icon.destroy' => ['DELETE', 'category', StaffPermission::CategoriesManage],
+        'api.v1.admin.modes.index' => ['GET', null, StaffPermission::ModesView],
+        'api.v1.admin.modes.show' => ['GET', 'mode', StaffPermission::ModesView],
+        'api.v1.admin.modes.update' => ['PATCH', 'mode', StaffPermission::ModesManage],
+        'api.v1.admin.modes.activate' => ['POST', 'mode', StaffPermission::ModesManage],
+        'api.v1.admin.modes.deactivate' => ['POST', 'mode', StaffPermission::ModesManage],
+        'api.v1.admin.areas.index' => ['GET', null, StaffPermission::AreasView],
+        'api.v1.admin.areas.show' => ['GET', 'area', StaffPermission::AreasView],
+        'api.v1.admin.areas.store' => ['POST', null, StaffPermission::AreasManage],
+        'api.v1.admin.areas.update' => ['PATCH', 'area', StaffPermission::AreasManage],
+        'api.v1.admin.areas.activate' => ['POST', 'area', StaffPermission::AreasManage],
+        'api.v1.admin.areas.deactivate' => ['POST', 'area', StaffPermission::AreasManage],
+        'api.v1.admin.areas.destroy' => ['DELETE', 'area', StaffPermission::AreasManage],
+        'api.v1.admin.pricing-rules.index' => ['GET', null, StaffPermission::PricingRulesView],
+        'api.v1.admin.pricing-rules.show' => ['GET', 'pricingRule', StaffPermission::PricingRulesView],
+        'api.v1.admin.pricing-rules.store' => ['POST', null, StaffPermission::PricingRulesManage],
+        'api.v1.admin.pricing-rules.update' => ['PATCH', 'pricingRule', StaffPermission::PricingRulesManage],
+        'api.v1.admin.pricing-rules.activate' => ['POST', 'pricingRule', StaffPermission::PricingRulesManage],
+        'api.v1.admin.pricing-rules.deactivate' => ['POST', 'pricingRule', StaffPermission::PricingRulesManage],
+        'api.v1.admin.pricing-rules.destroy' => ['DELETE', 'pricingRule', StaffPermission::PricingRulesManage],
         'api.v1.admin.staff.index' => ['GET', null, StaffPermission::StaffManage],
         'api.v1.admin.staff.store' => ['POST', null, StaffPermission::StaffManage],
         'api.v1.admin.staff.role.update' => ['PUT', 'staff', StaffPermission::StaffManage],
@@ -91,6 +123,10 @@ class AdminRolePermissionsTest extends TestCase
             'tayarProfile' => TayarProfile::factory()->has(Vehicle::factory())->create(),
             'tayar' => TayarProfile::factory()->approved()->create(),
             'vehicleType' => VehicleType::factory()->create(),
+            'category' => Category::factory()->create(),
+            'mode' => Mode::factory()->create(),
+            'area' => Area::factory()->create(),
+            'pricingRule' => PricingRule::factory()->create(),
             null => null,
         };
     }

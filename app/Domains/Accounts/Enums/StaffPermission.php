@@ -17,4 +17,12 @@ enum StaffPermission: string
     case TayarsReview = 'tayars.review';
     case VehicleTypesView = 'vehicle_types.view';
     case VehicleTypesManage = 'vehicle_types.manage';
+    case CategoriesView = 'categories.view';
+    case CategoriesManage = 'categories.manage';
+    case ModesView = 'modes.view';
+    case ModesManage = 'modes.manage';
+    case AreasView = 'areas.view';
+    case AreasManage = 'areas.manage';
+    case PricingRulesView = 'pricing_rules.view';
+    case PricingRulesManage = 'pricing_rules.manage';
 }
