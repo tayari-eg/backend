@@ -14,6 +14,10 @@ return [
     |
     */
 
+    'firebase' => [
+        'credentials' => env('FIREBASE_CREDENTIALS') ?: null,
+    ],
+
     'postmark' => [
         'key' => env('POSTMARK_API_KEY'),
     ],

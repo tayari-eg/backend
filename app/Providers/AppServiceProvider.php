@@ -2,6 +2,7 @@
 
 namespace App\Providers;
 
+use App\Contracts\PushSender;
 use App\Contracts\SmsSender;
 use App\Domains\Accounts\Data\PhoneNumber;
 use App\Domains\Accounts\Enums\StaffRole;
@@ -13,6 +14,8 @@ use App\Domains\Tayars\Models\TayarProfile;
 use App\Domains\Tayars\Policies\TayarProfilePolicy;
 use App\Http\ClientContext;
 use App\Models\User;
+use App\Services\Push\FcmPushSender;
+use App\Services\Push\LogPushSender;
 use App\Services\Sms\LogSmsSender;
 use Illuminate\Cache\RateLimiting\Limit;
 use Illuminate\Contracts\Foundation\Application;
@@ -44,6 +47,8 @@ class AppServiceProvider extends ServiceProvider
             'log' => new LogSmsSender,
             default => throw new InvalidArgumentException('Unsupported SMS driver ['.config('tayari.sms.driver').'].'),
         });
+
+        $this->app->bind(PushSender::class, fn (): PushSender => $this->makePushSender());
     }
 
     /**
@@ -97,6 +102,30 @@ class AppServiceProvider extends ServiceProvider
                 Limit::perHour(config('tayari.auth.login_attempts_per_phone_per_hour'))->by("login:phone:{$phone}"),
             ];
         });
+    }
+
+    /**
+     * Missing or unreadable credentials (local and tests) fall back to logging, so nothing crashes and nothing is sent.
+     */
+    private function makePushSender(): PushSender
+    {
+        $path = config('services.firebase.credentials');
+
+        if (blank($path)) {
+            return new LogPushSender('FIREBASE_CREDENTIALS is empty');
+        }
+
+        if (! is_file($path) || ! is_readable($path)) {
+            return new LogPushSender('the FIREBASE_CREDENTIALS file is missing or unreadable');
+        }
+
+        $credentials = json_decode((string) file_get_contents($path), true);
+
+        if (! is_array($credentials) || ! isset($credentials['project_id'], $credentials['client_email'], $credentials['private_key'])) {
+            return new LogPushSender('the FIREBASE_CREDENTIALS file is not a service account JSON');
+        }
+
+        return new FcmPushSender($credentials);
     }
 
     /**

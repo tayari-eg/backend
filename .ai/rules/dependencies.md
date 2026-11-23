@@ -11,3 +11,7 @@ paths:
 ## No dependency changes without approval
 
 Don't add, remove, upgrade or downgrade a Composer or npm dependency without explicit approval. That includes `composer require`, `composer update`, `npm install <pkg>`, and edits to `composer.json`/`package.json` or their lock files. If a task seems to need a new package, say which one and why, and wait for approval.
+
+## Approved dependencies
+
+- `google/auth`: gets the OAuth access token from the Firebase service account for FCM HTTP v1 pushes (`app/Services/Push/FcmPushSender`); chosen over kreait/laravel-firebase because the send itself is one call through Laravel's HTTP client.

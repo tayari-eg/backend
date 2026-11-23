@@ -30,6 +30,8 @@ Approved folders outside `app/Domains` and the HTTP side folders:
 - `app/Models/Concerns`: traits shared by models in more than one domain (`php artisan make:trait`), e.g. `HasTranslatedNameSearch` for the translatable `name` scopes.
 - `app/Contracts`: interfaces for swappable infrastructure, e.g. `SmsSender`.
 - `app/Services/Sms`: the SMS drivers behind `SmsSender`, picked by `config('tayari.sms.driver')`.
+- `app/Services/Push`: the push senders behind `PushSender` (`FcmPushSender`, or `LogPushSender` when `config('services.firebase.credentials')` is empty or unreadable).
+- `app/Jobs`: queued jobs (`php artisan make:job`), e.g. `SendPushToDevice`.
 
 ## API versioning
 
