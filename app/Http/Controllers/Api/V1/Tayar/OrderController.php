@@ -14,7 +14,7 @@ class OrderController extends Controller
     /**
      * @var list<string>
      */
-    public const array RELATIONS = ['mode', 'category', 'sender.businessProfile'];
+    public const array RELATIONS = ['mode', 'category', 'sender.businessProfile', 'notDeliveredReason', 'media'];
 
     /**
      * The orders I accepted, newest first: active (default) or past. Cursor pages.

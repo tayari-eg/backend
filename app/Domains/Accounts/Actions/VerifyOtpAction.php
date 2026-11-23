@@ -16,7 +16,7 @@ class VerifyOtpAction
      *
      * @throws ValidationException when the code is wrong, expired, used up or missing
      */
-    public function handle(PhoneNumber $phone, OtpPurpose $purpose, string $code): void
+    public function handle(PhoneNumber $phone, OtpPurpose $purpose, #[\SensitiveParameter] string $code): void
     {
         $maxAttempts = config('tayari.otp.max_attempts');
 

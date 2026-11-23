@@ -16,7 +16,7 @@ class ResolveLoginUserAction
     /**
      * @throws ValidationException when the phone or password is wrong
      */
-    public function handle(PhoneNumber $phone, string $password): User
+    public function handle(PhoneNumber $phone, #[\SensitiveParameter] string $password): User
     {
         $user = User::query()->where('phone', $phone->value)->first();
 

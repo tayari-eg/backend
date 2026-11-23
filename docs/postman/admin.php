@@ -599,6 +599,9 @@ return [
                 2. **Order details** page → **Get order**: the fee breakdown (the tayar earning and platform fee are estimates until a tayar accepts), the tayar and vehicle once accepted, and the status history with who made each change (no name = the system).
                 3. **Offers** tab on the order details page → **List order offers**: which tayars got the order in each round, and who accepted, rejected or let it expire.
                 4. **Cancel** button (only while `can_cancel` is true: before pickup, also after a tayar accepted) → a dialog with **Get cancel reasons** and a note → **Cancel order**. Cancelling an accepted order notifies the tayar and never records a fee; a sender who cancelled after the free period shows `cancel_fee` and `cancel_fee_owed_to` (recorded only, settled later by the wallet).
+                5. **Close as not delivered** button (picked up or on the way; `orders.manage`): when the receiver can't be reached → a dialog with **Get not-delivered reasons** and a required note → **Close as not delivered**. The only status staff can force; the sender and the tayar are both notified.
+                6. **Resend receiver codes** button (picked up or on the way; `orders.manage`), for a receiver who lost the SMS or hit the lock-out (`receiver_codes.locked`). Staff never see the codes.
+                7. The status history shows where the tayar was for each step (`lat`, `lng`), and the pickup photos. Delivery does not check payment yet; receivers get codes only once a real SMS provider is configured.
                 MD,
             'requests' => [
                 [
@@ -620,6 +623,22 @@ return [
                     'route' => 'api.v1.public.order-reasons.index',
                     'name' => 'Get cancel reasons',
                     'screen' => '**Cancel** dialog on the order details page, on open (`type` = `cancel`).',
+                ],
+                [
+                    'route' => 'api.v1.public.order-reasons.index',
+                    'name' => 'Get not-delivered reasons',
+                    'screen' => '**Close as not delivered** dialog on the order details page, on open (`type` = `not_delivered`).',
+                ],
+                [
+                    'route' => 'api.v1.admin.orders.not-delivered',
+                    'name' => 'Close as not delivered',
+                    'screen' => '**Order details** page, when the staff member confirms the **Close as not delivered** dialog.',
+                    'next' => 'Show the returned order: `status` = `not_delivered` and the new history row.',
+                ],
+                [
+                    'route' => 'api.v1.admin.orders.resend-codes',
+                    'name' => 'Resend receiver codes',
+                    'screen' => '**Order details** page, when the staff member taps **Resend receiver codes**.',
                 ],
                 [
                     'route' => 'api.v1.admin.orders.cancel',

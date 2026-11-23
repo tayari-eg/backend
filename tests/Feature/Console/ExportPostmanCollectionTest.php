@@ -166,11 +166,11 @@ class ExportPostmanCollectionTest extends TestCase
         $this->assertSame([], $this->topFolder($collection, 'Changelog')['item']);
 
         $this->assertSame(
-            ['1. App start', '2. Sign up and login', '3. Account', '4. Push notifications', '5. Business profile', '6. National ID', '7. Tayar mode · Become a tayar', '8. Tayar mode · Application status', '9. Tayar mode · Switch mode', '10. Tayar mode · Go online and offline', '11. Tayar mode · Location updates', '12. Tayar mode · Vehicle', '13. Client mode · Categories', '14. Client mode · Orders', '15. Tayar mode · Offers', '16. Tayar mode · My orders'],
+            ['1. App start', '2. Sign up and login', '3. Account', '4. Push notifications', '5. Business profile', '6. National ID', '7. Tayar mode · Become a tayar', '8. Tayar mode · Application status', '9. Tayar mode · Switch mode', '10. Tayar mode · Go online and offline', '11. Tayar mode · Location updates', '12. Tayar mode · Vehicle', '13. Client mode · Categories', '14. Client mode · Orders', '15. Tayar mode · Offers', '16. Tayar mode · My orders', '17. Tayar mode · Delivery'],
             array_column($this->topFolder($collection, 'Flutter app')['item'], 'name'),
         );
         $this->assertSame(
-            ['1. Before login', '2. Sign up and login', '3. Account', '4. Business onboarding', '5. National ID', '6. Categories', '7. Orders'],
+            ['1. Before login', '2. Sign up and login', '3. Account', '4. Business onboarding', '5. National ID', '6. Categories', '7. Orders', '8. Tracking page'],
             array_column($this->topFolder($collection, 'React website')['item'], 'name'),
         );
         $this->assertSame(

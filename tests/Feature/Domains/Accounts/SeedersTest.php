@@ -169,18 +169,21 @@ class SeedersTest extends TestCase
         $this->assertDatabaseCount('modes', 3);
     }
 
-    public function test_the_cancel_reasons_are_seeded_once_in_order_and_keep_what_staff_changed(): void
+    public function test_the_cancel_and_not_delivered_reasons_are_seeded_once_in_order_and_keep_what_staff_changed(): void
     {
         $this->seed(OrderReasonSeeder::class);
-        OrderReason::query()->orderBy('sort_order')->first()->update(['is_active' => false]);
+        OrderReason::query()->ofType(OrderReasonType::Cancel)->orderBy('sort_order')->first()->update(['is_active' => false]);
 
         $this->seed(OrderReasonSeeder::class);
 
-        $reasons = OrderReason::query()->orderBy('sort_order')->get();
-        $this->assertCount(5, $reasons);
-        $this->assertTrue($reasons->every(fn (OrderReason $reason): bool => $reason->type === OrderReasonType::Cancel));
-        $this->assertSame('Other', $reasons->last()->getTranslation('name', 'en'));
-        $this->assertFalse($reasons->first()->is_active);
+        foreach ([OrderReasonType::Cancel, OrderReasonType::NotDelivered] as $type) {
+            $reasons = OrderReason::query()->ofType($type)->orderBy('sort_order')->get();
+            $this->assertCount(5, $reasons, $type->value);
+            $this->assertSame('Other', $reasons->last()->getTranslation('name', 'en'));
+        }
+
+        $this->assertFalse(OrderReason::query()->ofType(OrderReasonType::Cancel)->orderBy('sort_order')->first()->is_active);
+        $this->assertTrue(OrderReason::query()->ofType(OrderReasonType::NotDelivered)->where('name->en', 'The receiver can\'t be reached')->exists());
     }
 
     public function test_the_database_seeder_runs_all_six(): void
@@ -193,7 +196,7 @@ class SeedersTest extends TestCase
         $this->assertDatabaseCount('business_types', 10);
         $this->assertDatabaseCount('vehicle_types', 4);
         $this->assertDatabaseCount('modes', 3);
-        $this->assertDatabaseCount('order_reasons', 5);
+        $this->assertDatabaseCount('order_reasons', 10);
         $this->assertTrue(User::query()->sole()->hasRole(StaffRole::SuperAdmin->value));
     }
 
@@ -299,25 +302,30 @@ class SeedersTest extends TestCase
         $this->assertNotNull($tayars[2]->rejection_reason);
         $this->assertDatabaseCount('tayar_reviews', 2);
 
-        // Businesses: 4 + 2 + 2 documents; tayars: 5 + 1 + 2, 4 + 2 (a bicycle has no licences), 5 + 1 + 2.
-        $this->assertDatabaseCount('media', 30);
+        // Businesses: 4 + 2 + 2 documents; tayars: 5 + 1 + 2, 4 + 2 (a bicycle has no licences), 5 + 1 + 2; 1 pickup photo.
+        $this->assertDatabaseCount('media', 31);
         $this->assertSame(['local'], DB::table('media')->distinct()->pluck('disk')->all());
 
         // The approved business has an order looking for a tayar (area mode, offered to the online demo tayar), a
         // cancelled food order (zone mode, nobody to offer it to) and an order the demo tayar accepted (area mode).
-        $orders = Order::query()->with(['mode', 'statusHistories', 'cancelReason', 'offers'])->orderBy('id')->get();
+        $orders = Order::query()->with(['mode', 'statusHistories', 'cancelReason', 'offers', 'media'])->orderBy('id')->get();
         $this->assertSame(array_fill(0, 3, $businesses[0]->user_id), $orders->pluck('sender_id')->all());
-        $this->assertSame([OrderStatus::LookingForTayar, OrderStatus::Cancelled, OrderStatus::Pending], $orders->pluck('status')->all());
+        $this->assertSame([OrderStatus::LookingForTayar, OrderStatus::Cancelled, OrderStatus::Ongoing], $orders->pluck('status')->all());
         $this->assertSame([ModeCode::Area, ModeCode::Zone, ModeCode::Area], $orders->map(fn (Order $order): ModeCode => $order->mode->code)->all());
         $this->assertSame(['0.00', '10.00', '0.00'], $orders->pluck('food_extra')->all());
         $this->assertSame(ShippingPaidBy::Receiver, $orders[0]->shipping_paid_by);
-        $this->assertSame([1, 2, 2], $orders->map(fn (Order $order): int => $order->statusHistories->count())->all());
+        $this->assertSame([1, 2, 4], $orders->map(fn (Order $order): int => $order->statusHistories->count())->all());
+        // Picked up, then on the way: the receiver's codes went out (hashes only) and the photo is stored.
+        $this->assertNotNull($orders[2]->delivery_code_hash);
+        $this->assertNotNull($orders[2]->codes_sent_at);
+        $this->assertCount(1, $orders[2]->getMedia(Order::PICKUP_PHOTOS));
         $this->assertSame('I no longer need the order', $orders[1]->cancelReason->getTranslation('name', 'en'));
 
         $demoTayar = $tayars[0];
         $this->assertTrue($demoTayar->is_online);
         $this->assertSame(ModeCode::Area, $demoTayar->currentWorkSession()->with('mode')->sole()->mode->code);
-        $this->assertSame([[$demoTayar->user_id, OfferStatus::Offered]], $orders[0]->offers->map(fn (OrderOffer $offer): array => [$offer->tayar_id, $offer->status])->all());
+        // Withdrawn once the demo tayar accepted order 3 and reached the area mode's limit.
+        $this->assertSame([[$demoTayar->user_id, OfferStatus::Withdrawn]], $orders[0]->offers->map(fn (OrderOffer $offer): array => [$offer->tayar_id, $offer->status])->all());
         $this->assertSame([], $orders[1]->offers->all());
         $this->assertSame([[$demoTayar->user_id, OfferStatus::Accepted]], $orders[2]->offers->map(fn (OrderOffer $offer): array => [$offer->tayar_id, $offer->status])->all());
         $this->assertSame([$demoTayar->user_id, $demoTayar->current_work_session_id], [$orders[2]->tayar_id, $orders[2]->work_session_id]);
@@ -339,13 +347,13 @@ class SeedersTest extends TestCase
         $this->assertDatabaseCount('tayar_profiles', 3);
         $this->assertDatabaseCount('vehicles', 3);
         $this->assertDatabaseCount('tayar_reviews', 2);
-        $this->assertDatabaseCount('media', 30);
+        $this->assertDatabaseCount('media', 31);
         $this->assertDatabaseCount('modes', 3);
         $this->assertDatabaseCount('vehicle_types', 4);
         $this->assertDatabaseCount('business_types', 10);
-        $this->assertDatabaseCount('order_reasons', 5);
+        $this->assertDatabaseCount('order_reasons', 10);
         $this->assertDatabaseCount('orders', 3);
-        $this->assertDatabaseCount('order_status_histories', 5);
+        $this->assertDatabaseCount('order_status_histories', 7);
         $this->assertDatabaseCount('order_offers', 2);
         $this->assertDatabaseCount('tayar_work_sessions', 1);
     }
@@ -368,13 +376,13 @@ class SeedersTest extends TestCase
         $this->app->instance(DemoDataSeeder::class, $seeder);
 
         $this->seed(DemoDataSeeder::class);
-        $this->assertSame(30, $seeder->placeholderFiles);
+        $this->assertSame(31, $seeder->placeholderFiles);
 
         $seeder->placeholderFiles = 0;
         $this->seed(DemoDataSeeder::class);
 
         $this->assertSame(0, $seeder->placeholderFiles);
-        $this->assertDatabaseCount('media', 30);
+        $this->assertDatabaseCount('media', 31);
     }
 
     public function test_demo_accounts_stop_when_the_reviewer_phone_belongs_to_a_non_staff_user(): void

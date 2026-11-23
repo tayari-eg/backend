@@ -11,7 +11,7 @@ use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
 class OrderReasonController extends Controller
 {
     /**
-     * Active order reasons of one type (cancel), in display order, with names in the request locale.
+     * Active order reasons of one type (cancel or not_delivered), in display order, with names in the request locale.
      *
      * @unauthenticated
      */

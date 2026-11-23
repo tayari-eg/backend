@@ -5,6 +5,7 @@ namespace App\Http\Resources\Api\V1\Client;
 use App\Domains\Orders\Enums\OrderCanceller;
 use App\Domains\Orders\Enums\OrderStatus;
 use App\Domains\Orders\Models\Order;
+use App\Http\Resources\Api\V1\MediaResource;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
 
@@ -66,7 +67,22 @@ class OrderResource extends JsonResource
                     'color' => $this->workSession->vehicle->color,
                     'plate_number' => $this->workSession->vehicle->plate_number,
                 ]),
+                // The last position the tayar sent, while the order is accepted, picked up or on the way.
+                'location' => $this->whenLoaded('tayar', fn (): ?array => in_array($this->status, OrderStatus::withTayarCases(), true)
+                    && $this->tayar->relationLoaded('tayarProfile') && $this->tayar->tayarProfile?->current_lat !== null ? [
+                        'lat' => $this->tayar->tayarProfile->current_lat,
+                        'lng' => $this->tayar->tayarProfile->current_lng,
+                        'updated_at' => $this->tayar->tayarProfile->location_updated_at?->toIso8601ZuluString(),
+                    ] : null),
             ]),
+            'pickup_photos' => $this->whenLoaded('media', fn () => MediaResource::collection($this->pickupPhotos())),
+            'not_delivered_reason' => $this->whenLoaded('notDeliveredReason', fn (): ?array => $this->notDeliveredReason === null ? null : [
+                'id' => $this->notDeliveredReason->id,
+                'name' => $this->notDeliveredReason->getTranslation('name', app()->getLocale()),
+            ]),
+            'not_delivered_note' => $this->not_delivered_note,
+            // For the receiver's tracking link, if the sender wants to share it.
+            'tracking_token' => $this->tracking_token,
             'cancelled_by_type' => $this->cancelledByType(),
             // Recorded on cancel: what the sender owes the tayar for cancelling after the free period.
             'cancel_fee' => $this->cancel_fee,
@@ -75,6 +91,11 @@ class OrderResource extends JsonResource
             'search_ends_at' => $this->status === OrderStatus::LookingForTayar ? $this->searchEndsAt()->toIso8601ZuluString() : null,
             'price_accepted_at' => $this->price_accepted_at?->toIso8601ZuluString(),
             'accepted_at' => $this->accepted_at?->toIso8601ZuluString(),
+            'picked_up_at' => $this->picked_up_at?->toIso8601ZuluString(),
+            'receiver_confirmed_at' => $this->receiver_confirmed_at?->toIso8601ZuluString(),
+            'codes_sent_at' => $this->codes_sent_at?->toIso8601ZuluString(),
+            'delivered_at' => $this->delivered_at?->toIso8601ZuluString(),
+            'not_delivered_at' => $this->not_delivered_at?->toIso8601ZuluString(),
             'cancelled_at' => $this->cancelled_at?->toIso8601ZuluString(),
             'created_at' => $this->created_at?->toIso8601ZuluString(),
             'updated_at' => $this->updated_at?->toIso8601ZuluString(),

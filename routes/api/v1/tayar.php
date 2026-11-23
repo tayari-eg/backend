@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\Api\V1\Tayar\DeliveryController;
 use App\Http\Controllers\Api\V1\Tayar\LocationController;
 use App\Http\Controllers\Api\V1\Tayar\OfferController;
 use App\Http\Controllers\Api\V1\Tayar\OrderController;
@@ -17,4 +18,10 @@ Route::middleware(['auth:sanctum', 'tayar'])->group(function (): void {
 
     Route::get('orders', [OrderController::class, 'index'])->name('orders.index');
     Route::get('orders/{order}', [OrderController::class, 'show'])->name('orders.show');
+    Route::post('orders/{order}/pickup', [DeliveryController::class, 'pickup'])->name('orders.pickup');
+    Route::post('orders/{order}/receiver-confirmed', [DeliveryController::class, 'receiverConfirmed'])->name('orders.receiver-confirmed');
+    Route::middleware('throttle:delivery-codes')->group(function (): void {
+        Route::post('orders/{order}/deliver', [DeliveryController::class, 'deliver'])->name('orders.deliver');
+        Route::post('orders/{order}/not-delivered', [DeliveryController::class, 'notDelivered'])->name('orders.not-delivered');
+    });
 });

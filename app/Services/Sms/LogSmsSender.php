@@ -11,7 +11,7 @@ use Illuminate\Support\Facades\Log;
  */
 class LogSmsSender implements SmsSender
 {
-    public function send(PhoneNumber $to, string $message): void
+    public function send(PhoneNumber $to, #[\SensitiveParameter] string $message): void
     {
         Log::info('SMS sent', [
             'to' => $to->value,

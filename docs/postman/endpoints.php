@@ -51,13 +51,21 @@ $notTayar = '- **403:** not an approved tayar (`message`: "Tayar mode is only av
 $reapplyLater = '- **422:** `errors.status` = "You can change your application again from …" while a rejected application still has to wait until `can_reapply_at`.';
 $backToReview = 'An approved or rejected application goes back to `pending` (and an online tayar goes offline): warn the user before saving.';
 $orderRouteFields = "- `category_id` (number, required): a subcategory from **Get categories** (one of a main category's `children`).\n- `pickup_lat`, `pickup_lng`, `dropoff_lat`, `dropoff_lng` (numbers, required): the points picked on the map, up to 7 decimals.";
-$orderFields = '`id`, `code` (the short code people see, e.g. `TY-7K3P9Q`), `status` (`looking_for_tayar` | `pending` | `picked_up` | `ongoing` | `delivered` | `not_delivered` | `cancelled`), `can_cancel` (true until pickup), `category` (`id`, `name`, `is_food`), `details`, `pickup` (`address`, `lat`, `lng`, `contact_phone`), `dropoff` (`address`, `lat`, `lng`), `receiver` (`name`, `phone`), `goods_value`, `shipping_paid_by` (`sender` | `receiver`), `amount_to_collect` (what the receiver pays: the goods value, plus the shipping fee when the receiver pays it), `distance_km`, `food_extra`, `shipping_fee`, `cancel_reason` (`id`, `name`, or null), `tayar` (null until a tayar accepts; then `name`, `phone` (null once the order is delivered, not delivered or cancelled) and `vehicle` (`type`, `model`, `color`, `plate_number`)), `cancelled_by_type` (null unless cancelled; then `sender`, `staff`, or `system` when no tayar accepted in time), `free_cancel_until` (while `pending`: until when cancelling is free; otherwise null), `cancel_fee_now` (what cancelling now would cost: `"0.00"` before a tayar accepts and until `free_cancel_until`, then the cancellation fee, at most the shipping fee), `cancel_fee` (the fee recorded when the order was cancelled, `"0.00"` otherwise), `search_ends_at` (while `looking_for_tayar`: when Tayari stops looking and cancels the order; otherwise null), `price_accepted_at`, `accepted_at` (when the tayar accepted, or null), `cancelled_at`, `created_at`, `updated_at`. Amounts are strings with two decimals, in EGP; coordinates are strings with 7 decimals';
-$adminOrderFields = '`id`, `code`, `status`, `can_cancel`, `sender` (`id`, `name`, `phone`, `business_name`), `category` (`id`, `name` with `ar` and `en`, `is_food`), `mode` (`id`, `code`, `name` with `ar` and `en`: the mode the order was priced in), `details`, `pickup` (`address`, `lat`, `lng`, `contact_phone`), `dropoff` (`address`, `lat`, `lng`), `receiver` (`name`, `phone`, `user_id` when the receiver has an account), `goods_value`, `shipping_paid_by`, `amount_to_collect`, `fee` (`distance_km`, `base_fare`, `price_per_km`, `distance_fare`, `minimum_fare`, `food_extra`, `shipping_fee`, `tayar_share_percent`, `tayar_earning`, `platform_fee`), `tayar` (`id`, `name`, `phone`, or null until a tayar accepts), `vehicle` (the tayar\'s vehicle for this order: `id`, `type` with `ar` and `en`, `model`, `color`, `plate_number`, or null), `work_session_id` (or null), `cancelled_by_type` (null unless cancelled; then `sender`, `staff` or `system`), `cancel_fee` (owed by the sender for cancelling an accepted order after the free period, `"0.00"` otherwise; recorded only, nothing is charged yet), `cancel_fee_owed_to` (`id`, `name` of the tayar it is owed to, or null), `price_accepted_at`, `accepted_at`, `cancelled_at`, `created_at`, `updated_at`. Amounts are strings with two decimals, in EGP';
-$adminOrderDetailFields = "{$adminOrderFields}, plus `cancelled_by` (`id`, `name`, or null), `cancel_reason` (`id`, `name` with `ar` and `en`, or null) and `status_history` (every status change, oldest first: `from_status` (null for the first row), `to_status`, `changed_by` (`id`, `name`, or null for the system), `note`, `created_at`)";
+$orderFields = '`id`, `code` (the short code people see, e.g. `TY-7K3P9Q`), `status` (`looking_for_tayar` | `pending` | `picked_up` | `ongoing` | `delivered` | `not_delivered` | `cancelled`), `can_cancel` (true until pickup), `category` (`id`, `name`, `is_food`), `details`, `pickup` (`address`, `lat`, `lng`, `contact_phone`), `dropoff` (`address`, `lat`, `lng`), `receiver` (`name`, `phone`), `goods_value`, `shipping_paid_by` (`sender` | `receiver`), `amount_to_collect` (what the receiver pays: the goods value, plus the shipping fee when the receiver pays it), `distance_km`, `food_extra`, `shipping_fee`, `cancel_reason` (`id`, `name`, or null), `tayar` (null until a tayar accepts; then `name`, `phone` (null once the order is delivered, not delivered or cancelled) and `vehicle` (`type`, `model`, `color`, `plate_number`)), `cancelled_by_type` (null unless cancelled; then `sender`, `staff`, or `system` when no tayar accepted in time), `free_cancel_until` (while `pending`: until when cancelling is free; otherwise null), `cancel_fee_now` (what cancelling now would cost: `"0.00"` before a tayar accepts and until `free_cancel_until`, then the cancellation fee, at most the shipping fee), `cancel_fee` (the fee recorded when the order was cancelled, `"0.00"` otherwise), `search_ends_at` (while `looking_for_tayar`: when Tayari stops looking and cancels the order; otherwise null), `price_accepted_at`, `accepted_at` (when the tayar accepted, or null), `cancelled_at`, `created_at`, `updated_at`. Amounts are strings with two decimals, in EGP; coordinates are strings with 7 decimals. Delivery: `tayar.location` (`lat`, `lng`, `updated_at`: the tayar\'s last position while the order is `pending`, `picked_up` or `ongoing`, otherwise null), `pickup_photos` (the tayar\'s photos at pickup, each with a signed `url`), `picked_up_at`, `receiver_confirmed_at`, `codes_sent_at` (when the receiver\'s codes were last sent by SMS), `delivered_at`, `not_delivered_at`, `not_delivered_reason` (`id`, `name`, or null), `not_delivered_note`, `tracking_token` (for the receiver\'s tracking link)';
+$adminOrderFields = '`id`, `code`, `status`, `can_cancel`, `sender` (`id`, `name`, `phone`, `business_name`), `category` (`id`, `name` with `ar` and `en`, `is_food`), `mode` (`id`, `code`, `name` with `ar` and `en`: the mode the order was priced in), `details`, `pickup` (`address`, `lat`, `lng`, `contact_phone`), `dropoff` (`address`, `lat`, `lng`), `receiver` (`name`, `phone`, `user_id` when the receiver has an account), `goods_value`, `shipping_paid_by`, `amount_to_collect`, `fee` (`distance_km`, `base_fare`, `price_per_km`, `distance_fare`, `minimum_fare`, `food_extra`, `shipping_fee`, `tayar_share_percent`, `tayar_earning`, `platform_fee`), `tayar` (`id`, `name`, `phone`, or null until a tayar accepts), `vehicle` (the tayar\'s vehicle for this order: `id`, `type` with `ar` and `en`, `model`, `color`, `plate_number`, or null), `work_session_id` (or null), `cancelled_by_type` (null unless cancelled; then `sender`, `staff` or `system`), `cancel_fee` (owed by the sender for cancelling an accepted order after the free period, `"0.00"` otherwise; recorded only, nothing is charged yet), `cancel_fee_owed_to` (`id`, `name` of the tayar it is owed to, or null), `price_accepted_at`, `accepted_at`, `cancelled_at`, `created_at`, `updated_at`. Amounts are strings with two decimals, in EGP. Delivery: `picked_up_at`, `receiver_confirmed_at`, `delivered_at`, `not_delivered_at`, `not_delivered_reason` (`id`, `name` with `ar` and `en`, or null), `not_delivered_note`, `tracking_token`, `receiver_codes` (`sent_at`, `expire_at`, `attempts`, `locked`; never the codes)';
+$adminOrderDetailFields = "{$adminOrderFields}, plus `cancelled_by` (`id`, `name`, or null), `cancel_reason` (`id`, `name` with `ar` and `en`, or null) and `status_history` (every status change, oldest first: `from_status` (null for the first row), `to_status`, `changed_by` (`id`, `name`, or null for the system), `note`, `lat`, `lng` (where the tayar was, or null for the sender, staff and the system), `created_at`), and `pickup_photos` (each with a signed `url`)";
 $orderNotFound = '- **404:** no order with this id.';
 $offerFields = '`id`, `status` (`offered` while it can be accepted; `accepted`, `rejected`, `expired` or `withdrawn` otherwise), `round`, `distance_km` (from the tayar to the pickup, in a straight line, when the offer was made), `tayar_earning` (what this tayar earns with this vehicle, EGP), `expires_at`, `expires_in_seconds` (counted on the server: use it for the countdown, not the phone clock), `order` (`id`, `code`, `mode` (`code`, `name`), `category` (`id`, `name`, `is_food`), `details`, `pickup` (`address`, `lat`, `lng`), `dropoff` (`address`, `lat`, `lng`), `distance_km` (the trip, by road)). No phone numbers until the tayar accepts';
-$tayarOrderFields = '`id`, `code`, `status` (`pending` | `picked_up` | `ongoing` | `delivered` | `not_delivered` | `cancelled`), `mode` (`code`, `name`), `category` (`id`, `name`, `is_food`), `details`, `sender` (`name`, `phone`, `business_name`), `pickup` (`address`, `lat`, `lng`, `contact_phone`), `dropoff` (`address`, `lat`, `lng`), `receiver` (`name`, `phone`), `distance_km`, `tayar_earning` (what I earn, EGP). The phones (`sender.phone`, `pickup.contact_phone`, `receiver.phone`) are null once the order is delivered, not delivered or cancelled; the names stay, `cancel_fee` (what the sender owes me for cancelling after the free period, `"0.00"` otherwise; paid out later through the wallet), `accepted_at`, `cancelled_at`, `created_at`. Coordinates are strings with 7 decimals';
+$tayarOrderFields = '`id`, `code`, `status` (`pending` | `picked_up` | `ongoing` | `delivered` | `not_delivered` | `cancelled`), `mode` (`code`, `name`), `category` (`id`, `name`, `is_food`), `details`, `sender` (`name`, `phone`, `business_name`), `pickup` (`address`, `lat`, `lng`, `contact_phone`), `dropoff` (`address`, `lat`, `lng`), `receiver` (`name`, `phone`), `distance_km`, `tayar_earning` (what I earn, EGP). The phones (`sender.phone`, `pickup.contact_phone`, `receiver.phone`) are null once the order is delivered, not delivered or cancelled; the names stay, `cancel_fee` (what the sender owes me for cancelling after the free period, `"0.00"` otherwise; paid out later through the wallet), `accepted_at`, `cancelled_at`, `created_at`. Coordinates are strings with 7 decimals. Delivery: `pickup_photos` (each with a signed `url`), `receiver_codes` (`sent_at`, `expire_at`, `attempts_left`, `problem`: null when a code can be checked now, else `codes_not_sent`, `codes_locked` or `codes_expired`; never the codes), `picked_up_at`, `receiver_confirmed_at`, `delivered_at`, `not_delivered_at`, `not_delivered_reason` (`id`, `name`, or null), `not_delivered_note`';
 $adminOfferFields = '`id`, `tayar` (`id`, `name`, `phone`), `work_session_id`, `round`, `distance_km` (tayar to pickup when offered), `tayar_share_percent`, `tayar_earning`, `platform_fee` (what the order would earn with this tayar\'s vehicle), `status` (`offered` | `accepted` | `rejected` | `expired` | `withdrawn`, as of now), `expires_at`, `responded_at` (when the tayar accepted or rejected, or null), `created_at`';
+$tayarPositionFields = '- `lat` (number, required): -90 to 90, up to 7 decimals.\n- `lng` (number, required): -180 to 180, up to 7 decimals. The current GPS position, saved on the status history.';
+$wrongStep = "- **422:** `errors.status` = \"This order can't move to that step now.\" (another step is due: reload the order).";
+$codeErrors = '- **422:** `errors.code`: the code is wrong (":left attempts left"; the refusal code counts as wrong here, and the other way round), the codes are locked after :code_max_attempts wrong codes, they expired (after :codes_valid_hours hours), or they were not sent yet. For locked or expired codes, ask the receiver to request new codes from the tracking link, or contact support.';
+$codeThrottled = '- **429:** more than :code_requests_per_minute codes in a minute. Wait for `Retry-After` seconds.';
+$noPaymentCheck = 'Delivery does not check payment yet: the payment phase comes later.';
+$smsNote = 'The receiver gets the codes only once a real SMS provider is configured on the server; until then they are only written to the log on a local server.';
+$trackingFields = '`code`, `status`, `sender_name` (the business name), `dropoff_address`, `tayar` (null until a tayar accepts; then `first_name` and `vehicle` (`type`, `color`, `plate_number`)), `location` (`lat`, `lng`, `updated_at`: the tayar\'s last position while the order is `picked_up` or `ongoing`, otherwise null), `can_resend_codes`, `codes_sent_at`, `picked_up_at`, `receiver_confirmed_at`, `delivered_at`, `not_delivered_at`, `cancelled_at`, `is_finished`. No phone numbers, no codes and no amounts';
+$trackingNotFound = '- **404:** no order with this tracking token (or a token that is not 40 letters and digits).';
 $offerNotFound = '- **404:** no offer with this id.';
 $offerErrors = '- **422:** `errors.offer` explains why: "This offer has expired.", "This order is no longer available." (another tayar took it, or it was cancelled), "This offer was for a work session that has ended. Stay online to get new offers." (the tayar went offline or changed the mode settings), or "Finish your current orders before accepting another one." (:max_active_orders accepted order in the zone and area modes, :max_active_orders_long_distance in long distance). Remove the offer card and show the message.';
 $notApprovedBusiness = '- **403:** `message` explains why: only business accounts can send orders for now, or the business profile is not approved yet. Show the message with a link to the business profile page.';
@@ -521,8 +529,8 @@ return [
         'who' => 'Any logged-in user who is not blocked.',
         'request' => '- `mode` (required): `client` or `tayar`.',
         'success' => "**200** with `data`, the user: {$userFields}.",
-        'errors' => "- **403:** `tayar` needs an approved tayar application (\"Tayar mode is only available after your tayar application is approved.\").\n- **422:** an unknown `mode`.\n{$loggedOut}\n{$blocked}\n{$upgrade}\n{$serverError}",
-        'notes' => "- Switching to `client` while online sets the tayar offline and closes the work session.\n- Approval doesn't change the mode: when `register_as` = `tayar`, `next_step` = `ready` and `last_mode` = `client`, call this once with `tayar` before **Go online**.",
+        'errors' => "- **403:** `tayar` needs an approved tayar application (\"Tayar mode is only available after your tayar application is approved.\").\n- **422:** an unknown `mode`, or `errors.status` = \"Finish your orders before going offline or switching to client mode.\" when switching to `client` while holding an accepted, picked-up or ongoing order.\n{$loggedOut}\n{$blocked}\n{$upgrade}\n{$serverError}",
+        'notes' => "- Switching to `client` while online sets the tayar offline and closes the work session; it is refused while the tayar holds an accepted, picked-up or ongoing order, even when the tayar is already offline.\n- Approval doesn't change the mode: when `register_as` = `tayar`, `next_step` = `ready` and `last_mode` = `client`, call this once with `tayar` before **Go online**.",
     ],
 
     'api.v1.tayar.online' => [
@@ -539,8 +547,8 @@ return [
         'who' => 'An approved tayar.',
         'request' => '- No body.',
         'success' => "**200** with `data`: {$workStatusFields} (`is_online` = false, `work_session` = null). Stop the background location service.",
-        'errors' => "{$loggedOut}\n{$notTayar}\n{$upgrade}\n{$serverError}",
-        'notes' => '- Going offline while offline also answers 200. The last position is kept.',
+        'errors' => "- **422:** `errors.status` = \"Finish your orders before going offline or switching to client mode.\" while holding an accepted, picked-up or ongoing order: keep the location service running.\n{$loggedOut}\n{$notTayar}\n{$upgrade}\n{$serverError}",
+        'notes' => "- Going offline while offline also answers 200. The last position is kept.\n- While the tayar holds an order, the server never sets them offline for a stale location either: the sender sees how old the last position is.",
     ],
 
     'api.v1.tayar.location' => [
@@ -594,6 +602,42 @@ return [
         'success' => "**200** with `data`: {$tayarOrderFields}.",
         'errors' => "{$orderNotFound}\n- **403:** another tayar's order, or an order I never accepted.\n{$loggedOut}\n{$notTayar}\n{$upgrade}\n{$serverError}",
         'notes' => '- Reload it when an `order_cancelled` push arrives: the sender or staff can cancel an accepted order before pickup. Then show it as cancelled and stop the trip, with `cancel_fee` when the sender owes me one (paid out later through the wallet).',
+    ],
+
+    'api.v1.tayar.orders.pickup' => [
+        'what' => 'Confirms the pickup with photos of the items. The order becomes `picked_up`, and the receiver gets the delivery and refusal codes and the tracking link in one SMS.',
+        'who' => 'The tayar who accepted the order (`pending`).',
+        'request' => "- Multipart form (POST).\n- Path `order`: the order `id`.\n- `photos[]` (files, required): 1 to 4 images (jpg, jpeg, png or webp), up to :max_upload_mb MB each.\n{$tayarPositionFields}",
+        'success' => "**200** with `data`, the order: {$tayarOrderFields}.",
+        'errors' => "{$orderNotFound}\n- **403:** another tayar's order.\n{$wrongStep}\n- **422:** `photos` missing, more than 4, or not images.\n{$loggedOut}\n{$notTayar}\n{$upgrade}\n{$serverError}",
+        'notes' => "- The codes are made and sent by the server within about a minute; `receiver_codes.sent_at` shows when. {$smsNote}\n- From now on nobody can cancel the order.",
+    ],
+
+    'api.v1.tayar.orders.receiver-confirmed' => [
+        'what' => 'The tayar called the receiver, who is there today: the order is on the way (`ongoing`).',
+        'who' => 'The tayar of a `picked_up` order.',
+        'request' => "- Path `order`: the order `id`.\n{$tayarPositionFields}",
+        'success' => "**200** with `data`, the order: {$tayarOrderFields}.",
+        'errors' => "{$orderNotFound}\n- **403:** another tayar's order.\n{$wrongStep}\n- **422:** `lat`/`lng` missing or out of range.\n{$loggedOut}\n{$notTayar}\n{$upgrade}\n{$serverError}",
+        'notes' => '- Receiver unreachable or not there today: don\'t confirm; contact support, who closes the order as not delivered.',
+    ],
+
+    'api.v1.tayar.orders.deliver' => [
+        'what' => 'Delivers the order with the receiver\'s delivery code. The order becomes `delivered`.',
+        'who' => 'The tayar of an `ongoing` order.',
+        'request' => "- Path `order`: the order `id`.\n- `code` (string, required): the :code_length-digit delivery code the receiver reads out.\n{$tayarPositionFields}",
+        'success' => "**200** with `data`, the order: {$tayarOrderFields}.",
+        'errors' => "{$orderNotFound}\n- **403:** another tayar's order.\n{$wrongStep}\n{$codeErrors}\n{$codeThrottled}\n{$loggedOut}\n{$notTayar}\n{$upgrade}\n{$serverError}",
+        'notes' => "- The code is never shown to the tayar: the receiver has it. {$noPaymentCheck}\n- Wrong codes are shared with **Mark not delivered**: :code_max_attempts in total, then the codes lock until new ones are sent.",
+    ],
+
+    'api.v1.tayar.orders.not-delivered' => [
+        'what' => 'The receiver refused the order at the door and gave the refusal code: the order becomes `not_delivered`, with a reason.',
+        'who' => 'The tayar of an `ongoing` order.',
+        'request' => "- Path `order`: the order `id`.\n- `code` (string, required): the :code_length-digit refusal code.\n- `not_delivered_reason_id` (number, required): a reason from **Get not-delivered reasons**.\n- `note` (string, optional, up to 500 characters).\n{$tayarPositionFields}",
+        'success' => "**200** with `data`, the order: {$tayarOrderFields}.",
+        'errors' => "{$orderNotFound}\n- **403:** another tayar's order.\n{$wrongStep}\n{$codeErrors}\n- **422:** `not_delivered_reason_id` is not an active not-delivered reason.\n{$codeThrottled}\n{$loggedOut}\n{$notTayar}\n{$upgrade}\n{$serverError}",
+        'notes' => '- Not delivered is final for now: returning the goods to the sender comes in a later version. Contact support for what to do with them.',
     ],
 
     'api.v1.admin.tayar-applications.index' => [
@@ -986,7 +1030,7 @@ return [
     'api.v1.public.order-reasons.index' => [
         'what' => 'Lists the active reasons of one type, in display order, for the cancel dialog.',
         'who' => 'Anyone, no login.',
-        'request' => "- Query `type` (required): `cancel`.\n- Query `per_page` (optional, 1 to :max_per_page, default :per_page) and `page` (optional, starts at 1).\n- `Accept-Language` decides the language of the names.",
+        'request' => "- Query `type` (required): `cancel` (the cancel dialog) or `not_delivered` (the tayar's and staff's not-delivered dialog).\n- Query `per_page` (optional, 1 to :max_per_page, default :per_page) and `page` (optional, starts at 1).\n- `Accept-Language` decides the language of the names.",
         'success' => '**200** with `data`: a list of `{ id, name }` in display order, plus `meta` and `links` for pages.',
         'errors' => "- **422:** `type` is missing or unknown, or `per_page` is out of range.\n{$upgrade}\n{$serverError}",
         'notes' => '- Send the chosen `id` as `cancel_reason_id` in **Cancel order**. Load the list when the cancel dialog opens.',
@@ -1025,7 +1069,7 @@ return [
         'request' => '- Path `order`: the order `id`. No body.',
         'success' => "**200** with `data`: {$orderFields}.",
         'errors' => "{$orderNotFound}\n- **403:** the order belongs to someone else.\n{$loggedOut}\n{$clientOnly}\n{$upgrade}\n{$serverError}",
-        'notes' => "- Show **Cancel order** only when `can_cancel` is true.\n- While `status` = `looking_for_tayar`, call it again every 10 seconds while the screen is open (and when an `order_accepted` or `order_no_tayar` push arrives): there are no live updates. Stop when the status changes.\n- Once a tayar accepts (`status` = `pending`), show the `tayar` card: name, a call button for `phone`, and the vehicle. The tayar's location comes in a later version.\n- **Cancel order** stays available until pickup. Before confirming, show the cost from `cancel_fee_now`: free until `free_cancel_until` (:free_cancel_seconds seconds after the tayar accepted), then a cancellation fee owed to the tayar. Reload the order when the dialog opens, so the amount is current.\n- `cancelled_by_type` = `system` means no tayar accepted in time: offer to send the order again.",
+        'notes' => "- Show **Cancel order** only when `can_cancel` is true.\n- While `status` = `looking_for_tayar`, call it again every 10 seconds while the screen is open (and when an `order_accepted` or `order_no_tayar` push arrives): there are no live updates. Stop when the status changes.\n- Once a tayar accepts (`status` = `pending`), show the `tayar` card: name, a call button for `phone`, and the vehicle. The tayar's location comes in a later version.\n- **Cancel order** stays available until pickup. Before confirming, show the cost from `cancel_fee_now`: free until `free_cancel_until` (:free_cancel_seconds seconds after the tayar accepted), then a cancellation fee owed to the tayar. Reload the order when the dialog opens, so the amount is current.\n- `cancelled_by_type` = `system` means no tayar accepted in time: offer to send the order again.\n- While the order is `pending`, `picked_up` or `ongoing`, show the tayar on the map from `tayar.location` and how old `updated_at` is, and keep calling this every 10 to 15 seconds while the screen is open. There is no ETA.\n- After pickup, nobody can cancel. The receiver gets the delivery and refusal codes and the tracking link by SMS (only once a real SMS provider is configured); share the link from `tracking_token` if needed. Delivery does not check payment yet.",
     ],
 
     'api.v1.client.orders.cancel' => [
@@ -1071,6 +1115,42 @@ return [
         'success' => "**200** with `data`, the order (`status` = `cancelled`, `cancelled_by_type` = `staff`): {$adminOrderDetailFields}. The last `status_history` row names the staff member.",
         'errors' => "{$orderNotFound}\n- **422:** field errors, or `errors.status` = \"This order can no longer be cancelled.\" once the order is picked up or finished.\n{$loggedOut}\n{$staffOnly}\n{$serverError}",
         'notes' => "- Ask for confirmation first, with the reasons from **Get cancel reasons**.\n- Staff can cancel an accepted (`pending`) order at any time, never with a cancellation fee (`cancel_fee` stays `\"0.00\"`). The order keeps its `tayar`, and the tayar gets an `order_cancelled` push with `cancelled_by_type` = `staff`.\n- Offers still open are withdrawn.",
+    ],
+
+    'api.v1.admin.orders.not-delivered' => [
+        'what' => 'Closes a picked-up or ongoing order as not delivered, without a code, when the receiver can\'t be reached, so the tayar is never stuck holding it. The only status staff can force.',
+        'who' => 'Staff with `orders.manage` (ops, admin, super admin).',
+        'request' => "- Path `order`: the order `id`.\n- `not_delivered_reason_id` (number, required): a reason from **Get not-delivered reasons**.\n- `note` (string, required, up to 500 characters): what happened, for the record.",
+        'success' => "**200** with `data`, the order (`status` = `not_delivered`): {$adminOrderDetailFields}. The last `status_history` row names the staff member and has no position.",
+        'errors' => "{$orderNotFound}\n- **422:** field errors, or `errors.status` = \"Only a picked-up or ongoing order can be closed as not delivered.\"\n{$loggedOut}\n{$staffOnly}\n{$serverError}",
+        'notes' => "- The sender and the tayar both get an `order_not_delivered` push.\n- Ask for confirmation first: it can't be undone, and returning the goods comes in a later version.",
+    ],
+
+    'api.v1.admin.orders.resend-codes' => [
+        'what' => 'Sends the receiver new delivery and refusal codes by SMS, for example after a lock-out or a lost SMS. The old codes stop working and the wrong-code count starts again.',
+        'who' => 'Staff with `orders.manage` (ops, admin, super admin).',
+        'request' => '- Path `order`: the order `id`. No body.',
+        'success' => '**204** with no body. `receiver_codes.sent_at` changes within about a minute.',
+        'errors' => "{$orderNotFound}\n- **422:** `errors.status` = \"Codes are only sent while the order is with the tayar.\" (not picked up or ongoing).\n{$loggedOut}\n{$staffOnly}\n{$serverError}",
+        'notes' => "- Staff never see the codes. {$smsNote}",
+    ],
+
+    'api.v1.public.tracking.show' => [
+        'what' => 'The receiver\'s tracking page: the order\'s status, the tayar\'s first name and vehicle, and the tayar\'s last position while the goods are on the way.',
+        'who' => 'Anyone with the tracking link (no login). The receiver gets it by SMS at pickup; the sender has `tracking_token` on the order.',
+        'request' => '- Path `trackingToken`: the 40-character token from the link.',
+        'success' => "**200** with `data`: {$trackingFields}.",
+        'errors' => "{$trackingNotFound}\n- **429:** more than :tracking_per_minute requests a minute from this IP address. Wait for `Retry-After` seconds.\n{$serverError}",
+        'notes' => "- Reload every 15 seconds while `is_finished` is false; there are no live updates. Show how old `location.updated_at` is.\n- The page keeps answering after the order ends, with the final status and no position.\n- The codes are never shown here: they come only by SMS. {$smsNote}",
+    ],
+
+    'api.v1.public.tracking.resend-codes' => [
+        'what' => 'Sends the receiver new delivery and refusal codes by SMS to the receiver\'s phone (never shown on the page).',
+        'who' => 'Anyone with the tracking link (no login), while `can_resend_codes` is true.',
+        'request' => '- Path `trackingToken`: the 40-character token from the link. No body.',
+        'success' => '**204** with no body. Tell the receiver a new SMS is on its way; the old codes stop working.',
+        'errors' => "{$trackingNotFound}\n- **422:** `errors.status` = \"Codes are only sent while the order is with the tayar.\"\n- **429:** more than :resend_codes_per_hour resends an hour for this order, or too many requests from this IP address. Wait for `Retry-After` seconds.\n{$serverError}",
+        'notes' => "- {$smsNote}",
     ],
 
 ];

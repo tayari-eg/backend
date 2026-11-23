@@ -99,6 +99,12 @@ class ExportPostmanCollection extends Command
         ':max_active_orders_long_distance' => ['MATCHING_MAX_ACTIVE_ORDERS_LONG_DISTANCE', 'matching.max_active_orders_long_distance'],
         ':max_active_orders' => ['MATCHING_MAX_ACTIVE_ORDERS', 'matching.max_active_orders'],
         ':free_cancel_seconds' => ['MATCHING_FREE_CANCEL_SECONDS', 'matching.free_cancel_seconds'],
+        ':code_length' => ['TRACKING_CODE_LENGTH', 'tracking.code_length'],
+        ':code_max_attempts' => ['TRACKING_CODE_MAX_ATTEMPTS', 'tracking.code_max_attempts'],
+        ':codes_valid_hours' => ['TRACKING_CODES_VALID_HOURS', 'tracking.codes_valid_hours'],
+        ':resend_codes_per_hour' => ['TRACKING_RESEND_CODES_PER_HOUR', 'tracking.resend_codes_per_hour'],
+        ':tracking_per_minute' => ['TRACKING_REQUESTS_PER_MINUTE', 'tracking.requests_per_minute'],
+        ':code_requests_per_minute' => ['TRACKING_CODE_REQUESTS_PER_MINUTE', 'tracking.code_requests_per_minute'],
         ':per_page' => [null, 'pagination.per_page'],
         ':max_per_page' => [null, 'pagination.max_per_page'],
     ];

@@ -1,5 +1,7 @@
 <?php
 
+use App\Services\Sentry\ScrubSensitiveEventData;
+
 /**
  * Sentry Laravel SDK configuration file.
  *
@@ -52,6 +54,9 @@ return [
 
     // @see: https://docs.sentry.io/platforms/php/guides/laravel/configuration/options/#send_default_pii
     'send_default_pii' => env('SENTRY_SEND_DEFAULT_PII', false),
+
+    // Strips codes, OTPs, passwords, tokens and the Authorization and Cookie headers from every event.
+    'before_send' => [ScrubSensitiveEventData::class, 'beforeSend'],
 
     // Configures which data is collected automatically, `null` keeps collecting data based on `send_default_pii`
     'data_collection' => null,

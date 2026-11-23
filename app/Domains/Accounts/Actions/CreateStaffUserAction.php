@@ -12,7 +12,7 @@ class CreateStaffUserAction
     /**
      * The phone counts as verified: a super admin vouches for it, and login needs a verified phone.
      */
-    public function handle(string $name, PhoneNumber $phone, string $password, StaffRole $role): User
+    public function handle(string $name, PhoneNumber $phone, #[\SensitiveParameter] string $password, StaffRole $role): User
     {
         return DB::transaction(function () use ($name, $phone, $password, $role): User {
             $user = new User(['name' => $name, 'phone' => $phone->value, 'password' => $password]);

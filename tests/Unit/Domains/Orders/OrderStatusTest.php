@@ -16,9 +16,14 @@ class OrderStatusTest extends TestCase
         );
     }
 
-    public function test_only_the_matching_and_cancel_transitions_are_allowed_for_now(): void
+    public function test_only_the_designs_transitions_are_allowed(): void
     {
-        $allowed = ['looking_for_tayar → pending', 'looking_for_tayar → cancelled', 'pending → cancelled'];
+        $allowed = [
+            'looking_for_tayar → pending', 'looking_for_tayar → cancelled',
+            'pending → picked_up', 'pending → cancelled',
+            'picked_up → ongoing', 'picked_up → not_delivered',
+            'ongoing → delivered', 'ongoing → not_delivered',
+        ];
 
         foreach (OrderStatus::cases() as $from) {
             foreach (OrderStatus::cases() as $to) {
@@ -37,6 +42,22 @@ class OrderStatusTest extends TestCase
             $this->assertSame(in_array($status, $beforePickup, true), $status->canBeCancelledBy(OrderCanceller::Sender), $status->value);
             $this->assertSame(in_array($status, $beforePickup, true), $status->canBeCancelledBy(OrderCanceller::Staff), $status->value);
             $this->assertSame($status === OrderStatus::LookingForTayar, $status->canBeCancelledBy(OrderCanceller::System), $status->value);
+        }
+    }
+
+    public function test_the_tayar_never_skips_a_step_and_only_staff_close_a_picked_up_order_as_not_delivered(): void
+    {
+        $tayarSteps = ['pending → picked_up', 'picked_up → ongoing', 'ongoing → delivered', 'ongoing → not_delivered'];
+
+        foreach (OrderStatus::cases() as $from) {
+            foreach (OrderStatus::cases() as $to) {
+                $transition = "{$from->value} → {$to->value}";
+
+                $this->assertSame(in_array($transition, $tayarSteps, true), $from->tayarCanMoveTo($to), $transition);
+            }
+
+            $this->assertSame(in_array($from, [OrderStatus::PickedUp, OrderStatus::Ongoing], true), $from->staffCanCloseAsNotDelivered(), $from->value);
+            $this->assertSame(in_array($from, [OrderStatus::PickedUp, OrderStatus::Ongoing], true), $from->hasReceiverCodes(), $from->value);
         }
     }
 

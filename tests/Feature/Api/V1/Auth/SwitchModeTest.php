@@ -2,6 +2,9 @@
 
 namespace Tests\Feature\Api\V1\Auth;
 
+use App\Domains\Accounts\Enums\AppMode;
+use App\Domains\Orders\Models\Order;
+use App\Domains\Tayars\Actions\GoOfflineAction;
 use App\Domains\Tayars\Actions\GoOnlineAction;
 use App\Domains\Tayars\Models\TayarProfile;
 use App\Domains\Tayars\Models\TayarWorkSession;
@@ -65,5 +68,34 @@ class SwitchModeTest extends TestCase
         $this->patchJson(route('api.v1.auth.mode.update'), ['mode' => 'driver'])
             ->assertUnprocessable()
             ->assertJsonValidationErrors(['mode']);
+    }
+
+    public function test_a_tayar_holding_an_order_cannot_switch_to_client_mode(): void
+    {
+        $tayar = $this->onlineTayar(30.0444, 31.2357);
+        Order::factory()->pickedUpBy($tayar)->create();
+        Sanctum::actingAs(User::query()->findOrFail($tayar->user_id));
+
+        $this->patchJson(route('api.v1.auth.mode.update'), ['mode' => 'client'])
+            ->assertUnprocessable()
+            ->assertJsonValidationErrors('status');
+
+        $this->assertSame(AppMode::Tayar, User::query()->findOrFail($tayar->user_id)->last_mode);
+        $this->assertTrue($tayar->refresh()->is_online);
+    }
+
+    public function test_an_offline_tayar_still_holding_an_order_cannot_switch_to_client_mode(): void
+    {
+        $tayar = $this->onlineTayar(30.0444, 31.2357);
+        Order::factory()->acceptedBy($tayar)->create();
+        // The review-reset path still sets a tayar holding an order offline.
+        $this->assertTrue(app(GoOfflineAction::class)->handle($tayar));
+        Sanctum::actingAs(User::query()->findOrFail($tayar->user_id));
+
+        $this->patchJson(route('api.v1.auth.mode.update'), ['mode' => 'client'])
+            ->assertUnprocessable()
+            ->assertJsonValidationErrors(['status' => __('tayars.finish_orders_first')]);
+
+        $this->assertSame(AppMode::Tayar, User::query()->findOrFail($tayar->user_id)->last_mode);
     }
 }

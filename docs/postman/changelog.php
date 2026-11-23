@@ -29,6 +29,38 @@
 return [
 
     [
+        'version' => '1.9.0',
+        'date' => '2026-11-23',
+        'changes' => [
+            'Added: POST /api/v1/tayar/orders/{order}/pickup — confirms the pickup of an accepted order with 1 to 4 photos (multipart) and lat/lng: the order becomes picked_up, and the receiver gets the delivery and refusal codes and the tracking link in one SMS (only hashes are stored); 422 errors.status when another step is due. Apps: Flutter tayar mode.',
+            'Added: POST /api/v1/tayar/orders/{order}/receiver-confirmed — the receiver confirmed by phone they are there today: the order becomes ongoing (lat/lng required). Apps: Flutter tayar mode.',
+            'Added: POST /api/v1/tayar/orders/{order}/deliver — delivers an ongoing order with the receiver\'s delivery code: 422 errors.code for a wrong code (shared count of 5 with the refusal step, then locked until new codes are sent), expired codes (24 hours) or codes not sent yet; 429 after 10 codes a minute. Delivery does not check payment yet (the payment phase comes later), and receivers get codes only once a real SMS provider is configured. Apps: Flutter tayar mode.',
+            'Added: POST /api/v1/tayar/orders/{order}/not-delivered — the receiver refused at the door: the refusal code, a not_delivered reason and an optional note make the order not_delivered (final; returns come later). Same code rules as deliver. Apps: Flutter tayar mode.',
+            'Added: POST /api/v1/admin/orders/{order}/not-delivered — staff (orders.manage) close a picked_up or ongoing order as not_delivered without a code, with a required reason and note, when the receiver can\'t be reached; the sender and the tayar both get an order_not_delivered push. The only status staff can force. Apps: Admin panel.',
+            'Added: POST /api/v1/admin/orders/{order}/resend-codes — staff (orders.manage) send the receiver new codes by SMS (204); the old codes stop working and the wrong-code count restarts. Apps: Admin panel.',
+            'Added: GET /api/v1/track/{trackingToken} — the receiver\'s public tracking page (no login, 30 requests a minute per IP): status, business name, the tayar\'s first name and vehicle, and the last position while picked_up or ongoing; no phones, codes or amounts; keeps answering with the final status after the order ends. Apps: Website.',
+            'Added: POST /api/v1/track/{trackingToken}/resend-codes — sends the receiver new codes by SMS while the order is picked_up or ongoing (204; 3 an hour per order); the codes are never shown on the page. Delivery does not check payment yet (the payment phase comes later), and receivers get codes only once a real SMS provider is configured. Apps: Website.',
+            'Changed: POST /api/v1/client/orders — the order has the new fields tracking_token, tayar.location, pickup_photos, picked_up_at, receiver_confirmed_at, codes_sent_at, delivered_at, not_delivered_at, not_delivered_reason and not_delivered_note. Apps: Website, Flutter client mode.',
+            'Changed: GET /api/v1/client/orders — the same new order fields; tayar.location is the tayar\'s last position while pending, picked_up or ongoing. Apps: Website, Flutter client mode.',
+            'Changed: GET /api/v1/client/orders/{order} — the same new order fields; poll every 10 to 15 seconds while the order is accepted, picked up or on the way; there is no ETA. Apps: Website, Flutter client mode.',
+            'Changed: POST /api/v1/client/orders/{order}/cancel — the response has the new order fields; a picked-up order can\'t be cancelled (422 errors.status), as before for every status after pending. Apps: Website, Flutter client mode.',
+            'Changed: POST /api/v1/tayar/offers/{offer}/accept — the returned order has the new delivery fields (pickup_photos, receiver_codes, the step timestamps, not_delivered_reason and not_delivered_note). Apps: Flutter tayar mode.',
+            'Changed: GET /api/v1/tayar/orders — each order has the new delivery fields, including receiver_codes (sent_at, expire_at, attempts_left, problem; never the codes). Apps: Flutter tayar mode.',
+            'Changed: GET /api/v1/tayar/orders/{order} — the new delivery fields, including receiver_codes. Apps: Flutter tayar mode.',
+            'Changed: POST /api/v1/tayar/offline — refused with 422 errors.status while the tayar holds an accepted, picked-up or ongoing order; the stale-location job also leaves such a tayar online. Apps: Flutter tayar mode.',
+            'Changed: PATCH /api/v1/auth/mode — switching to client mode is refused with 422 errors.status while the tayar holds an accepted, picked-up or ongoing order, even when the tayar is already offline. Apps: Flutter client mode, Flutter tayar mode.',
+            'Changed: GET /api/v1/order-reasons — type=not_delivered now lists the not-delivered reasons, for the tayar\'s and staff\'s not-delivered dialogs. Apps: Flutter tayar mode, Admin panel.',
+            'Changed: GET /api/v1/admin/orders — each order has the new fields picked_up_at, receiver_confirmed_at, delivered_at, not_delivered_at, not_delivered_reason, not_delivered_note, tracking_token and receiver_codes (sent_at, expire_at, attempts, locked; never the codes). Apps: Admin panel.',
+            'Changed: GET /api/v1/admin/orders/{order} — the same new fields plus pickup_photos, and status_history rows now have lat and lng (where the tayar was). Apps: Admin panel.',
+            'Changed: POST /api/v1/admin/orders/{order}/cancel — the response has the new order fields; staff can\'t cancel a picked-up order (422 errors.status): close it as not delivered instead. Apps: Admin panel.',
+            'Docs: Flutter folder 4. Push notifications — lists the new push types order_picked_up, order_on_the_way and order_delivered (sender; order_id) and order_not_delivered (sender, and the tayar when staff close the order; order_id). Apps: Flutter client mode, Flutter tayar mode.',
+            'Docs: Flutter folder 17. Tayar mode · Delivery — pickup photos, calling the receiver, the delivery and refusal codes, lock-out, and "receiver unreachable: contact support, who closes the order". Apps: Flutter tayar mode.',
+            'Docs: Website folder 8. Tracking page — the receiver\'s public tracking page and the resend-codes button. Apps: Website.',
+            'Docs: Read me first — the demo order the approved tayar accepted is now on the way (ongoing), and on a local server its receiver codes can be read from the log. Apps: Website, Admin panel, Flutter client mode, Flutter tayar mode.',
+        ],
+    ],
+
+    [
         'version' => '1.8.0',
         'date' => '2026-11-23',
         'changes' => [

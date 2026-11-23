@@ -188,6 +188,32 @@ return [
 
     /*
     |--------------------------------------------------------------------------
+    | Tracking
+    |--------------------------------------------------------------------------
+    |
+    | At pickup the receiver gets one SMS with the tracking link (url, where
+    | {token} is replaced) and two codes of code_length digits: the delivery
+    | code and the refusal code. Only their hashes are stored. The codes last
+    | codes_valid_hours; code_max_attempts wrong codes lock them until new
+    | ones are sent (the receiver can ask resend_codes_per_hour times an hour
+    | per order). The public tracking endpoint allows requests_per_minute
+    | requests per IP; a tayar may send code_requests_per_minute delivery or
+    | refusal codes a minute.
+    |
+    */
+
+    'tracking' => [
+        'url' => (string) env('TRACKING_URL', 'http://localhost:3000/track/{token}'),
+        'code_length' => (int) env('TRACKING_CODE_LENGTH', 6),
+        'code_max_attempts' => (int) env('TRACKING_CODE_MAX_ATTEMPTS', 5),
+        'codes_valid_hours' => (int) env('TRACKING_CODES_VALID_HOURS', 24),
+        'resend_codes_per_hour' => (int) env('TRACKING_RESEND_CODES_PER_HOUR', 3),
+        'requests_per_minute' => (int) env('TRACKING_REQUESTS_PER_MINUTE', 30),
+        'code_requests_per_minute' => (int) env('TRACKING_CODE_REQUESTS_PER_MINUTE', 10),
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
     | Pagination
     |--------------------------------------------------------------------------
     */

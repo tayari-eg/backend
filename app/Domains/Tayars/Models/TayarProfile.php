@@ -3,6 +3,8 @@
 namespace App\Domains\Tayars\Models;
 
 use App\Domains\Accounts\Enums\UserStatus;
+use App\Domains\Orders\Enums\OrderStatus;
+use App\Domains\Orders\Models\Order;
 use App\Domains\Tayars\Data\BoundingBox;
 use App\Domains\Tayars\Enums\TayarDocument;
 use App\Domains\Tayars\Enums\TayarStatus;
@@ -128,6 +130,14 @@ class TayarProfile extends Model implements HasMedia
     public function reviewer(): BelongsTo
     {
         return $this->belongsTo(User::class, 'reviewed_by');
+    }
+
+    /**
+     * Whether the tayar holds an order that is accepted, picked up or on the way.
+     */
+    public function holdsActiveOrders(): bool
+    {
+        return Order::query()->where('tayar_id', $this->user_id)->whereStatusIn(OrderStatus::withTayarCases())->exists();
     }
 
     public function isPending(): bool

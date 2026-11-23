@@ -11,6 +11,10 @@ enum OrderPushType: string
     case OrderAccepted = 'order_accepted';
     case OrderNoTayar = 'order_no_tayar';
     case OrderCancelled = 'order_cancelled';
+    case OrderPickedUp = 'order_picked_up';
+    case OrderOnTheWay = 'order_on_the_way';
+    case OrderDelivered = 'order_delivered';
+    case OrderNotDelivered = 'order_not_delivered';
 
     public function titleKey(): string
     {

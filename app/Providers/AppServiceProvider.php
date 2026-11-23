@@ -100,6 +100,15 @@ class AppServiceProvider extends ServiceProvider
         RateLimiter::for('tayar-location', fn (Request $request): Limit => Limit::perMinute(config('tayari.tayars.location_updates_per_minute'))
             ->by('tayar-location:'.$request->user()->id));
 
+        RateLimiter::for('delivery-codes', fn (Request $request): Limit => Limit::perMinute(config('tayari.tracking.code_requests_per_minute'))->by('delivery-codes:'.$request->user()->id));
+
+        RateLimiter::for('tracking', fn (Request $request): Limit => Limit::perMinute(config('tayari.tracking.requests_per_minute'))
+            ->by('tracking:'.$request->ip()));
+
+        // Per order, so nobody can flood one receiver with SMS.
+        RateLimiter::for('tracking-resend-codes', fn (Request $request): Limit => Limit::perHour(config('tayari.tracking.resend_codes_per_hour'))
+            ->by('tracking-resend-codes:'.$request->route('trackingToken')));
+
         RateLimiter::for('login', function (Request $request): array {
             $phone = $this->phoneLimiterKey($request);
 

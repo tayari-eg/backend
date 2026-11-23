@@ -11,4 +11,6 @@ return [
     'not_online' => 'Go online before sending your location.',
     'national_id_number_taken' => 'This national ID number is already used in another tayar application.',
 
+    'finish_orders_first' => 'Finish your orders before going offline or switching to client mode.',
+
 ];

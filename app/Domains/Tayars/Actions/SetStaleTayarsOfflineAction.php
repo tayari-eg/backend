@@ -10,7 +10,8 @@ class SetStaleTayarsOfflineAction
     public function __construct(private GoOfflineAction $goOffline) {}
 
     /**
-     * Sets offline every online tayar with no location for the configured minutes. Returns how many went offline.
+     * Sets offline every online tayar with no location for the configured minutes, except tayars holding an accepted,
+     * picked-up or ongoing order (the sender sees how old the last position is). Returns how many went offline.
      */
     public function handle(): int
     {
