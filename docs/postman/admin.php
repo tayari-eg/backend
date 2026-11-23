@@ -590,6 +590,40 @@ return [
             ],
         ],
 
+        [
+            'name' => '15. Orders',
+            'description' => <<<'MD'
+                Following and cancelling orders (staff with `orders.view`; cancelling needs `orders.manage`):
+
+                1. **Orders** page: a table with status, sender, category, mode and date filters, and a search box (order code or phone) → **List orders**.
+                2. **Order details** page → **Get order**: the fee breakdown (the tayar earning and platform fee are estimates until a tayar accepts) and the status history with who made each change.
+                3. **Cancel** button (only while `can_cancel` is true) → a dialog with **Get cancel reasons** and a note → **Cancel order**.
+                MD,
+            'requests' => [
+                [
+                    'route' => 'api.v1.admin.orders.index',
+                    'name' => 'List orders',
+                    'screen' => '**Orders** page, on open and when a filter, the search or the page changes.',
+                ],
+                [
+                    'route' => 'api.v1.admin.orders.show',
+                    'name' => 'Get order',
+                    'screen' => '**Order details** page, on open.',
+                ],
+                [
+                    'route' => 'api.v1.public.order-reasons.index',
+                    'name' => 'Get cancel reasons',
+                    'screen' => '**Cancel** dialog on the order details page, on open (`type` = `cancel`).',
+                ],
+                [
+                    'route' => 'api.v1.admin.orders.cancel',
+                    'name' => 'Cancel order',
+                    'screen' => '**Order details** page, when the staff member confirms the **Cancel** dialog.',
+                    'next' => 'Show the returned order: `status` = `cancelled` and the new history row.',
+                ],
+            ],
+        ],
+
     ],
 
 ];

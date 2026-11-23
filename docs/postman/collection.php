@@ -48,6 +48,7 @@ $demoSection = <<<MD
     - **Password of every demo account:** `{$demoPassword}` (`{{demo_password}}` in the **Tayari Local** environment).
     - **Phones:** each account has an environment variable, for example `{{demo_tayar_approved_phone}}`. Log in with the phone as shown; the server accepts any Egyptian format.
     - **Which app uses which account:** Admin panel: the three staff accounts. Website: the business accounts. Flutter app: the tayar and business accounts.
+    - The approved business (`{{demo_business_approved_phone}}`) has two demo orders: one looking for a tayar and one cancelled food order.
     - The rejected tayar can change the application from `can_reapply_at` (after TAYAR_REAPPLY_AFTER_HOURS, 24 hours by default).
 
     | Phone | Variable | Name | Kind | Status | next_step | Use in |
@@ -165,6 +166,8 @@ return [
             - `data`: the items of this page;
             - `meta`: `current_page`, `last_page`, `per_page`, `total`, `from`, `to`;
             - `links`: `first`, `last`, `prev` and `next` URLs (`next` is null on the last page).
+
+            A few long lists (for example **Get my orders**) use **cursor pages** instead: send `cursor` = `meta.next_cursor` from the previous answer (and `per_page`) until `next_cursor` is null. Their `meta` has `per_page`, `next_cursor` and `prev_cursor`, with no total.
 
             ## Language, dates and documents
 

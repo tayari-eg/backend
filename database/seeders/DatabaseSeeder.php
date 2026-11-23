@@ -20,6 +20,7 @@ class DatabaseSeeder extends Seeder
             BusinessTypeSeeder::class,
             VehicleTypeSeeder::class,
             ModeSeeder::class,
+            OrderReasonSeeder::class,
         ]);
     }
 }

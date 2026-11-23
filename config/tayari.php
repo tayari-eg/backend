@@ -133,6 +133,27 @@ return [
 
     /*
     |--------------------------------------------------------------------------
+    | Orders
+    |--------------------------------------------------------------------------
+    |
+    | Distances are straight lines times road_distance_multiplier, to
+    | approximate the road until a maps API is added. A trip up to
+    | zone_max_distance_km is priced in the zone mode (unless both points are
+    | in one area); longer trips in the long distance mode, up to
+    | max_distance_km of road. Pickup and drop-off must be at least
+    | min_distance_km apart in a straight line.
+    |
+    */
+
+    'orders' => [
+        'road_distance_multiplier' => (string) env('ORDER_ROAD_DISTANCE_MULTIPLIER', '1.30'),
+        'zone_max_distance_km' => (int) env('ORDER_ZONE_MAX_DISTANCE_KM', 15),
+        'max_distance_km' => (int) env('ORDER_MAX_DISTANCE_KM', 1200),
+        'min_distance_km' => (string) env('ORDER_MIN_DISTANCE_KM', '0.1'),
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
     | Pagination
     |--------------------------------------------------------------------------
     */

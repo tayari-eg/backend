@@ -13,6 +13,11 @@ use App\Domains\Catalog\Enums\ModeCode;
 use App\Domains\Catalog\Models\Area;
 use App\Domains\Catalog\Models\Category;
 use App\Domains\Catalog\Models\Mode;
+use App\Domains\Orders\Enums\OrderReasonType;
+use App\Domains\Orders\Enums\OrderStatus;
+use App\Domains\Orders\Enums\ShippingPaidBy;
+use App\Domains\Orders\Models\Order;
+use App\Domains\Orders\Models\OrderReason;
 use App\Domains\Pricing\Models\PricingRule;
 use App\Domains\Tayars\Enums\TayarStatus;
 use App\Domains\Tayars\Enums\VehicleStatus;
@@ -23,6 +28,7 @@ use Database\Seeders\BusinessTypeSeeder;
 use Database\Seeders\DatabaseSeeder;
 use Database\Seeders\DemoDataSeeder;
 use Database\Seeders\ModeSeeder;
+use Database\Seeders\OrderReasonSeeder;
 use Database\Seeders\RolesAndPermissionsSeeder;
 use Database\Seeders\SuperAdminSeeder;
 use Database\Seeders\VehicleTypeSeeder;
@@ -47,9 +53,10 @@ class SeedersTest extends TestCase
         $this->assertSame(['admin', 'ops', 'super_admin', 'support'], Role::query()->where('guard_name', 'web')->orderBy('name')->pluck('name')->all());
         $this->assertSame($this->permissionNames(StaffRole::Admin), $this->rolePermissions('admin'));
         $this->assertNotContains(StaffPermission::StaffManage->value, $this->rolePermissions('admin'));
-        $this->assertSame(['areas.view', 'business_profiles.review', 'business_profiles.view', 'business_types.view', 'categories.view', 'modes.view', 'national_ids.review', 'national_ids.view', 'pricing_rules.view', 'tayars.review', 'tayars.view', 'users.block', 'users.view', 'vehicle_types.view'], $this->rolePermissions('ops'));
-        $this->assertSame(['areas.view', 'business_profiles.view', 'business_types.view', 'categories.view', 'modes.view', 'national_ids.view', 'pricing_rules.view', 'tayars.view', 'users.view', 'vehicle_types.view'], $this->rolePermissions('support'));
+        $this->assertSame(['areas.view', 'business_profiles.review', 'business_profiles.view', 'business_types.view', 'categories.view', 'modes.view', 'national_ids.review', 'national_ids.view', 'orders.manage', 'orders.view', 'pricing_rules.view', 'tayars.review', 'tayars.view', 'users.block', 'users.view', 'vehicle_types.view'], $this->rolePermissions('ops'));
+        $this->assertSame(['areas.view', 'business_profiles.view', 'business_types.view', 'categories.view', 'modes.view', 'national_ids.view', 'orders.view', 'pricing_rules.view', 'tayars.view', 'users.view', 'vehicle_types.view'], $this->rolePermissions('support'));
         $this->assertContains(StaffPermission::PricingRulesManage->value, $this->rolePermissions('admin'));
+        $this->assertContains(StaffPermission::OrdersManage->value, $this->rolePermissions('admin'));
         $this->assertContains(StaffPermission::TayarsReview->value, $this->rolePermissions('admin'));
         $this->assertContains(StaffPermission::VehicleTypesManage->value, $this->rolePermissions('admin'));
         $this->assertSame([], $this->rolePermissions('super_admin'));
@@ -160,7 +167,21 @@ class SeedersTest extends TestCase
         $this->assertDatabaseCount('modes', 3);
     }
 
-    public function test_the_database_seeder_runs_all_five(): void
+    public function test_the_cancel_reasons_are_seeded_once_in_order_and_keep_what_staff_changed(): void
+    {
+        $this->seed(OrderReasonSeeder::class);
+        OrderReason::query()->orderBy('sort_order')->first()->update(['is_active' => false]);
+
+        $this->seed(OrderReasonSeeder::class);
+
+        $reasons = OrderReason::query()->orderBy('sort_order')->get();
+        $this->assertCount(5, $reasons);
+        $this->assertTrue($reasons->every(fn (OrderReason $reason): bool => $reason->type === OrderReasonType::Cancel));
+        $this->assertSame('Other', $reasons->last()->getTranslation('name', 'en'));
+        $this->assertFalse($reasons->first()->is_active);
+    }
+
+    public function test_the_database_seeder_runs_all_six(): void
     {
         config(['tayari.super_admin' => ['name' => 'Owner', 'phone' => '01012345678', 'password' => 'owner-secret']]);
 
@@ -170,6 +191,7 @@ class SeedersTest extends TestCase
         $this->assertDatabaseCount('business_types', 10);
         $this->assertDatabaseCount('vehicle_types', 4);
         $this->assertDatabaseCount('modes', 3);
+        $this->assertDatabaseCount('order_reasons', 5);
         $this->assertTrue(User::query()->sole()->hasRole(StaffRole::SuperAdmin->value));
     }
 
@@ -208,6 +230,7 @@ class SeedersTest extends TestCase
         $this->assertDatabaseCount('categories', 0);
         $this->assertDatabaseCount('areas', 0);
         $this->assertDatabaseCount('pricing_rules', 0);
+        $this->assertDatabaseCount('orders', 0);
         $this->assertDatabaseCount('media', 0);
     }
 
@@ -277,6 +300,16 @@ class SeedersTest extends TestCase
         // Businesses: 4 + 2 + 2 documents; tayars: 5 + 1 + 2, 4 + 2 (a bicycle has no licences), 5 + 1 + 2.
         $this->assertDatabaseCount('media', 30);
         $this->assertSame(['local'], DB::table('media')->distinct()->pluck('disk')->all());
+
+        // The approved business has one order looking for a tayar (area mode) and one cancelled food order (zone mode).
+        $orders = Order::query()->with(['mode', 'statusHistories', 'cancelReason'])->orderBy('id')->get();
+        $this->assertSame([$businesses[0]->user_id, $businesses[0]->user_id], $orders->pluck('sender_id')->all());
+        $this->assertSame([OrderStatus::LookingForTayar, OrderStatus::Cancelled], $orders->pluck('status')->all());
+        $this->assertSame([ModeCode::Area, ModeCode::Zone], $orders->map(fn (Order $order): ModeCode => $order->mode->code)->all());
+        $this->assertSame(['0.00', '10.00'], $orders->pluck('food_extra')->all());
+        $this->assertSame(ShippingPaidBy::Receiver, $orders[0]->shipping_paid_by);
+        $this->assertSame([1, 2], $orders->map(fn (Order $order): int => $order->statusHistories->count())->all());
+        $this->assertSame('I no longer need the order', $orders[1]->cancelReason->getTranslation('name', 'en'));
     }
 
     public function test_running_the_demo_data_seeder_twice_creates_nothing_twice(): void
@@ -299,6 +332,9 @@ class SeedersTest extends TestCase
         $this->assertDatabaseCount('modes', 3);
         $this->assertDatabaseCount('vehicle_types', 4);
         $this->assertDatabaseCount('business_types', 10);
+        $this->assertDatabaseCount('order_reasons', 5);
+        $this->assertDatabaseCount('orders', 2);
+        $this->assertDatabaseCount('order_status_histories', 3);
     }
 
     public function test_a_second_demo_run_writes_no_placeholder_files_for_existing_applications(): void

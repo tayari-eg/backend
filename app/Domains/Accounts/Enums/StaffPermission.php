@@ -25,4 +25,6 @@ enum StaffPermission: string
     case AreasManage = 'areas.manage';
     case PricingRulesView = 'pricing_rules.view';
     case PricingRulesManage = 'pricing_rules.manage';
+    case OrdersView = 'orders.view';
+    case OrdersManage = 'orders.manage';
 }

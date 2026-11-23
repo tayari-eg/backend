@@ -3,6 +3,8 @@
 use App\Http\Controllers\Api\V1\Client\BusinessDocumentController;
 use App\Http\Controllers\Api\V1\Client\BusinessProfileController;
 use App\Http\Controllers\Api\V1\Client\NationalIdController;
+use App\Http\Controllers\Api\V1\Client\OrderController;
+use App\Http\Controllers\Api\V1\Client\OrderEstimateController;
 use App\Http\Controllers\Api\V1\Client\TayarDocumentController;
 use App\Http\Controllers\Api\V1\Client\TayarProfileController;
 use App\Http\Controllers\Api\V1\Client\TayarVehicleController;
@@ -23,4 +25,10 @@ Route::middleware(['auth:sanctum', 'client'])->group(function (): void {
     Route::post('tayar-profile/documents/{collection}', TayarDocumentController::class)->name('tayar-profile.documents.store');
     Route::patch('tayar-profile/vehicle', [TayarVehicleController::class, 'update'])->name('tayar-profile.vehicle.update');
     Route::post('tayar-profile/vehicle/documents/{collection}', VehicleDocumentController::class)->name('tayar-profile.vehicle.documents.store');
+
+    Route::post('orders/estimate', OrderEstimateController::class)->name('orders.estimate');
+    Route::get('orders', [OrderController::class, 'index'])->name('orders.index');
+    Route::post('orders', [OrderController::class, 'store'])->name('orders.store');
+    Route::get('orders/{order}', [OrderController::class, 'show'])->name('orders.show');
+    Route::post('orders/{order}/cancel', [OrderController::class, 'cancel'])->name('orders.cancel');
 });
