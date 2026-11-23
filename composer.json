@@ -9,6 +9,7 @@
         "php": "^8.3",
         "brick/math": "^1.0",
         "dedoc/scramble": "^0.13.55",
+        "google/auth": "^1.55",
         "laravel/framework": "^13.17",
         "laravel/sanctum": "^4.0",
         "laravel/tinker": "^3.0",

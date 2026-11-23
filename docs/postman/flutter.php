@@ -159,6 +159,20 @@ return [
                 1. After every successful login, get the FCM token and call **Save push token** with the platform and app version.
                 2. When FCM gives a new token (`onTokenRefresh`), call **Save push token** again.
                 3. On logout, call **Remove push token** **before** **Log out**, while the login is still valid.
+                4. Ask for notification permission (iOS, and Android 13 and later) before getting the token.
+
+                **What the app receives.** Every push is sent to all of the user's saved devices, through FCM:
+
+                - `notification.title` and `notification.body`: already in the user's language (`locale`), so show them as they are.
+                - `data`: every value is a **string**. There is always a `type`; each type adds its own keys. Today the only type is `test` (from the server's `push:test` command), with no other keys. Future types are listed here as they are added.
+                - Android uses the default notification channel (no `channel_id` is sent). If the app later creates its own channel, the server can send its id.
+
+                **Handling it:**
+
+                - App open (`FirebaseMessaging.onMessage`): FCM shows nothing by itself, so show a local notification or an in-app banner.
+                - App in the background (`onMessageOpenedApp`) or closed (`getInitialMessage()` on start): when the user taps the notification, open the screen for `data.type`. Ignore a `type` the app does not know.
+
+                A token that FCM reports as unregistered or invalid is removed on the server, so keep calling **Save push token** after login and on every token refresh.
                 MD,
             'requests' => [
                 [

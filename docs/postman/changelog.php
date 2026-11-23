@@ -29,6 +29,15 @@
 return [
 
     [
+        'version' => '1.4.0',
+        'date' => '2026-11-23',
+        'changes' => [
+            'Docs: Flutter folder 4. Push notifications — the server now sends FCM pushes to every saved device: notification title and body in the user\'s language, and data whose values are all strings with a type key (only test for now, from the push:test command); ask for notification permission, show a local notification while the app is open, and open the screen for data.type when the user taps it. Apps: Flutter client mode, Flutter tayar mode.',
+            'Docs: Flutter folder 4. Push notifications — Android uses the default notification channel (no channel_id is sent); tokens FCM reports as unregistered or invalid are removed on the server. Apps: Flutter client mode, Flutter tayar mode.',
+        ],
+    ],
+
+    [
         'version' => '1.3.0',
         'date' => '2026-11-23',
         'changes' => [
