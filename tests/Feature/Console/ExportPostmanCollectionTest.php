@@ -382,7 +382,7 @@ class ExportPostmanCollectionTest extends TestCase
         $this->assertSame(['status', 'per_page'], array_column($requests['GET {{baseUrl}}/admin/business-profiles']['request']['url']['query'], 'key'));
 
         $register = json_decode($requests['POST {{baseUrl}}/auth/register']['request']['body']['raw'], true);
-        $this->assertSame(['name', 'phone', 'password', 'password_confirmation', 'account_type'], array_keys($register));
+        $this->assertSame(['name', 'phone', 'password', 'password_confirmation', 'register_as'], array_keys($register));
 
         $fields = collect($requests['POST {{baseUrl}}/client/business-profile']['request']['body']['formdata'])->keyBy('key');
         $this->assertSame('file', $fields['national_id_front']['type']);

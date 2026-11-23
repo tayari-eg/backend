@@ -27,13 +27,13 @@ return [
             'description' => <<<'MD'
                 Data the public pages need:
 
-                1. When the visitor picks **Business** on the sign-up page, load **Get business types** for the onboarding wizard that comes after login (the type is sent with the business profile, not at sign up).
+                1. Load **Get business types** for the onboarding wizard that comes after login (the type is sent with the business profile, not at sign up).
                 MD,
             'requests' => [
                 [
                     'route' => 'api.v1.public.business-types.index',
                     'name' => 'Get business types',
-                    'screen' => '**Sign up** page when **Business** is chosen, and the first step of the **Business onboarding** wizard.',
+                    'screen' => 'The first step of the **Business onboarding** wizard.',
                 ],
             ],
         ],
@@ -44,10 +44,10 @@ return [
                 From a visitor to a logged-in user:
 
                 1. On app load (and before **Log in**), call **Get CSRF cookie**.
-                2. **Sign up** page: name, phone, password, password again, and **Customer** or **Business** → **Sign up**.
+                2. **Sign up** page: name, phone, password, password again → **Sign up** with `register_as` = `business` (the website signs up business owners only for now).
                 3. If `phone_verification_required` is true, open the **OTP** page; otherwise go to **Login**.
                 4. **OTP** page: code input and a **Resend code** link with a countdown from `resend_available_in` → **Verify phone** / **Resend code**.
-                5. **Login** page: phone and password → **Log in**. Then load **Get my account** and go to the account (business accounts without a profile go to the onboarding wizard).
+                5. **Login** page: phone and password → **Log in**. Then load **Get my account** and open the page for `next_step` (`complete_business_profile` → the onboarding wizard; `business_under_review` / `business_rejected` → the business profile page; `complete_tayar_application` / `tayar_under_review` / `tayar_rejected` → a "continue in the Tayari app" page, since the website is for business accounts only; `ready` → the account).
                 6. **Forgot password** page → **Forgot password**, then always the **Reset password** page → **Reset password**, then Login.
 
                 A 419 answer means the CSRF cookie is old: call **Get CSRF cookie** again and retry once.
@@ -79,7 +79,7 @@ return [
                     'route' => 'api.v1.auth.login',
                     'name' => 'Log in',
                     'screen' => '**Login** page, when the visitor clicks **Log in** (after **Get CSRF cookie**).',
-                    'next' => 'Call **Get my account**, then go to the account page (or the onboarding wizard for a business without a profile).',
+                    'next' => 'Call **Get my account**, then open the page for `next_step`.',
                 ],
                 [
                     'route' => 'api.v1.auth.forgot-password',
@@ -128,7 +128,7 @@ return [
         [
             'name' => '4. Business onboarding',
             'description' => <<<'MD'
-                Business accounts only (`account_type` = `business`):
+                Business accounts (`account_type` = `business`; new sign ups have `register_as` = `business`):
 
                 1. After login, if **Get my account** has `business_profile: null`, open the **Onboarding wizard**.
                 2. Wizard step 1, **Business details**: business type (from **Get business types**), name, description, average daily orders, tax registration number, and links.

@@ -22,7 +22,7 @@ $loggedOut = '- **401:** not logged in, or the login expired. Clear the stored l
 $blocked = '- **403:** the account is blocked (`message` says so). Show the message and log the user out.';
 $clientOnly = '- **403:** `message` explains why: the account is blocked, the phone is not verified yet (when phone verification is on), or a staff account tried a customer screen. Show the message; for "verify your phone", send the user to the OTP screen.';
 $staffOnly = '- **403:** not a staff account, blocked, or missing the permission (`message` says which). Hide this action for users without the permission.';
-$userFields = '`id`, `name`, `phone`, `email`, `account_type` (`individual` | `business`), `locale` (`ar` | `en`), `status` (`active` | `blocked`), `is_phone_verified`, `phone_verified_at`, `national_id` (`status`: null | `pending` | `approved` | `rejected`, `rejection_reason`, `verified_at`, `front` and `back` files with a signed `url`), `business_profile` (or null), `last_mode` (`client` | `tayar`: the mode the app reopens in), `tayar_profile` (`id`, `status`, `is_online`, or null when the user never applied), `roles` (staff role names, for display only; an empty list for customers) and `permissions` (what the user may do; an empty list for customers, every permission for a super admin)';
+$userFields = '`id`, `name`, `phone`, `email`, `account_type` (`individual` | `business`), `register_as` (`business` | `tayar`, or null for accounts from before sign up asked for it), `next_step` (the screen to open: see **Get my account**), `locale` (`ar` | `en`), `status` (`active` | `blocked`), `is_phone_verified`, `phone_verified_at`, `national_id` (`status`: null | `pending` | `approved` | `rejected`, `rejection_reason`, `verified_at`, `front` and `back` files with a signed `url`), `business_profile` (or null), `last_mode` (`client` | `tayar`: the mode the app reopens in), `tayar_profile` (`id`, `status`, `is_online`, `rejection_reason`, `can_reapply_at`, or null when the user never applied), `roles` (staff role names, for display only; an empty list for customers) and `permissions` (what the user may do; an empty list for customers, every permission for a super admin)';
 $profileFields = '`id`, `business_type` (`id`, `name`), `business_name`, `description`, `avg_daily_orders`, `tax_registration_number`, `verification_status` (`pending` | `approved` | `rejected`), `rejection_reason`, `reviewed_at`, `links` (`id`, `type`, `url`), `documents` (`national_id_front`, `national_id_back`, `commercial_register` (the commercial register, السجل التجاري), `tax_card` (the tax card, البطاقة الضريبية): each a file with `file_name`, `mime_type`, `size`, `uploaded_at` and a signed `url`, or null), `created_at`, `updated_at`';
 $businessTypeFields = '`id`, `name` (`ar` and `en`), `is_active`, `sort_order`, `business_profiles_count` (how many business profiles use it), `created_at`, `updated_at`';
 $customerFields = '`id`, `name`, `phone`, `email`, `account_type` (`individual` | `business`), `locale`, `status` (`active` | `blocked`), `blocked_reason`, `is_phone_verified`, `phone_verified_at`, `national_id` (`status`: null | `pending` | `approved` | `rejected`, `rejection_reason`, `verified_at`, `reviewed_at`, `front` and `back` files with a signed `url`), `business_profile` (or null), `created_at`';
@@ -74,8 +74,8 @@ return [
     'api.v1.auth.register' => [
         'what' => 'Creates a new account. It does not log the user in.',
         'who' => 'Guest (not logged in).',
-        'request' => "- `name` (string, required): up to 255 characters.\n- {$phoneField}\n- `password` (string, required): 8 to 64 characters.\n- `password_confirmation` (string, required): the same password again.\n- `account_type` (required): `individual` (customer) or `business`.\n- `Accept-Language` is saved as the account language (used for SMS).",
-        'success' => "**201** with:\n- `data`: the new user: {$userFields}.\n- `phone_verification_required` (boolean): when true, an SMS code was sent.\n- `resend_available_in` (number of seconds, or null): how long until **Resend code** may send another code. Null when no code was sent.\n- `message`: \"Your account has been created.\"",
+        'request' => "- `name` (string, required): up to 255 characters.\n- {$phoneField}\n- `password` (string, required): 8 to 64 characters.\n- `password_confirmation` (string, required): the same password again.\n- `register_as` (required): `business` (business owner) or `tayar`, from the choice on the first screen. Individual customers come later.\n- `Accept-Language` is saved as the account language (used for SMS).",
+        'success' => "**201** with:\n- `data`: the new user: {$userFields}. `next_step` is `complete_business_profile` or `complete_tayar_application`: after the code screen and Login, open that form.\n- `phone_verification_required` (boolean): when true, an SMS code was sent.\n- `resend_available_in` (number of seconds, or null): how long until **Resend code** may send another code. Null when no code was sent.\n- `message`: \"Your account has been created.\"",
         'errors' => "- **422:** field errors. A phone that already has an account gets `errors.phone` = \"This phone number already has an account. Please log in, or use forgot password.\": show it with links to Login and Forgot password.\n{$throttled}\n{$upgrade}\n{$serverError}",
         'notes' => "- Register never changes an existing account. An unverified user who comes back finishes with **Resend code** and **Verify phone**, not with register again.\n- Limits: :otp_limit_per_phone requests per phone number and :otp_limit_per_ip per IP address every :otp_limit_minutes minutes (users on the same network share the IP limit). **Sign up**, **Resend code** and **Forgot password** share one limit per phone.",
     ],
@@ -138,9 +138,9 @@ return [
         'what' => 'Returns the logged-in user with everything the account screens need.',
         'who' => 'Any logged-in user who is not blocked (customer, business or staff).',
         'request' => '- No body. Send the Bearer token (mobile) or the session cookie (web).',
-        'success' => "**200** with `data`, the user: {$userFields}.",
+        'success' => "**200** with `data`, the user: {$userFields}.\n\n`next_step` says which screen to open, also after a reinstall or a login on another phone:\n- `complete_business_profile`: the business profile form → **Create business profile**.\n- `business_under_review`: the \"waiting for review\" screen (**Get business profile**).\n- `business_rejected`: show `business_profile.rejection_reason` and let the user fix the data or documents (**Update business profile**, **Upload document**).\n- `complete_tayar_application`: the tayar application form → **Get vehicle types**, then **Apply to be a tayar**.\n- `tayar_under_review`: the \"waiting for review\" screen (**Get my tayar application**).\n- `tayar_rejected`: show `tayar_profile.rejection_reason`; changes are allowed from `tayar_profile.can_reapply_at`.\n- `ready`: the home screen. Staff are always `ready`; older accounts without `register_as` are `ready` unless they are a business account or have a tayar application.",
         'errors' => "{$loggedOut}\n{$blocked}\n{$upgrade}\n{$serverError}",
-        'notes' => '- The document `url`s expire after :signed_url_minutes minutes: call **me** again to refresh them.',
+        'notes' => "- `next_step` follows only the side the user registered as (`register_as`); an application on the other side shows in its own status (`business_profile`, `tayar_profile`).\n- A tayar reaching `ready` is still in client mode (`last_mode` = `client`): call **Switch mode** with `tayar` once before **Go online**.\n- The document `url`s expire after :signed_url_minutes minutes: call **me** again to refresh them.",
     ],
 
     'api.v1.auth.password.update' => [
@@ -499,7 +499,7 @@ return [
         'request' => '- `mode` (required): `client` or `tayar`.',
         'success' => "**200** with `data`, the user: {$userFields}.",
         'errors' => "- **403:** `tayar` needs an approved tayar application (\"Tayar mode is only available after your tayar application is approved.\").\n- **422:** an unknown `mode`.\n{$loggedOut}\n{$blocked}\n{$upgrade}\n{$serverError}",
-        'notes' => '- Switching to `client` while online sets the tayar offline and closes the work session.',
+        'notes' => "- Switching to `client` while online sets the tayar offline and closes the work session.\n- Approval doesn't change the mode: when `register_as` = `tayar`, `next_step` = `ready` and `last_mode` = `client`, call this once with `tayar` before **Go online**.",
     ],
 
     'api.v1.tayar.online' => [
@@ -508,7 +508,7 @@ return [
         'request' => '- `lat` (number, required): -90 to 90, up to 7 decimals.\n- `lng` (number, required): -180 to 180, up to 7 decimals.',
         'success' => "**200** with `data`: {$workStatusFields}. Start the background location service.",
         'errors' => "- **422:** `lat`/`lng` missing or out of range, or `errors.vehicle` = \"You need an approved vehicle to go online.\"\n- **403:** the app is in client mode (`message`: \"Switch to tayar mode before going online.\"): call **Switch mode** with `tayar` first.\n{$loggedOut}\n{$notTayar}\n{$upgrade}\n{$serverError}",
-        'notes' => '- Going online while already online keeps the same work session and only moves the position.',
+        'notes' => "- Going online while already online keeps the same work session and only moves the position.\n- A newly approved tayar is still in client mode: when `register_as` = `tayar`, `next_step` = `ready` and `last_mode` = `client`, call **Switch mode** with `tayar` once first.",
     ],
 
     'api.v1.tayar.offline' => [
