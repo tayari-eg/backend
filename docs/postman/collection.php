@@ -13,6 +13,56 @@
 |
 */
 
+// The documented DEMO_USERS_PASSWORD of the temporary demo accounts (DemoDataSeeder); wiped before launch.
+$demoPassword = 'DFT5sxvmezNBWL8g';
+
+/**
+ * The demo accounts from DemoDataSeeder: variable key, phone, name, kind, status, next_step, apps.
+ *
+ * @var list<array{string, string, string, string, string, string, string}>
+ */
+$demoAccounts = [
+    ['admin', '01000000001', 'Demo Admin', 'staff (admin)', 'active', 'ready', 'Admin panel'],
+    ['ops', '01000000002', 'Demo Ops', 'staff (ops)', 'active', 'ready', 'Admin panel'],
+    ['support', '01000000003', 'Demo Support', 'staff (support)', 'active', 'ready', 'Admin panel'],
+    ['business_approved', '01000000004', 'Demo Business Approved', 'business', 'approved', 'ready', 'Website, Flutter app'],
+    ['business_pending', '01000000005', 'Demo Business Pending', 'business', 'pending', 'business_under_review', 'Website, Flutter app'],
+    ['business_rejected', '01000000006', 'Demo Business Rejected', 'business', 'rejected', 'business_rejected', 'Website, Flutter app'],
+    ['business_new', '01000000010', 'Demo Business New', 'business', 'not applied', 'complete_business_profile', 'Website, Flutter app'],
+    ['tayar_approved', '01000000007', 'Demo Tayar Approved', 'tayar', 'approved', 'ready', 'Flutter app'],
+    ['tayar_pending', '01000000008', 'Demo Tayar Pending', 'tayar', 'pending', 'tayar_under_review', 'Flutter app'],
+    ['tayar_rejected', '01000000009', 'Demo Tayar Rejected', 'tayar', 'rejected', 'tayar_rejected', 'Flutter app'],
+    ['tayar_new', '01000000011', 'Demo Tayar New', 'tayar', 'not applied', 'complete_tayar_application', 'Flutter app'],
+];
+
+$demoTable = implode("\n", array_map(
+    fn (array $account): string => "| {$account[1]} | `{{demo_{$account[0]}_phone}}` | {$account[2]} | {$account[3]} | {$account[4]} | `{$account[5]}` | {$account[6]} |",
+    $demoAccounts,
+));
+
+$demoSection = <<<MD
+    ## Demo accounts
+
+    Fake accounts for trying every screen. They exist only on a server where `php artisan db:seed --class=DemoDataSeeder` was run with `DEMO_USERS_PASSWORD` set to the password below, and they are wiped before launch. Never use them for real orders.
+
+    - **Password of every demo account:** `{$demoPassword}` (`{{demo_password}}` in the **Tayari Local** environment).
+    - **Phones:** each account has an environment variable, for example `{{demo_tayar_approved_phone}}`. Log in with the phone as shown; the server accepts any Egyptian format.
+    - **Which app uses which account:** Admin panel: the three staff accounts. Website: the business accounts. Flutter app: the tayar and business accounts.
+    - The rejected tayar can change the application from `can_reapply_at` (after TAYAR_REAPPLY_AFTER_HOURS, 24 hours by default).
+
+    | Phone | Variable | Name | Kind | Status | next_step | Use in |
+    | --- | --- | --- | --- | --- | --- | --- |
+    {$demoTable}
+    MD;
+
+$demoEnvironment = [
+    'demo_password' => $demoPassword,
+    ...array_combine(
+        array_map(fn (array $account): string => "demo_{$account[0]}_phone", $demoAccounts),
+        array_column($demoAccounts, 1),
+    ),
+];
+
 return [
 
     'output' => [
@@ -43,6 +93,7 @@ return [
             'locale' => 'ar',
             'platform' => 'android',
             'appVersion' => '1.0.0',
+            ...$demoEnvironment,
         ],
     ],
 
@@ -121,7 +172,7 @@ return [
             - All dates are UTC in ISO 8601 (for example `2026-11-21T09:30:00Z`). Convert them to the user's time zone before showing them.
             - Personal and business documents are private. API responses include a short signed `url` for each file, valid for :signed_url_minutes minutes. Open it as it is; when it expires, load the screen data again to get a new URL.
             - Phone numbers can be typed in any Egyptian mobile format (`010…`, `+2010…`, Arabic digits). The server saves and returns them as `+201XXXXXXXXX`.
-            MD,
+            MD."\n\n".$demoSection,
     ],
 
 ];

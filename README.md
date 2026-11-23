@@ -7,6 +7,31 @@
 <a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/l/laravel/framework" alt="License"></a>
 </p>
 
+## Demo data
+
+Fake accounts and catalog data for testing every screen by hand. Never run it on a database with real users; the database is wiped before launch.
+
+1. Set `DEMO_USERS_PASSWORD` in `.env` (the password of every demo account). While it is empty, the seeder refuses to run and creates nothing.
+2. Run `php artisan db:seed --class=DemoDataSeeder`. `php artisan db:seed` alone never adds demo data.
+
+It adds any missing roles, business types, vehicle types and modes, then categories (every main category with at least one subcategory), 8 Cairo and Giza areas, pricing rules and the accounts below, with placeholder documents on the private disk. Running it again creates nothing twice. The phones, the shared password and each account's `next_step` are also in the Postman collection (**Read me first › Demo accounts**).
+
+| Phone | Account |
+| --- | --- |
+| 01000000001 | Demo Admin (staff, admin) |
+| 01000000002 | Demo Ops (staff, ops) |
+| 01000000003 | Demo Support (staff, support) |
+| 01000000004 | Demo Business Approved (approved business profile, restaurant) |
+| 01000000005 | Demo Business Pending (business profile waiting for review) |
+| 01000000006 | Demo Business Rejected (rejected business profile, with a reason) |
+| 01000000007 | Demo Tayar Approved (approved, motorcycle approved and active, tayar mode) |
+| 01000000008 | Demo Tayar Pending (application waiting for review, bicycle) |
+| 01000000009 | Demo Tayar Rejected (rejected with a reason, can reapply after the wait) |
+| 01000000010 | Demo Business New (registered as a business, no business profile yet) |
+| 01000000011 | Demo Tayar New (registered as a tayar, no application yet) |
+
+The super admin comes from `SUPER_ADMIN_*`, as with `php artisan db:seed`.
+
 ## About Laravel
 
 Laravel is a web application framework with expressive, elegant syntax. We believe development must be an enjoyable and creative experience to be truly fulfilling. Laravel takes the pain out of development by easing common tasks used in many web projects, such as:
