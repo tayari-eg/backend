@@ -52,11 +52,11 @@ $reapplyLater = '- **422:** `errors.status` = "You can change your application a
 $backToReview = 'An approved or rejected application goes back to `pending` (and an online tayar goes offline): warn the user before saving.';
 $orderRouteFields = "- `category_id` (number, required): a subcategory from **Get categories** (one of a main category's `children`).\n- `pickup_lat`, `pickup_lng`, `dropoff_lat`, `dropoff_lng` (numbers, required): the points picked on the map, up to 7 decimals.";
 $orderFields = '`id`, `code` (the short code people see, e.g. `TY-7K3P9Q`), `status` (`looking_for_tayar` | `pending` | `picked_up` | `ongoing` | `delivered` | `not_delivered` | `cancelled`), `can_cancel` (true until pickup), `category` (`id`, `name`, `is_food`), `details`, `pickup` (`address`, `lat`, `lng`, `contact_phone`), `dropoff` (`address`, `lat`, `lng`), `receiver` (`name`, `phone`), `goods_value`, `shipping_paid_by` (`sender` | `receiver`), `amount_to_collect` (what the receiver pays: the goods value, plus the shipping fee when the receiver pays it), `distance_km`, `food_extra`, `shipping_fee`, `cancel_reason` (`id`, `name`, or null), `tayar` (null until a tayar accepts; then `name`, `phone` (null once the order is delivered, not delivered or cancelled) and `vehicle` (`type`, `model`, `color`, `plate_number`)), `cancelled_by_type` (null unless cancelled; then `sender`, `staff`, or `system` when no tayar accepted in time), `free_cancel_until` (while `pending`: until when cancelling is free; otherwise null), `cancel_fee_now` (what cancelling now would cost: `"0.00"` before a tayar accepts and until `free_cancel_until`, then the cancellation fee, at most the shipping fee), `cancel_fee` (the fee recorded when the order was cancelled, `"0.00"` otherwise), `search_ends_at` (while `looking_for_tayar`: when Tayari stops looking and cancels the order; otherwise null), `price_accepted_at`, `accepted_at` (when the tayar accepted, or null), `cancelled_at`, `created_at`, `updated_at`. Amounts are strings with two decimals, in EGP; coordinates are strings with 7 decimals. Delivery: `tayar.location` (`lat`, `lng`, `updated_at`: the tayar\'s last position while the order is `pending`, `picked_up` or `ongoing`, otherwise null), `pickup_photos` (the tayar\'s photos at pickup, each with a signed `url`), `picked_up_at`, `receiver_confirmed_at`, `codes_sent_at` (when the receiver\'s codes were last sent by SMS), `delivered_at`, `not_delivered_at`, `not_delivered_reason` (`id`, `name`, or null), `not_delivered_note`, `tracking_token` (for the receiver\'s tracking link)';
-$adminOrderFields = '`id`, `code`, `status`, `can_cancel`, `sender` (`id`, `name`, `phone`, `business_name`), `category` (`id`, `name` with `ar` and `en`, `is_food`), `mode` (`id`, `code`, `name` with `ar` and `en`: the mode the order was priced in), `details`, `pickup` (`address`, `lat`, `lng`, `contact_phone`), `dropoff` (`address`, `lat`, `lng`), `receiver` (`name`, `phone`, `user_id` when the receiver has an account), `goods_value`, `shipping_paid_by`, `amount_to_collect`, `fee` (`distance_km`, `base_fare`, `price_per_km`, `distance_fare`, `minimum_fare`, `food_extra`, `shipping_fee`, `tayar_share_percent`, `tayar_earning`, `platform_fee`), `tayar` (`id`, `name`, `phone`, or null until a tayar accepts), `vehicle` (the tayar\'s vehicle for this order: `id`, `type` with `ar` and `en`, `model`, `color`, `plate_number`, or null), `work_session_id` (or null), `cancelled_by_type` (null unless cancelled; then `sender`, `staff` or `system`), `cancel_fee` (owed by the sender for cancelling an accepted order after the free period, `"0.00"` otherwise; recorded only, nothing is charged yet), `cancel_fee_owed_to` (`id`, `name` of the tayar it is owed to, or null), `price_accepted_at`, `accepted_at`, `cancelled_at`, `created_at`, `updated_at`. Amounts are strings with two decimals, in EGP. Delivery: `picked_up_at`, `receiver_confirmed_at`, `delivered_at`, `not_delivered_at`, `not_delivered_reason` (`id`, `name` with `ar` and `en`, or null), `not_delivered_note`, `tracking_token`, `receiver_codes` (`sent_at`, `expire_at`, `attempts`, `locked`; never the codes)';
+$adminOrderFields = '`id`, `code`, `status`, `can_cancel`, `sender` (`id`, `name`, `phone`, `business_name`), `category` (`id`, `name` with `ar` and `en`, `is_food`), `mode` (`id`, `code`, `name` with `ar` and `en`: the mode the order was priced in), `details`, `pickup` (`address`, `lat`, `lng`, `contact_phone`), `dropoff` (`address`, `lat`, `lng`), `receiver` (`name`, `phone`, `user_id` when the receiver has an account), `goods_value`, `shipping_paid_by`, `amount_to_collect`, `fee` (`distance_km`, `base_fare`, `price_per_km`, `distance_fare`, `minimum_fare`, `food_extra`, `shipping_fee`, `tayar_share_percent`, `tayar_earning`, `platform_fee`), `tayar` (`id`, `name`, `phone`, or null until a tayar accepts), `vehicle` (the tayar\'s vehicle for this order: `id`, `type` with `ar` and `en`, `model`, `color`, `plate_number`, or null), `work_session_id` (or null), `cancelled_by_type` (null unless cancelled; then `sender`, `staff` or `system`), `cancel_fee` (owed by the sender for cancelling an accepted order after the free period, `"0.00"` otherwise; charged to the business\'s wallet and added to the tayar\'s), `cancel_fee_owed_to` (`id`, `name` of the tayar it is owed to, or null), `price_accepted_at`, `accepted_at`, `cancelled_at`, `created_at`, `updated_at`. Amounts are strings with two decimals, in EGP. Delivery: `picked_up_at`, `receiver_confirmed_at`, `delivered_at`, `not_delivered_at`, `not_delivered_reason` (`id`, `name` with `ar` and `en`, or null), `not_delivered_note`, `tracking_token`, `receiver_codes` (`sent_at`, `expire_at`, `attempts`, `locked`; never the codes)';
 $adminOrderDetailFields = "{$adminOrderFields}, plus `cancelled_by` (`id`, `name`, or null), `cancel_reason` (`id`, `name` with `ar` and `en`, or null) and `status_history` (every status change, oldest first: `from_status` (null for the first row), `to_status`, `changed_by` (`id`, `name`, or null for the system), `note`, `lat`, `lng` (where the tayar was, or null for the sender, staff and the system), `created_at`), and `pickup_photos` (each with a signed `url`)";
 $orderNotFound = '- **404:** no order with this id.';
 $offerFields = '`id`, `status` (`offered` while it can be accepted; `accepted`, `rejected`, `expired` or `withdrawn` otherwise), `round`, `distance_km` (from the tayar to the pickup, in a straight line, when the offer was made), `tayar_earning` (what this tayar earns with this vehicle, EGP), `expires_at`, `expires_in_seconds` (counted on the server: use it for the countdown, not the phone clock), `order` (`id`, `code`, `mode` (`code`, `name`), `category` (`id`, `name`, `is_food`), `details`, `pickup` (`address`, `lat`, `lng`), `dropoff` (`address`, `lat`, `lng`), `distance_km` (the trip, by road)). No phone numbers until the tayar accepts';
-$tayarOrderFields = '`id`, `code`, `status` (`pending` | `picked_up` | `ongoing` | `delivered` | `not_delivered` | `cancelled`), `mode` (`code`, `name`), `category` (`id`, `name`, `is_food`), `details`, `sender` (`name`, `phone`, `business_name`), `pickup` (`address`, `lat`, `lng`, `contact_phone`), `dropoff` (`address`, `lat`, `lng`), `receiver` (`name`, `phone`), `distance_km`, `tayar_earning` (what I earn, EGP). The phones (`sender.phone`, `pickup.contact_phone`, `receiver.phone`) are null once the order is delivered, not delivered or cancelled; the names stay, `cancel_fee` (what the sender owes me for cancelling after the free period, `"0.00"` otherwise; paid out later through the wallet), `accepted_at`, `cancelled_at`, `created_at`. Coordinates are strings with 7 decimals. Delivery: `pickup_photos` (each with a signed `url`), `receiver_codes` (`sent_at`, `expire_at`, `attempts_left`, `problem`: null when a code can be checked now, else `codes_not_sent`, `codes_locked` or `codes_expired`; never the codes), `picked_up_at`, `receiver_confirmed_at`, `delivered_at`, `not_delivered_at`, `not_delivered_reason` (`id`, `name`, or null), `not_delivered_note`';
+$tayarOrderFields = '`id`, `code`, `status` (`pending` | `picked_up` | `ongoing` | `delivered` | `not_delivered` | `cancelled`), `mode` (`code`, `name`), `category` (`id`, `name`, `is_food`), `details`, `sender` (`name`, `phone`, `business_name`), `pickup` (`address`, `lat`, `lng`, `contact_phone`), `dropoff` (`address`, `lat`, `lng`), `receiver` (`name`, `phone`), `distance_km`, `tayar_earning` (what I earn, EGP). The phones (`sender.phone`, `pickup.contact_phone`, `receiver.phone`) are null once the order is delivered, not delivered or cancelled; the names stay, `cancel_fee` (what the sender owes me for cancelling after the free period, `"0.00"` otherwise; added to my wallet), `accepted_at`, `cancelled_at`, `created_at`. Coordinates are strings with 7 decimals. Delivery: `pickup_photos` (each with a signed `url`), `receiver_codes` (`sent_at`, `expire_at`, `attempts_left`, `problem`: null when a code can be checked now, else `codes_not_sent`, `codes_locked` or `codes_expired`; never the codes), `picked_up_at`, `receiver_confirmed_at`, `delivered_at`, `not_delivered_at`, `not_delivered_reason` (`id`, `name`, or null), `not_delivered_note`';
 $adminOfferFields = '`id`, `tayar` (`id`, `name`, `phone`), `work_session_id`, `round`, `distance_km` (tayar to pickup when offered), `tayar_share_percent`, `tayar_earning`, `platform_fee` (what the order would earn with this tayar\'s vehicle), `status` (`offered` | `accepted` | `rejected` | `expired` | `withdrawn`, as of now), `expires_at`, `responded_at` (when the tayar accepted or rejected, or null), `created_at`';
 $tayarPositionFields = '- `lat` (number, required): -90 to 90, up to 7 decimals.\n- `lng` (number, required): -180 to 180, up to 7 decimals. The current GPS position, saved on the status history.';
 $wrongStep = "- **422:** `errors.status` = \"This order can't move to that step now.\" (another step is due: reload the order).";
@@ -67,11 +67,26 @@ $smsNote = 'The receiver gets the codes only once a real SMS provider is configu
 $trackingFields = '`code`, `status`, `sender_name` (the business name), `dropoff_address`, `tayar` (null until a tayar accepts; then `first_name` and `vehicle` (`type`, `color`, `plate_number`)), `location` (`lat`, `lng`, `updated_at`: the tayar\'s last position while the order is `picked_up` or `ongoing`, otherwise null), `can_resend_codes`, `codes_sent_at`, `picked_up_at`, `receiver_confirmed_at`, `delivered_at`, `not_delivered_at`, `cancelled_at`, `is_finished`. No phone numbers, no codes and no amounts';
 $trackingNotFound = '- **404:** no order with this tracking token (or a token that is not 40 letters and digits).';
 $offerNotFound = '- **404:** no offer with this id.';
-$offerErrors = '- **422:** `errors.offer` explains why: "This offer has expired.", "This order is no longer available." (another tayar took it, or it was cancelled), "This offer was for a work session that has ended. Stay online to get new offers." (the tayar went offline or changed the mode settings), or "Finish your current orders before accepting another one." (:max_active_orders accepted order in the zone and area modes, :max_active_orders_long_distance in long distance). Remove the offer card and show the message.';
+$offerErrors = '- **422:** `errors.offer` explains why: "This offer has expired.", "This order is no longer available." (another tayar took it, or it was cancelled), "This offer was for a work session that has ended. Stay online to get new offers." (the tayar went offline or changed the mode settings), "Finish your current orders before accepting another one." (:max_active_orders accepted order in the zone and area modes, :max_active_orders_long_distance in long distance), or "Hand in the cash you collected before accepting new orders." (the tayar owes more than EGP :max_cash_owed in collected cash: see **Get my wallet**). Remove the offer card and show the message.';
 $notApprovedBusiness = '- **403:** `message` explains why: only business accounts can send orders for now, or the business profile is not approved yet. Show the message with a link to the business profile page.';
 $routeErrors = '- **422:** `errors.route`: the pickup and drop-off are less than 100 m apart (in a straight line), the drop-off is more than :order_max_distance_km km (by road) from the pickup, Tayari does not deliver on this route yet, or a food order is too far (food only goes up to :order_zone_max_distance_km km, or inside one area). Show it on the map step.';
 $cancelReasonFields = "- `cancel_reason_id` (number, required): a reason from **Get cancel reasons**.\n- `note` (string, optional, up to 500 characters).";
 $otpCodeError = 'The same error for a wrong code, an expired code, a used code, a code with too many wrong tries (:otp_max_attempts per code) and an unknown phone: `errors.code` = "The code is wrong or has expired…". Show it under the code input and offer **Resend code**.';
+
+$transactionTypes = '`goods_payout` (the goods value of a delivered order, owed to the business), `shipping_fee` (the shipping fee a business pays at delivery when it pays the shipping), `delivery_earning`, `cash_collected` (cash the tayar collected from the receiver and owes Tayari), `commission`, `cancel_fee_earned`, `cancel_fee_charged`, `bonus`, `cash_handed_in`, `payout`, `adjustment`';
+$postingTypes = '`order_delivered` | `cancel_fee` | `signup_bonus` | `payout` | `cash_handed_in` | `adjustment` | `reversal`';
+$walletFields = '`id`, `type` (`tayar` | `business`), `balance` (what Tayari owes me; negative = what I owe Tayari), `available_balance` (the balance without today\'s earnings and bonuses, which count from :available_from_hour:00 Cairo time), `payable_balance` (what Tayari can pay out now, never below 0), `updated_at`; a tayar wallet also has `locked_bonus` (the signup bonus, held until `bonus_unlock_delivered_orders` delivered orders), `bonus_unlock_delivered_orders`, `cash_to_hand_in` (the collected cash I owe, net of my earnings), `max_cash_owed` and `blocked_from_offers` (true while I owe more than `max_cash_owed`). Amounts are strings with two decimals, in EGP';
+$walletTransactionFields = "`id`, `type` ({$transactionTypes}), `amount` (signed: positive adds to the balance, negative takes from it), `balance_after`, `available_at` (when it can be paid out), `order` (`id`, `code`, or null), `posting` (`id`, `type` ({$postingTypes}), `reference` (the transfer reference of a payout or hand-in, or null), `reason` (the adjustment reason in my language, or null), `reversal_of_id` (for a reversal: the posting it undoes)), `created_at`";
+$adminWalletFields = '`id`, `type` (`tayar` | `business` | `system`), `system_code` (for Tayari\'s own wallets: `revenue` (commission), `bonus_expense`, `adjustments` or `treasury` (Tayari\'s bank and cash box, shown as the mirror of what Tayari holds); null otherwise), `owner` (`id`, `name`, `phone`, or null for a system wallet), `balance`, `created_at`, `updated_at`';
+$adminPostingFields = "`id`, `type` ({$postingTypes}), `reference`, `note` (the staff note), `reason` (`id`, `name` with `ar` and `en`, or null), `created_by` (`id`, `name` of the staff member, or null for the system), `reversal_of_id`, `reversed_by_id` (the reversal that undid it, or null), `can_reverse` (true for a payout, cash handed in or adjustment not reversed yet), `created_at`";
+$adminWalletTransactionFields = "`id`, `type`, `amount`, `balance_after`, `available_at`, `order` (`id`, `code`, or null), `posting` ({$adminPostingFields}), `created_at`";
+$walletAdjustmentReasonFields = '`id`, `name` (`ar` and `en`), `is_active`, `sort_order`, `postings_count` (how many adjustments and reversals used it), `created_at`, `updated_at`';
+$walletNotFound = '- **404:** no wallet with this id.';
+$walletReasonNotFound = '- **404:** no adjustment reason with this id.';
+$transactionListRequest = "- Query `type` (optional): one transaction type, e.g. `delivery_earning` or `payout`.\n- Query `per_page` (optional, 1 to :max_per_page, default :per_page) and `cursor` (from `meta.next_cursor`).";
+$businessWalletOnly = '- **403:** `message` = "Only business accounts have a wallet here. Tayars see their wallet in tayar mode.", or the account is blocked or the phone is not verified.';
+$idempotencyKey = '- `idempotency_key` (string, required): a UUID the panel makes once per form. Sending the same one again (a double click or a retry) returns the first result with 200 instead of recording it twice.';
+$cashOnly = 'Every order is cash for now: the tayar collects `amount_to_collect` from the receiver and owes it to Tayari.';
 
 return [
 
@@ -601,7 +616,7 @@ return [
         'request' => '- Path `order`: the order `id`. No body.',
         'success' => "**200** with `data`: {$tayarOrderFields}.",
         'errors' => "{$orderNotFound}\n- **403:** another tayar's order, or an order I never accepted.\n{$loggedOut}\n{$notTayar}\n{$upgrade}\n{$serverError}",
-        'notes' => '- Reload it when an `order_cancelled` push arrives: the sender or staff can cancel an accepted order before pickup. Then show it as cancelled and stop the trip, with `cancel_fee` when the sender owes me one (paid out later through the wallet).',
+        'notes' => '- Reload it when an `order_cancelled` push arrives: the sender or staff can cancel an accepted order before pickup. Then show it as cancelled and stop the trip, with `cancel_fee` when the sender owes me one (added to my wallet).',
     ],
 
     'api.v1.tayar.orders.pickup' => [
@@ -628,7 +643,7 @@ return [
         'request' => "- Path `order`: the order `id`.\n- `code` (string, required): the :code_length-digit delivery code the receiver reads out.\n{$tayarPositionFields}",
         'success' => "**200** with `data`, the order: {$tayarOrderFields}.",
         'errors' => "{$orderNotFound}\n- **403:** another tayar's order.\n{$wrongStep}\n{$codeErrors}\n{$codeThrottled}\n{$loggedOut}\n{$notTayar}\n{$upgrade}\n{$serverError}",
-        'notes' => "- The code is never shown to the tayar: the receiver has it. {$noPaymentCheck}\n- Wrong codes are shared with **Mark not delivered**: :code_max_attempts in total, then the codes lock until new ones are sent.",
+        'notes' => "- The code is never shown to the tayar: the receiver has it. {$noPaymentCheck}\n- Wrong codes are shared with **Mark not delivered**: :code_max_attempts in total, then the codes lock until new ones are sent.\n- {$cashOnly} Delivering adds my `delivery_earning` to my wallet and the collected `amount_to_collect` as `cash_collected` (see **Get my wallet**).",
     ],
 
     'api.v1.tayar.orders.not-delivered' => [
@@ -664,7 +679,7 @@ return [
         'request' => '- Path `tayarProfile`: the application `id`. No body.',
         'success' => "**200** with `data`: {$tayarAdminDetailFields} (`status` = `approved`). Remove it from the pending tab.",
         'errors' => "- **404:** no application with this id.\n- **422:** the application is not pending any more (`errors.status`): reload the list.\n{$loggedOut}\n{$staffOnly} Staff (except super admins) can't review their own application.\n{$serverError}",
-        'notes' => '- The tayar can switch to tayar mode and go online at once.',
+        'notes' => '- The tayar can switch to tayar mode and go online at once.\n- A first approval adds the EGP :signup_bonus signup bonus to the tayar\'s wallet (once per tayar; an application approved again after a review gets none).',
     ],
 
     'api.v1.admin.tayar-applications.reject' => [
@@ -1073,12 +1088,12 @@ return [
     ],
 
     'api.v1.client.orders.cancel' => [
-        'what' => 'Cancels one of my orders before pickup. Free before a tayar accepts and for :free_cancel_seconds seconds after; later, a cancellation fee owed to the tayar is recorded.',
+        'what' => 'Cancels one of my orders before pickup. Free before a tayar accepts and for :free_cancel_seconds seconds after; later, a cancellation fee owed to the tayar is charged to my business wallet.',
         'who' => 'The sender of the order.',
         'request' => "- Path `order`: the order `id`.\n{$cancelReasonFields}",
         'success' => "**200** with `data`, the order (`status` = `cancelled`, `can_cancel` = false, `cancel_fee` = the fee that was recorded, `\"0.00\"` when free): {$orderFields}.",
         'errors' => "{$orderNotFound}\n- **422:** field errors, or `errors.status` = \"This order can no longer be cancelled.\" once the order is picked up or finished (reload the order).\n- **403:** the order belongs to someone else.\n{$loggedOut}\n{$clientOnly}\n{$upgrade}\n{$serverError}",
-        'notes' => "- Ask for confirmation in a dialog with the reasons from **Get cancel reasons** and an optional note. For an accepted order, show `cancel_fee_now` from **Get order** in the dialog.\n- Whether the cancel is free is decided by the server at the moment it cancels: a cancel sent after `free_cancel_until` records the fee even if the dialog showed it as free. The fee is at most the shipping fee.\n- The fee is only recorded on the order for now: nothing is charged, and the wallet will settle it later.\n- The tayar of an accepted order gets an `order_cancelled` push.",
+        'notes' => "- Ask for confirmation in a dialog with the reasons from **Get cancel reasons** and an optional note. For an accepted order, show `cancel_fee_now` from **Get order** in the dialog.\n- Whether the cancel is free is decided by the server at the moment it cancels: a cancel sent after `free_cancel_until` records the fee even if the dialog showed it as free. The fee is at most the shipping fee.\n- The fee is taken from my business wallet (`cancel_fee_charged`) and added to the tayar's wallet, in the same moment as the cancel.\n- The tayar of an accepted order gets an `order_cancelled` push.",
     ],
 
     'api.v1.admin.orders.index' => [
@@ -1151,6 +1166,154 @@ return [
         'success' => '**204** with no body. Tell the receiver a new SMS is on its way; the old codes stop working.',
         'errors' => "{$trackingNotFound}\n- **422:** `errors.status` = \"Codes are only sent while the order is with the tayar.\"\n- **429:** more than :resend_codes_per_hour resends an hour for this order, or too many requests from this IP address. Wait for `Retry-After` seconds.\n{$serverError}",
         'notes' => "- {$smsNote}",
+    ],
+
+    'api.v1.tayar.wallet.show' => [
+        'what' => 'Returns my tayar wallet: what Tayari owes me, what can be paid out now, the locked signup bonus and the collected cash I owe.',
+        'who' => 'An approved tayar (tayar mode).',
+        'request' => '- No body.',
+        'success' => "**200** with `data`: {$walletFields}.",
+        'errors' => "{$loggedOut}\n{$notTayar}\n{$upgrade}\n{$serverError}",
+        'notes' => "- {$cashOnly} A delivered order adds my `delivery_earning` and takes the `cash_collected`, so the balance goes negative while I hold cash.\n- While `blocked_from_offers` is true (I owe more than EGP :max_cash_owed net), no new offers arrive and accepting answers 422. Hand the cash in to Tayari; staff record it and the block lifts.\n- Payouts are made by Tayari staff (no withdrawal button yet). My earnings and bonuses count for payouts from :available_from_hour:00 Cairo time on the day I earn them.",
+    ],
+
+    'api.v1.tayar.wallet.transactions' => [
+        'what' => 'Lists my tayar wallet\'s transactions, newest first.',
+        'who' => 'An approved tayar (tayar mode).',
+        'request' => $transactionListRequest,
+        'success' => "**200** with `data`: a list of transactions, each with {$walletTransactionFields}. Plus `meta` (`next_cursor`, `prev_cursor`, `per_page`) and `links`.",
+        'errors' => "- **422:** an unknown `type` or `per_page` out of range.\n{$loggedOut}\n{$notTayar}\n{$upgrade}\n{$serverError}",
+        'notes' => '- A delivered order shows two rows: `delivery_earning` (plus) and `cash_collected` (minus). Tap a row with an `order` to open **My order**.',
+    ],
+
+    'api.v1.client.wallet.show' => [
+        'what' => 'Returns my business wallet: what Tayari owes me for delivered goods, less shipping and cancellation fees.',
+        'who' => 'A business account (approved or not; a new one shows zeros).',
+        'request' => '- No body.',
+        'success' => "**200** with `data`: {$walletFields}.",
+        'errors' => "{$loggedOut}\n{$businessWalletOnly}\n{$upgrade}\n{$serverError}",
+        'notes' => "- {$cashOnly} Tayari then owes the business the goods value (`goods_payout`), less the shipping fee when the business pays the shipping (`shipping_fee`) and any cancellation fee (`cancel_fee_charged`). The balance can go negative.\n- Tayari pays the business by transfer, recorded by staff (`payout`); there is no withdrawal button yet.",
+    ],
+
+    'api.v1.client.wallet.transactions' => [
+        'what' => 'Lists my business wallet\'s transactions, newest first.',
+        'who' => 'A business account.',
+        'request' => $transactionListRequest,
+        'success' => "**200** with `data`: a list of transactions, each with {$walletTransactionFields}. Plus `meta` (`next_cursor`, `prev_cursor`, `per_page`) and `links`.",
+        'errors' => "- **422:** an unknown `type` or `per_page` out of range.\n{$loggedOut}\n{$businessWalletOnly}\n{$upgrade}\n{$serverError}",
+        'notes' => '- Tap a row with an `order` to open **Order details**.',
+    ],
+
+    'api.v1.admin.wallets.index' => [
+        'what' => 'Lists every wallet, Tayari\'s own system wallets included, newest first or by balance.',
+        'who' => 'Staff with `wallets.view` (support, ops, admin, super admin).',
+        'request' => "- Query `type` (optional): `tayar`, `business` or `system`.\n- Query `owing` (optional): `true` for tayar and business wallets below zero (tayars holding cash, businesses owing fees); system wallets are never listed.\n- Query `search` (optional, up to 100 characters): a full phone number, or part of the owner's name.\n- Query `sort` (optional): `balance` (lowest first: who owes most) or `-balance` (highest first: who is owed most).\n- Query `per_page` (optional, 1 to :max_per_page, default :per_page) and `page`.",
+        'success' => "**200** with `data`: a list of wallets, each with {$adminWalletFields}. Plus `meta` and `links` for pages.",
+        'errors' => "- **422:** an invalid filter or sort, `search` too long or `per_page` out of range.\n{$loggedOut}\n{$staffOnly}\n{$serverError}",
+        'notes' => '- All balances together always add up to zero: every money movement is written on two sides.',
+    ],
+
+    'api.v1.admin.wallets.show' => [
+        'what' => 'Returns one wallet with its payout summary.',
+        'who' => 'Staff with `wallets.view`.',
+        'request' => '- Path `wallet`: the wallet `id`. No body.',
+        'success' => "**200** with `data`: {$adminWalletFields}, plus `summary` (`available_balance`, `payable_balance` (the most a payout can take now), `locked_bonus`, `cash_to_hand_in` (the most a cash hand-in can take), `blocked_from_offers`).",
+        'errors' => "{$walletNotFound}\n{$loggedOut}\n{$staffOnly}\n{$serverError}",
+    ],
+
+    'api.v1.admin.wallets.transactions' => [
+        'what' => 'Lists one wallet\'s transactions, newest first, with each posting\'s staff note and whether it can be reversed.',
+        'who' => 'Staff with `wallets.view`.',
+        'request' => "- Path `wallet`: the wallet `id`.\n{$transactionListRequest}",
+        'success' => "**200** with `data`: a list of transactions, each with {$adminWalletTransactionFields}. Plus `meta` (`next_cursor`, `prev_cursor`, `per_page`) and `links`.",
+        'errors' => "{$walletNotFound}\n- **422:** an unknown `type` or `per_page` out of range.\n{$loggedOut}\n{$staffOnly}\n{$serverError}",
+        'notes' => '- Show **Reverse** on a row only while `posting.can_reverse` is true.',
+    ],
+
+    'api.v1.admin.wallets.settlements.store' => [
+        'what' => 'Records money that changed hands outside the app: a payout to a tayar or a business, or cash a tayar handed in.',
+        'who' => 'Staff with `wallets.settle` (ops, admin, super admin).',
+        'request' => "- Path `wallet`: the wallet `id`.\n{$idempotencyKey}\n- `kind` (string, required): `payout` (Tayari paid the owner) or `cash_handed_in` (a tayar handed in collected cash).\n- `amount` (string, required): more than 0, up to 2 decimals. A payout is at most `summary.payable_balance`; a hand-in at most `summary.cash_to_hand_in`.\n- `reference` (string, required, up to 100 characters): the transfer or receipt reference.\n- `note` (string, optional, up to 500 characters).",
+        'success' => "**201** with `data`, the posting: {$adminPostingFields}, plus `transactions` (`id`, `wallet_id`, `type`, `amount`, `balance_after`, `available_at`: the owner's wallet and Tayari's treasury). **200** with the same body for a repeated `idempotency_key`.",
+        'errors' => "{$walletNotFound}\n- **422:** field errors; `errors.amount` = \"The most you can pay out now is EGP …\" or \"The tayar owes EGP … in cash at most.\"; `errors.wallet` for a system wallet, or a hand-in on a business wallet.\n{$loggedOut}\n{$staffOnly}\n{$serverError}",
+        'notes' => '- The owner gets a `wallet_payout_recorded` or `wallet_cash_received` push.\n- A mistake is undone with **Reverse posting**, never edited.',
+    ],
+
+    'api.v1.admin.wallets.adjustments.store' => [
+        'what' => 'Adjusts a wallet by hand, with a reason: a positive amount gives the owner money, a negative one takes it.',
+        'who' => 'Staff with `wallets.adjust` (admin, super admin).',
+        'request' => "- Path `wallet`: the wallet `id` (a tayar or business wallet).\n{$idempotencyKey}\n- `amount` (string, required): not 0, up to 2 decimals, -99999999.99 to 99999999.99.\n- `reason_id` (number, required): an active reason from **List adjustment reasons**.\n- `note` (string, required, up to 500 characters).",
+        'success' => "**201** with `data`, the posting: {$adminPostingFields}, plus `transactions`. **200** for a repeated `idempotency_key`.",
+        'errors' => "{$walletNotFound}\n- **422:** field errors (`errors.amount` = \"The amount can't be zero.\"), or `errors.wallet` = \"Tayari's own wallets can't be adjusted.\"\n{$loggedOut}\n{$staffOnly}\n{$serverError}",
+        'notes' => '- The balance may go below zero. The owner gets a `wallet_adjusted` push and sees the reason, never the note.',
+    ],
+
+    'api.v1.admin.wallet-postings.reverse' => [
+        'what' => 'Undoes a payout, cash hand-in or adjustment recorded by mistake, with a mirror posting. The original stays in the history.',
+        'who' => 'Staff with `wallets.adjust` (admin, super admin).',
+        'request' => "- Path `walletPosting`: the posting `id` (`posting.id` on a transaction row).\n- `reason_id` (number, required): an active reason from **List adjustment reasons**.\n- `note` (string, required, up to 500 characters).",
+        'success' => "**201** with `data`, the reversal (`type` = `reversal`, `reversal_of_id` = the posting it undoes): {$adminPostingFields}, plus `transactions`. **200** with the same reversal when the posting was already reversed.",
+        'errors' => "- **404:** no posting with this id.\n- **422:** field errors, or `errors.posting` = \"Only payouts, cash handed in and adjustments can be reversed. Correct other entries with an adjustment.\"\n{$loggedOut}\n{$staffOnly}\n{$serverError}",
+        'notes' => '- Order, cancellation fee and bonus postings are never reversed: correct them with an adjustment. The owner gets a `wallet_adjusted` push.',
+    ],
+
+    'api.v1.admin.wallet-adjustment-reasons.index' => [
+        'what' => 'Lists the reasons staff pick for adjustments and reversals, active and inactive, in sort order.',
+        'who' => 'Staff with `wallets.view` (support, ops, admin, super admin).',
+        'request' => "- Query `is_active` (optional): `true` for the Active tab and the reason pickers, `false` for the Inactive tab; leave it out for all.\n- Query `search` (optional, up to 100 characters): part of the Arabic or English name, any letter case.\n- Query `per_page` (optional, 1 to :max_per_page, default :per_page) and `page`.",
+        'success' => "**200** with `data`: a list of reasons, each with {$walletAdjustmentReasonFields}. Plus `meta` and `links` for pages.",
+        'errors' => "- **422:** an invalid `is_active`, `search` too long or `per_page` out of range.\n{$loggedOut}\n{$staffOnly}\n{$serverError}",
+        'notes' => '- Show **Delete** only when `postings_count` is 0; otherwise offer **Deactivate**.',
+    ],
+
+    'api.v1.admin.wallet-adjustment-reasons.show' => [
+        'what' => 'Returns one adjustment reason with its name in both languages, to fill the edit form.',
+        'who' => 'Staff with `wallets.view`.',
+        'request' => '- Path `walletAdjustmentReason`: the reason `id`. No body.',
+        'success' => "**200** with `data`: {$walletAdjustmentReasonFields}.",
+        'errors' => "{$walletReasonNotFound}\n{$loggedOut}\n{$staffOnly}\n{$serverError}",
+    ],
+
+    'api.v1.admin.wallet-adjustment-reasons.store' => [
+        'what' => 'Creates an adjustment reason.',
+        'who' => 'Staff with `wallets.adjust` (admin, super admin).',
+        'request' => "- `name.ar` and `name.en` (strings, both required): up to 100 characters each, as `{ \"name\": { \"ar\": \"تعويض\", \"en\": \"Compensation\" } }`.\n- `is_active` (boolean, optional): default `true`.\n- `sort_order` (number, optional): 0 to 65535. Left out, the reason goes to the end of the list.",
+        'success' => "**201** with `data`, the new reason: {$walletAdjustmentReasonFields}.",
+        'errors' => "- **422:** field errors. A name another reason already uses (ignoring letter case) gets `errors[\"name.ar\"]` or `errors[\"name.en\"]` = \"Another adjustment reason already has this name.\"\n{$loggedOut}\n{$staffOnly}\n{$serverError}",
+    ],
+
+    'api.v1.admin.wallet-adjustment-reasons.update' => [
+        'what' => 'Updates an adjustment reason. Send only the fields that change.',
+        'who' => 'Staff with `wallets.adjust` (admin, super admin).',
+        'request' => "- Path `walletAdjustmentReason`: the reason `id`.\n- Any of `name` (both `ar` and `en` when sent), `is_active`, `sort_order` (same rules as create).",
+        'success' => "**200** with `data`, the updated reason: {$walletAdjustmentReasonFields}.",
+        'errors' => "{$walletReasonNotFound}\n- **422:** field errors, for example a name with one language only, or a name another reason already uses.\n{$loggedOut}\n{$staffOnly}\n{$serverError}",
+        'notes' => '- Renaming a reason changes the name past adjustments show to their owners.',
+    ],
+
+    'api.v1.admin.wallet-adjustment-reasons.activate' => [
+        'what' => 'Activates an adjustment reason, so staff can pick it again.',
+        'who' => 'Staff with `wallets.adjust` (admin, super admin).',
+        'request' => '- Path `walletAdjustmentReason`: the reason `id`. No body.',
+        'success' => "**200** with `data`, the reason (`is_active` = true): {$walletAdjustmentReasonFields}.",
+        'errors' => "{$walletReasonNotFound}\n{$loggedOut}\n{$staffOnly}\n{$serverError}",
+    ],
+
+    'api.v1.admin.wallet-adjustment-reasons.deactivate' => [
+        'what' => 'Deactivates an adjustment reason: staff can no longer pick it; past adjustments keep it.',
+        'who' => 'Staff with `wallets.adjust` (admin, super admin).',
+        'request' => '- Path `walletAdjustmentReason`: the reason `id`. No body.',
+        'success' => "**200** with `data`, the reason (`is_active` = false): {$walletAdjustmentReasonFields}.",
+        'errors' => "{$walletReasonNotFound}\n{$loggedOut}\n{$staffOnly}\n{$serverError}",
+    ],
+
+    'api.v1.admin.wallet-adjustment-reasons.destroy' => [
+        'what' => 'Deletes an adjustment reason no adjustment or reversal uses.',
+        'who' => 'Staff with `wallets.adjust` (admin, super admin).',
+        'request' => '- Path `walletAdjustmentReason`: the reason `id`. No body.',
+        'success' => '**204** with no body. Remove the row.',
+        'errors' => "{$walletReasonNotFound}\n- **422:** a posting uses the reason: `errors.wallet_adjustment_reason` = \"This reason is used by wallet adjustments, so it cannot be deleted. Deactivate it instead.\"\n{$loggedOut}\n{$staffOnly}\n{$serverError}",
+        'notes' => '- Ask for confirmation first; a delete can\'t be undone.',
     ],
 
 ];

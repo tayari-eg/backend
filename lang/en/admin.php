@@ -4,6 +4,8 @@ return [
 
     'business_type_in_use' => 'This business type is used by business profiles, so it cannot be deleted. Deactivate it instead.',
     'business_type_name_taken' => 'Another business type already has this name.',
+    'wallet_adjustment_reason_in_use' => 'This reason is used by wallet adjustments, so it cannot be deleted. Deactivate it instead.',
+    'wallet_adjustment_reason_name_taken' => 'Another adjustment reason already has this name.',
     'vehicle_type_in_use' => 'This vehicle type is used by vehicles, so it cannot be deleted. Deactivate it instead.',
     'vehicle_type_name_taken' => 'Another vehicle type already has this name.',
     'vehicle_type_has_pricing_rules' => 'This vehicle type is used by pricing rules, so it cannot be deleted. Delete those rules or deactivate the type instead.',

@@ -21,6 +21,8 @@ class DatabaseSeeder extends Seeder
             VehicleTypeSeeder::class,
             ModeSeeder::class,
             OrderReasonSeeder::class,
+            WalletAdjustmentReasonSeeder::class,
+            SystemWalletSeeder::class,
         ]);
     }
 }

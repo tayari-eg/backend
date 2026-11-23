@@ -46,5 +46,21 @@ return [
         'title' => 'Order not delivered',
         'body' => 'Order :code was not delivered. Open it to see why.',
     ],
+    'wallet_payout_recorded' => [
+        'title' => 'Payout sent',
+        'body' => 'Tayari paid you EGP :amount. Open your wallet for the details.',
+    ],
+    'wallet_cash_received' => [
+        'title' => 'Cash received',
+        'body' => 'Tayari received EGP :amount in cash from you.',
+    ],
+    'wallet_adjusted' => [
+        'title' => 'Wallet updated',
+        'body' => 'Your wallet was adjusted by EGP :amount. Open it to see why.',
+    ],
+    'wallet_signup_bonus' => [
+        'title' => 'Welcome bonus',
+        'body' => 'You got a EGP :amount welcome bonus in your wallet.',
+    ],
 
 ];

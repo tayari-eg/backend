@@ -29,6 +29,7 @@ use App\Domains\Orders\Actions\ConfirmPickupAction;
 use App\Domains\Orders\Actions\ConfirmReceiverAction;
 use App\Domains\Orders\Actions\CreateOrderAction;
 use App\Domains\Orders\Actions\DispatchOrderOffersAction;
+use App\Domains\Orders\Enums\OfferStatus;
 use App\Domains\Orders\Enums\OrderCanceller;
 use App\Domains\Orders\Enums\OrderReasonType;
 use App\Domains\Orders\Enums\OrderStatus;
@@ -49,9 +50,19 @@ use App\Domains\Tayars\Enums\TayarDocument;
 use App\Domains\Tayars\Enums\TayarStatus;
 use App\Domains\Tayars\Models\TayarProfile;
 use App\Domains\Tayars\Models\VehicleType;
+use App\Domains\Wallet\Actions\PostOrderDeliveredAction;
+use App\Domains\Wallet\Actions\PostSignupBonusAction;
+use App\Domains\Wallet\Actions\RecordSettlementAction;
+use App\Domains\Wallet\Enums\SettlementKind;
+use App\Domains\Wallet\Enums\WalletType;
+use App\Domains\Wallet\Models\Wallet;
+use App\Domains\Wallet\Models\WalletAdjustmentReason;
 use App\Models\User;
+use Brick\Math\BigDecimal;
 use Illuminate\Database\Seeder;
 use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Validation\ValidationException;
 use RuntimeException;
 use Spatie\Permission\Models\Permission;
 use Spatie\Permission\Models\Role;
@@ -178,9 +189,9 @@ class DemoDataSeeder extends Seeder
      * Orders of the approved business; the fixed idempotency keys make a second run find them instead of adding more.
      *
      * The demo tayar accepts the third (accepted_by_demo_tayar) and brings it on the way, while the first stays looking
-     * for a tayar.
+     * for a tayar. The fourth is delivered by the demo tayar (delivered_by_demo_tayar), so the wallets have entries.
      *
-     * @var list<array{idempotency_key: string, category: string, pickup_address: string, pickup: array{string, string}, dropoff_address: string, dropoff: array{string, string}, receiver_name: string, receiver_phone: string, goods_value: string, shipping_paid_by: ShippingPaidBy, details: string, cancel_reason: ?string, accepted_by_demo_tayar: bool}>
+     * @var list<array{idempotency_key: string, category: string, pickup_address: string, pickup: array{string, string}, dropoff_address: string, dropoff: array{string, string}, receiver_name: string, receiver_phone: string, goods_value: string, shipping_paid_by: ShippingPaidBy, details: string, cancel_reason: ?string, accepted_by_demo_tayar: bool, delivered_by_demo_tayar: bool}>
      */
     private const array ORDERS = [
         ['idempotency_key' => '6f1c2a8e-0d1b-4c3e-9a51-000000000001', 'category' => 'Electronics',
@@ -188,19 +199,36 @@ class DemoDataSeeder extends Seeder
             'dropoff_address' => 'Makram Ebeid St, Nasr City', 'dropoff' => ['30.0606000', '31.3456000'],
             'receiver_name' => 'Demo Receiver One', 'receiver_phone' => '01000000020', 'goods_value' => '1500.00',
             'shipping_paid_by' => ShippingPaidBy::Receiver, 'details' => 'A boxed phone charger. Handle with care.', 'cancel_reason' => null,
-            'accepted_by_demo_tayar' => false],
+            'accepted_by_demo_tayar' => false, 'delivered_by_demo_tayar' => false],
         ['idempotency_key' => '6f1c2a8e-0d1b-4c3e-9a51-000000000002', 'category' => 'Meals',
             'pickup_address' => 'Talaat Harb St, Downtown', 'pickup' => ['30.0480000', '31.2390000'],
             'dropoff_address' => '26th of July St, Zamalek', 'dropoff' => ['30.0617000', '31.2194000'],
             'receiver_name' => 'Demo Receiver Two', 'receiver_phone' => '01000000021', 'goods_value' => '240.00',
             'shipping_paid_by' => ShippingPaidBy::Sender, 'details' => 'Two lunch boxes.', 'cancel_reason' => 'I no longer need the order',
-            'accepted_by_demo_tayar' => false],
+            'accepted_by_demo_tayar' => false, 'delivered_by_demo_tayar' => false],
         ['idempotency_key' => '6f1c2a8e-0d1b-4c3e-9a51-000000000003', 'category' => 'Papers',
             'pickup_address' => 'Mostafa El Nahas St, Nasr City', 'pickup' => ['30.0590000', '31.3350000'],
             'dropoff_address' => 'Hassan El Maamoun St, Nasr City', 'dropoff' => ['30.0650000', '31.3440000'],
             'receiver_name' => 'Demo Receiver Three', 'receiver_phone' => '01000000022', 'goods_value' => '0.00',
             'shipping_paid_by' => ShippingPaidBy::Sender, 'details' => 'A signed contract in an envelope.', 'cancel_reason' => null,
-            'accepted_by_demo_tayar' => true],
+            'accepted_by_demo_tayar' => true, 'delivered_by_demo_tayar' => false],
+        ['idempotency_key' => '6f1c2a8e-0d1b-4c3e-9a51-000000000004', 'category' => 'Electronics',
+            'pickup_address' => 'Abbas El Akkad St, Nasr City', 'pickup' => ['30.0561000', '31.3402000'],
+            'dropoff_address' => 'Youssef Abbas St, Nasr City', 'dropoff' => ['30.0640000', '31.3330000'],
+            'receiver_name' => 'Demo Receiver Four', 'receiver_phone' => '01000000023', 'goods_value' => '800.00',
+            'shipping_paid_by' => ShippingPaidBy::Receiver, 'details' => 'Wireless headphones, delivered and paid in cash.', 'cancel_reason' => null,
+            'accepted_by_demo_tayar' => false, 'delivered_by_demo_tayar' => true],
+    ];
+
+    /**
+     * Wallet settlements recorded by the demo admin: the demo tayar hands in part of the collected cash and Tayari pays
+     * the demo business part of its goods money. Fixed keys, so a re-run records nothing new.
+     *
+     * @var list<array{key: string, kind: SettlementKind, wallet: WalletType, amount: string, reference: string}>
+     */
+    private const array SETTLEMENTS = [
+        ['key' => '6f1c2a8e-0d1b-4c3e-9a51-100000000001', 'kind' => SettlementKind::CashHandedIn, 'wallet' => WalletType::Tayar, 'amount' => '500.00', 'reference' => 'DEMO-CASH-1'],
+        ['key' => '6f1c2a8e-0d1b-4c3e-9a51-100000000002', 'kind' => SettlementKind::Payout, 'wallet' => WalletType::Business, 'amount' => '300.00', 'reference' => 'DEMO-PAYOUT-1'],
     ];
 
     /**
@@ -266,6 +294,10 @@ class DemoDataSeeder extends Seeder
             $this->seedOrders($this->ordersSender);
         }
 
+        if ($this->ordersSender !== null && $this->demoTayar !== null) {
+            $this->seedWallets($reviewer);
+        }
+
         foreach (self::NEW_ACCOUNTS as $account) {
             $user = $this->customer($account['phone'], $account['name'], $password, $account['register_as']);
 
@@ -301,6 +333,10 @@ class DemoDataSeeder extends Seeder
 
         if (! OrderReason::query()->ofType(OrderReasonType::Cancel)->exists() || ! OrderReason::query()->ofType(OrderReasonType::NotDelivered)->exists()) {
             $this->call(OrderReasonSeeder::class);
+        }
+
+        if (! WalletAdjustmentReason::query()->exists()) {
+            $this->call(WalletAdjustmentReasonSeeder::class);
         }
     }
 
@@ -505,6 +541,72 @@ class DemoDataSeeder extends Seeder
 
             if ($demoOrder['accepted_by_demo_tayar'] && $this->demoTayar !== null) {
                 $this->bringOnTheWay($order->refresh());
+            }
+
+            if ($demoOrder['delivered_by_demo_tayar'] && $this->demoTayar !== null) {
+                $this->deliverAsDemoTayar($order->refresh());
+            }
+        }
+    }
+
+    /**
+     * A delivered cash order for the wallets. The demo tayar already holds order 3 (the mode's limit) and the seeder
+     * can't know the receiver's codes, so the steps are written straight through Order::moveTo (with their history
+     * rows) and the money is posted by the same Action a real delivery uses.
+     */
+    private function deliverAsDemoTayar(Order $order): void
+    {
+        $tayarId = $this->demoTayar->id;
+
+        DB::transaction(function () use ($order, $tayarId): void {
+            $order = Order::query()->lockForUpdate()->findOrFail($order->id);
+
+            if ($order->status === OrderStatus::LookingForTayar) {
+                $order->moveTo(OrderStatus::Pending, [
+                    'tayar_id' => $tayarId,
+                    'work_session_id' => TayarProfile::query()->where('user_id', $tayarId)->value('current_work_session_id'),
+                    'accepted_at' => now(),
+                ], $tayarId);
+
+                OrderOffer::query()
+                    ->where('order_id', $order->id)
+                    ->where('status', OfferStatus::Offered)
+                    ->update(['status' => OfferStatus::Withdrawn, 'updated_at' => now()]);
+
+                $order->moveTo(OrderStatus::PickedUp, ['picked_up_at' => now()], $tayarId);
+                $order->moveTo(OrderStatus::Ongoing, ['receiver_confirmed_at' => now()], $tayarId);
+                $order->moveTo(OrderStatus::Delivered, ['delivered_at' => now()], $tayarId);
+            }
+
+            if ($order->status === OrderStatus::Delivered && $order->tayar_id === $tayarId) {
+                app(PostOrderDeliveredAction::class)->handle($order);
+            }
+        });
+    }
+
+    /**
+     * The demo tayar's signup bonus (for a tayar approved before the wallet existed) and the demo settlements; each one is
+     * posted once. A settlement the wallet can't take yet is skipped with a warning.
+     */
+    private function seedWallets(User $reviewer): void
+    {
+        app(PostSignupBonusAction::class)->handle(TayarProfile::query()->where('user_id', $this->demoTayar->id)->firstOrFail());
+
+        foreach (self::SETTLEMENTS as $settlement) {
+            $owner = $settlement['wallet'] === WalletType::Tayar ? $this->demoTayar : $this->ordersSender;
+
+            try {
+                app(RecordSettlementAction::class)->handle(
+                    Wallet::ensureFor($owner->id, $settlement['wallet']),
+                    $settlement['kind'],
+                    BigDecimal::of($settlement['amount']),
+                    $settlement['reference'],
+                    'Demo settlement.',
+                    $settlement['key'],
+                    $reviewer,
+                );
+            } catch (ValidationException $exception) {
+                $this->command?->warn("Demo settlement {$settlement['reference']} skipped: {$exception->getMessage()}");
             }
         }
     }

@@ -11,13 +11,22 @@ use App\Domains\Orders\Models\Order;
 use App\Domains\Tayars\Actions\GoOnlineAction;
 use App\Domains\Tayars\Data\WorkSessionSettings;
 use App\Domains\Tayars\Models\TayarProfile;
+use App\Domains\Wallet\Actions\PostToWalletsAction;
+use App\Domains\Wallet\Data\PostingLine;
+use App\Domains\Wallet\Enums\PostingType;
+use App\Domains\Wallet\Enums\SystemWallet;
+use App\Domains\Wallet\Enums\TransactionType;
+use App\Domains\Wallet\Models\Wallet;
+use App\Domains\Wallet\Models\WalletPosting;
 use App\Jobs\SendReceiverCodes;
 use App\Models\User;
+use Brick\Math\BigDecimal;
 use Database\Seeders\RolesAndPermissionsSeeder;
 use Illuminate\Database\Eloquent\Factories\Factory;
 use Illuminate\Foundation\Testing\TestCase as BaseTestCase;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Str;
 
 abstract class TestCase extends BaseTestCase
 {
@@ -129,5 +138,19 @@ abstract class TestCase extends BaseTestCase
         $callback();
 
         return $count;
+    }
+
+    /**
+     * Moves money into (positive) or out of (negative) the wallet through PostToWalletsAction, against Tayari's
+     * adjustments wallet, as an entry of the given type available at once unless the type waits for the payout hour.
+     */
+    protected function postToWallet(Wallet $wallet, string $amount, TransactionType $type = TransactionType::Adjustment): WalletPosting
+    {
+        $amount = BigDecimal::of($amount);
+
+        return app(PostToWalletsAction::class)->handle(PostingType::Adjustment, 'test:'.Str::uuid(), [
+            new PostingLine($wallet, $type, $amount),
+            new PostingLine(Wallet::system(SystemWallet::Adjustments), TransactionType::Adjustment, $amount->negated()),
+        ]);
     }
 }

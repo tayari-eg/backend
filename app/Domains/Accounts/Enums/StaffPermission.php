@@ -27,4 +27,7 @@ enum StaffPermission: string
     case PricingRulesManage = 'pricing_rules.manage';
     case OrdersView = 'orders.view';
     case OrdersManage = 'orders.manage';
+    case WalletsView = 'wallets.view';
+    case WalletsSettle = 'wallets.settle';
+    case WalletsAdjust = 'wallets.adjust';
 }

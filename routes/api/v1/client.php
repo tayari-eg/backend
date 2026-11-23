@@ -9,6 +9,7 @@ use App\Http\Controllers\Api\V1\Client\TayarDocumentController;
 use App\Http\Controllers\Api\V1\Client\TayarProfileController;
 use App\Http\Controllers\Api\V1\Client\TayarVehicleController;
 use App\Http\Controllers\Api\V1\Client\VehicleDocumentController;
+use App\Http\Controllers\Api\V1\Client\WalletController;
 use Illuminate\Support\Facades\Route;
 
 Route::middleware(['auth:sanctum', 'client'])->group(function (): void {
@@ -31,4 +32,7 @@ Route::middleware(['auth:sanctum', 'client'])->group(function (): void {
     Route::post('orders', [OrderController::class, 'store'])->name('orders.store');
     Route::get('orders/{order}', [OrderController::class, 'show'])->name('orders.show');
     Route::post('orders/{order}/cancel', [OrderController::class, 'cancel'])->name('orders.cancel');
+
+    Route::get('wallet', [WalletController::class, 'show'])->name('wallet.show');
+    Route::get('wallet/transactions', [WalletController::class, 'transactions'])->name('wallet.transactions');
 });

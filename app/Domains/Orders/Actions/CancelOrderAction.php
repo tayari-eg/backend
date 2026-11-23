@@ -9,6 +9,9 @@ use App\Domains\Orders\Events\OrderCancelled;
 use App\Domains\Orders\Models\Order;
 use App\Domains\Orders\Models\OrderOffer;
 use App\Domains\Orders\Models\OrderReason;
+use App\Domains\Wallet\Actions\EnsureWalletsAction;
+use App\Domains\Wallet\Actions\PostCancelFeeAction;
+use App\Domains\Wallet\Enums\WalletType;
 use App\Models\User;
 use Brick\Math\BigDecimal;
 use Illuminate\Support\Facades\DB;
@@ -16,12 +19,15 @@ use Illuminate\Validation\ValidationException;
 
 class CancelOrderAction
 {
+    public function __construct(private EnsureWalletsAction $ensureWallets, private PostCancelFeeAction $postCancelFee) {}
+
     /**
      * Cancels an order by its sender or by staff, with a cancel reason and an optional note (kept on the status history
      * row), or by the system (no actor, no reason) when no tayar accepted it. Senders and staff cancel until pickup; an
      * accepted order keeps its tayar. A sender cancelling an accepted order after tayari.matching.free_cancel_seconds
-     * owes the tayar a cancel fee: it is only recorded on the order (cancel_fee, cancel_fee_owed_to_tayar_id) for the
-     * wallet to settle, never charged here. Staff never cause a fee. Offers still open are withdrawn. The order row is
+     * owes the tayar a cancel fee: it is recorded on the order (cancel_fee, cancel_fee_owed_to_tayar_id) and posted to
+     * the tayar's and the business's wallets in the same transaction, after the offers; when a fee is possible, those
+     * wallets are created before it opens. Staff never cause a fee. Offers still open are withdrawn. The order row is
      * locked first and the fee is decided on the locked row against now(), so a cancel can't cross an accept or the end
      * of the free period.
      *
@@ -34,6 +40,10 @@ class CancelOrderAction
             $actor->isStaff() => OrderCanceller::Staff,
             default => OrderCanceller::Sender,
         };
+
+        if ($canceller === OrderCanceller::Sender && $order->tayar_id !== null) {
+            $this->ensureWallets->handle([[$order->tayar_id, WalletType::Tayar], [$order->sender_id, WalletType::Business]]);
+        }
 
         return DB::transaction(function () use ($order, $actor, $reason, $note, $canceller): Order {
             $order = Order::query()->lockForUpdate()->findOrFail($order->id);
@@ -66,6 +76,8 @@ class CancelOrderAction
                 ->where('order_id', $order->id)
                 ->where('status', OfferStatus::Offered)
                 ->update(['status' => OfferStatus::Withdrawn, 'updated_at' => now()]);
+
+            $this->postCancelFee->handle($order);
 
             OrderCancelled::dispatch($order, $from, $canceller);
 
