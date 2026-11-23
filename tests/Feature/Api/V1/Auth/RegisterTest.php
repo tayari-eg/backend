@@ -7,6 +7,7 @@ use App\Domains\Accounts\Data\PhoneNumber;
 use App\Domains\Accounts\Enums\AccountType;
 use App\Domains\Accounts\Enums\Locale;
 use App\Domains\Accounts\Enums\OtpPurpose;
+use App\Domains\Accounts\Enums\RegisterAs;
 use App\Domains\Accounts\Models\OtpCode;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -29,7 +30,7 @@ class RegisterTest extends TestCase
             'phone' => '010 1234 5678',
             'password' => 'secret-pass',
             'password_confirmation' => 'secret-pass',
-            'account_type' => 'business',
+            'register_as' => 'business',
             ...$overrides,
         ];
     }
@@ -46,6 +47,8 @@ class RegisterTest extends TestCase
             ->assertJsonPath('resend_available_in', 60)
             ->assertJsonPath('data.phone', '+201012345678')
             ->assertJsonPath('data.account_type', 'business')
+            ->assertJsonPath('data.register_as', 'business')
+            ->assertJsonPath('data.next_step', 'complete_business_profile')
             ->assertJsonPath('data.locale', 'en')
             ->assertJsonPath('data.is_phone_verified', false)
             ->assertJsonMissingPath('data.password')
@@ -54,6 +57,7 @@ class RegisterTest extends TestCase
         $user = User::query()->where('phone', '+201012345678')->sole();
         $this->assertTrue(Hash::check('secret-pass', $user->password));
         $this->assertSame(AccountType::Business, $user->account_type);
+        $this->assertSame(RegisterAs::Business, $user->register_as);
         $this->assertSame(Locale::En, $user->locale);
         $this->assertNull($user->phone_verified_at);
 
@@ -121,7 +125,7 @@ class RegisterTest extends TestCase
         $winner = User::factory()->unverifiedPhone()->create(['phone' => '+201012345678', 'name' => 'First Request']);
 
         try {
-            app(RegisterUserAction::class)->handle('Second Request', PhoneNumber::from('01012345678'), 'secret-pass', AccountType::Business, Locale::En);
+            app(RegisterUserAction::class)->handle('Second Request', PhoneNumber::from('01012345678'), 'secret-pass', RegisterAs::Business, Locale::En);
             $this->fail('A ValidationException was expected.');
         } catch (ValidationException $exception) {
             $this->assertSame(['phone' => ['This phone number already has an account. Please log in, or use forgot password.']], $exception->errors());
@@ -177,11 +181,51 @@ class RegisterTest extends TestCase
             ->assertJsonValidationErrors(['password']);
     }
 
-    public function test_it_rejects_an_invalid_phone_and_account_type(): void
+    public function test_it_rejects_an_invalid_phone_and_register_as(): void
     {
-        $this->postJson(route('api.v1.auth.register'), $this->payload(['phone' => '0223456789', 'account_type' => 'tayar']))
+        $this->postJson(route('api.v1.auth.register'), $this->payload(['phone' => '0223456789', 'register_as' => 'driver']))
             ->assertUnprocessable()
-            ->assertJsonValidationErrors(['phone', 'account_type']);
+            ->assertJsonValidationErrors(['phone', 'register_as']);
+    }
+
+    public function test_register_as_is_required_and_individual_is_not_accepted_yet(): void
+    {
+        $withoutChoice = $this->payload();
+        unset($withoutChoice['register_as']);
+
+        $this->postJson(route('api.v1.auth.register'), $withoutChoice)
+            ->assertUnprocessable()
+            ->assertJsonValidationErrors(['register_as']);
+
+        $this->postJson(route('api.v1.auth.register'), $this->payload(['register_as' => 'individual']))
+            ->assertUnprocessable()
+            ->assertJsonValidationErrors(['register_as']);
+
+        $this->assertDatabaseCount('users', 0);
+    }
+
+    public function test_registering_as_a_tayar_keeps_the_individual_account_type_and_points_to_the_tayar_application(): void
+    {
+        $this->fakeSmsSender();
+
+        $this->postJson(route('api.v1.auth.register'), $this->payload(['register_as' => 'tayar']))
+            ->assertCreated()
+            ->assertJsonPath('data.register_as', 'tayar')
+            ->assertJsonPath('data.account_type', 'individual')
+            ->assertJsonPath('data.next_step', 'complete_tayar_application');
+
+        $user = User::query()->sole();
+        $this->assertSame(RegisterAs::Tayar, $user->register_as);
+        $this->assertSame(AccountType::Individual, $user->account_type);
+    }
+
+    public function test_an_account_type_sent_by_an_older_client_is_ignored(): void
+    {
+        $this->fakeSmsSender();
+
+        $this->postJson(route('api.v1.auth.register'), $this->payload(['register_as' => 'tayar', 'account_type' => 'business']))
+            ->assertCreated()
+            ->assertJsonPath('data.account_type', 'individual');
     }
 
     public function test_passwords_longer_than_64_characters_are_rejected_on_register_and_login(): void

@@ -23,6 +23,22 @@ return [
         - **Headers:** this folder adds `X-Platform: {{platform}}` (`android` by default; set `ios` in the environment) and `X-App-Version: {{appVersion}}`.
         - Build the folders in order: app start, sign up and login, account, push notifications, then the business and national ID screens, then the **Tayar mode** folders.
         - **Reopening the app:** `last_mode` in **Get my account** says which mode to open (`tayar` only works while `tayar_profile.status` is `approved`).
+
+        ## Onboarding
+
+        1. **Splash** → **App start** (**Get app config**).
+        2. **Choice** screen: **Tayar** or **Business owner** (individual customers come later).
+        3. **Sign up** screen: name, phone, password, password again → **Sign up** with `register_as` = `tayar` or `business`.
+        4. **OTP** screen when `phone_verification_required` is true → **Verify phone**, then **Log in**.
+        5. **Get my account**, then open the screen for `next_step`:
+           - `complete_business_profile` → the business profile form (**Get business types**, **Create business profile**);
+           - `business_under_review` / `business_rejected` → **Get business profile** (show `rejection_reason` when rejected);
+           - `complete_tayar_application` → the tayar application form (**Get vehicle types**, **Apply to be a tayar**);
+           - `tayar_under_review` / `tayar_rejected` → **Get my tayar application** (show `rejection_reason`, and allow changes from `can_reapply_at`);
+           - `ready` → the home screen.
+        6. **Tayars:** approval doesn't change the mode. When `register_as` = `tayar`, `next_step` = `ready` and `last_mode` = `client`, call **Switch mode** with `tayar` once, then open the tayar home and **Go online**.
+
+        Always decide the screen from `next_step` after **Log in** or on app start, never from local state: it still works after a reinstall or a login on another phone.
         MD,
 
     'folders' => [
@@ -55,11 +71,11 @@ return [
             'description' => <<<'MD'
                 From a new user to a logged-in user:
 
-                1. **Sign up** screen: name, phone, password, password again, and a choice between **Customer** (`individual`) and **Business** (`business`). Submit → **Sign up**.
+                1. **Sign up** screen, after the **Tayar** / **Business owner** choice: name, phone, password, password again. Submit → **Sign up** with `register_as` (`tayar` or `business`).
                 2. If the answer has `phone_verification_required: true`, open the **OTP** screen; otherwise go to **Login**.
                 3. **OTP** screen: a :otp_length-digit code input and a **Resend code** button with a countdown that starts at `resend_available_in` seconds. Submit → **Verify phone**; resend → **Resend code** (purpose `verify_phone`), then restart the countdown at :otp_cooldown_seconds seconds.
                 4. After the phone is verified, go to **Login** (verifying does not log in).
-                5. **Login** screen: phone and password → **Log in**. Save the token, then register the push token (**Push notifications**) and go to Home.
+                5. **Login** screen: phone and password → **Log in**. Save the token, register the push token (**Push notifications**), then open the screen for `next_step` (see **Onboarding** in the app folder).
                 6. **Forgot password** screen: phone → **Forgot password**, then always open **Reset password**.
                 7. **Reset password** screen: code, new password, new password again → **Reset password**, then go to Login.
 
@@ -87,7 +103,7 @@ return [
                     'route' => 'api.v1.auth.token',
                     'name' => 'Log in',
                     'screen' => '**Login** screen, when the user taps **Log in**.',
-                    'next' => 'Save `token` in secure storage, call **Save push token**, then go to Home.',
+                    'next' => 'Save `token` in secure storage, call **Save push token**, then open the screen for `data.next_step`.',
                 ],
                 [
                     'route' => 'api.v1.auth.forgot-password',
@@ -161,7 +177,7 @@ return [
         [
             'name' => '5. Business profile',
             'description' => <<<'MD'
-                Business accounts only (`account_type` = `business`):
+                Business accounts (`account_type` = `business`; new sign ups have `register_as` = `business`):
 
                 1. **Business profile** screen: on open → **Get business profile**. A 404 means there is no profile yet: show the form.
                 2. Show the status banner: **pending** ("waiting for review"), **approved**, or **rejected** with `rejection_reason`.
@@ -281,7 +297,8 @@ return [
                 1. **Mode switch** in the account menu (only when `tayar_profile.status` is `approved`) → **Switch mode** with `tayar` or `client`.
                 2. The app reopens in `last_mode` next time.
                 3. Switch to tayar mode **before** going online: **Go online** answers 403 while the app is in client mode.
-                4. Switching to client mode while online sets the tayar offline and closes the work session.
+                4. Approval doesn't change the mode: when `register_as` = `tayar`, `next_step` = `ready` and `last_mode` = `client`, call **Switch mode** with `tayar` once, without asking the tayar.
+                5. Switching to client mode while online sets the tayar offline and closes the work session.
                 MD,
             'requests' => [
                 [
@@ -298,7 +315,7 @@ return [
             'description' => <<<'MD'
                 The tayar home screen toggle:
 
-                1. The tayar home is only shown in tayar mode (after **Switch mode** with `tayar`). **Online** toggle on → read the GPS position → **Go online**. Then start the background location service (**Location updates**).
+                1. The tayar home is only shown in tayar mode (after **Switch mode** with `tayar`; a newly approved tayar with `last_mode` = `client` switches once first). **Online** toggle on → read the GPS position → **Go online**. Then start the background location service (**Location updates**).
                 2. **Online** toggle off → **Go offline**, then stop the location service.
                 3. `is_online` in **Get my account** (`tayar_profile.is_online`) tells the toggle state when the app opens.
                 MD,

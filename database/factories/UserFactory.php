@@ -4,6 +4,7 @@ namespace Database\Factories;
 
 use App\Domains\Accounts\Enums\AccountType;
 use App\Domains\Accounts\Enums\Locale;
+use App\Domains\Accounts\Enums\RegisterAs;
 use App\Domains\Accounts\Enums\UserStatus;
 use App\Models\User;
 use Illuminate\Database\Eloquent\Factories\Factory;
@@ -62,6 +63,17 @@ class UserFactory extends Factory
     {
         return $this->state(fn (array $attributes) => [
             'account_type' => AccountType::Business,
+        ]);
+    }
+
+    /**
+     * Signed up through the business or tayar path, with the matching account type.
+     */
+    public function registeredAs(RegisterAs $registerAs): static
+    {
+        return $this->state(fn (array $attributes) => [
+            'register_as' => $registerAs,
+            'account_type' => $registerAs->accountType(),
         ]);
     }
 

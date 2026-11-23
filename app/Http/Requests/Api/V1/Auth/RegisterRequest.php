@@ -2,7 +2,7 @@
 
 namespace App\Http\Requests\Api\V1\Auth;
 
-use App\Domains\Accounts\Enums\AccountType;
+use App\Domains\Accounts\Enums\RegisterAs;
 use App\Http\Requests\Concerns\NormalizesPhoneNumber;
 use App\Rules\EgyptianMobileNumber;
 use Illuminate\Foundation\Http\FormRequest;
@@ -30,7 +30,8 @@ class RegisterRequest extends FormRequest
             'phone' => ['bail', 'required', 'string', new EgyptianMobileNumber, Rule::unique('users', 'phone')],
             'password' => ['required', 'string', 'max:64', 'confirmed', Password::min(8)],
             'password_confirmation' => ['required', 'string', 'max:64'],
-            'account_type' => ['required', Rule::enum(AccountType::class)],
+            // account_type is no longer read: register_as decides it (RegisterAs::accountType()).
+            'register_as' => ['required', Rule::enum(RegisterAs::class)],
         ];
     }
 

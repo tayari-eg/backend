@@ -3,7 +3,7 @@
 namespace App\Http\Controllers\Api\V1\Auth;
 
 use App\Domains\Accounts\Actions\RegisterUserAction;
-use App\Domains\Accounts\Enums\AccountType;
+use App\Domains\Accounts\Enums\RegisterAs;
 use App\Http\ClientContext;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Api\V1\Auth\RegisterRequest;
@@ -14,7 +14,7 @@ use Symfony\Component\HttpFoundation\Response;
 class RegisterController extends Controller
 {
     /**
-     * Register with name, phone and password.
+     * Register with name, phone, password and what the user registers as (business or tayar).
      *
      * When `phone_verification_required` is true, the app shows the code screen. `resend_available_in` is the seconds
      * until a new code may be requested (null when no code is needed).
@@ -27,7 +27,7 @@ class RegisterController extends Controller
             $request->validated('name'),
             $request->phoneNumber(),
             $request->validated('password'),
-            AccountType::from($request->validated('account_type')),
+            RegisterAs::from($request->validated('register_as')),
             $clientContext->locale,
         );
 

@@ -29,6 +29,26 @@
 return [
 
     [
+        'version' => '1.3.0',
+        'date' => '2026-11-23',
+        'changes' => [
+            'Breaking (before launch): POST /api/v1/auth/register — register_as (business or tayar, from the choice screen) is now required, and account_type is no longer read (business sets the business account type; tayar keeps individual). The response user has register_as and next_step (complete_business_profile or complete_tayar_application). Apps: Flutter client mode, Flutter tayar mode, Website: send register_as (the website always sends business) and stop sending account_type.',
+            'Changed: GET /api/v1/auth/me — the user now has register_as and next_step (complete_business_profile, business_under_review, business_rejected, complete_tayar_application, tayar_under_review, tayar_rejected or ready), and tayar_profile has rejection_reason and can_reapply_at. Apps: Flutter client mode, Flutter tayar mode, Website, Admin panel.',
+            'Changed: POST /api/v1/auth/token — the user in data now has register_as, next_step, and rejection_reason and can_reapply_at in tayar_profile. Apps: Flutter client mode, Flutter tayar mode.',
+            'Changed: POST /api/v1/auth/login — the user in data now has register_as, next_step, and rejection_reason and can_reapply_at in tayar_profile. Apps: Website, Admin panel.',
+            'Changed: POST /api/v1/client/national-id — the user in data now has register_as, next_step, and rejection_reason and can_reapply_at in tayar_profile. Apps: Flutter client mode, Website.',
+            'Changed: PATCH /api/v1/auth/mode — the user in data now has register_as, next_step, and rejection_reason and can_reapply_at in tayar_profile. Apps: Flutter tayar mode.',
+            'Docs: a new Onboarding section in the Flutter app folder (splash, the Tayar or Business owner choice, sign up, then the screen for next_step), and the website sign up now sends register_as = business.',
+            'Docs: PATCH /api/v1/auth/mode — approval does not change the mode: when register_as = tayar, next_step = ready and last_mode = client, the app calls it once with tayar before going online.',
+            'Docs: POST /api/v1/tayar/online — a newly approved tayar still in client mode calls Switch mode with tayar once first.',
+            'Docs: GET /api/v1/auth/me — next_step ready: staff are always ready; older accounts without register_as are ready unless they are a business account or have a tayar application.',
+            'Docs: Flutter folder 5. Business profile — the intro now says business accounts (account_type = business; new sign ups have register_as = business).',
+            'Docs: Website folder 4. Business onboarding — the intro now says business accounts (account_type = business; new sign ups have register_as = business).',
+            'Docs: Website folder 2. Sign up and login — after Log in, complete_tayar_application, tayar_under_review and tayar_rejected open a "continue in the Tayari app" page, since the website is for business accounts only.',
+        ],
+    ],
+
+    [
         'version' => '1.2.0',
         'date' => '2026-11-21',
         'changes' => [

@@ -7,11 +7,14 @@ use App\Domains\Accounts\Enums\AccountType;
 use App\Domains\Accounts\Enums\AppMode;
 use App\Domains\Accounts\Enums\DocumentCollection;
 use App\Domains\Accounts\Enums\Locale;
+use App\Domains\Accounts\Enums\OnboardingStep;
+use App\Domains\Accounts\Enums\RegisterAs;
 use App\Domains\Accounts\Enums\StaffRole;
 use App\Domains\Accounts\Enums\UserStatus;
 use App\Domains\Accounts\Enums\VerificationStatus;
 use App\Domains\Accounts\Models\BusinessProfile;
 use App\Domains\Accounts\Models\UserDevice;
+use App\Domains\Tayars\Enums\TayarStatus;
 use App\Domains\Tayars\Models\TayarProfile;
 use App\Models\Concerns\EscapesLikeValues;
 use Database\Factories\UserFactory;
@@ -67,6 +70,7 @@ class User extends Authenticatable implements HasMedia
             'id_reviewed_at' => 'datetime',
             'password' => 'hashed',
             'account_type' => AccountType::class,
+            'register_as' => RegisterAs::class,
             'locale' => Locale::class,
             'status' => UserStatus::class,
             'last_mode' => AppMode::class,
@@ -183,6 +187,50 @@ class User extends Authenticatable implements HasMedia
             VerificationStatus::Rejected => $query->whereNull('id_verified_at')->whereNotNull('id_reviewed_at'),
             VerificationStatus::Pending => $query->whereNull('id_verified_at')->whereNull('id_reviewed_at')->whereHas('media', $hasFront),
             null => $query->whereNull('id_verified_at')->whereNull('id_reviewed_at')->whereDoesntHave('media', $hasFront),
+        };
+    }
+
+    /**
+     * The onboarding path the user is on: what they registered as, or for accounts from before that choice, a business
+     * account type or an existing tayar application. Null means no path (staff, or an older individual customer).
+     */
+    public function onboardingPath(): ?RegisterAs
+    {
+        if ($this->register_as !== null) {
+            return $this->register_as;
+        }
+
+        return match (true) {
+            $this->isBusiness() => RegisterAs::Business,
+            $this->tayarProfile !== null => RegisterAs::Tayar,
+            default => null,
+        };
+    }
+
+    /**
+     * The screen to open after login. Only the path the user registered for counts; an application on the other side
+     * shows in its own status. Reads the businessProfile, tayarProfile and roles relations.
+     */
+    public function onboardingStep(): OnboardingStep
+    {
+        if ($this->isStaff()) {
+            return OnboardingStep::Ready;
+        }
+
+        return match ($this->onboardingPath()) {
+            RegisterAs::Business => match ($this->businessProfile?->verification_status) {
+                null => OnboardingStep::CompleteBusinessProfile,
+                VerificationStatus::Pending => OnboardingStep::BusinessUnderReview,
+                VerificationStatus::Rejected => OnboardingStep::BusinessRejected,
+                VerificationStatus::Approved => OnboardingStep::Ready,
+            },
+            RegisterAs::Tayar => match ($this->tayarProfile?->status) {
+                null => OnboardingStep::CompleteTayarApplication,
+                TayarStatus::Pending => OnboardingStep::TayarUnderReview,
+                TayarStatus::Rejected => OnboardingStep::TayarRejected,
+                TayarStatus::Approved => OnboardingStep::Ready,
+            },
+            null => OnboardingStep::Ready,
         };
     }
 
