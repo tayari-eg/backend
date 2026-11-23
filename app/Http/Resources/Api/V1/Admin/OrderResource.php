@@ -3,6 +3,7 @@
 namespace App\Http\Resources\Api\V1\Admin;
 
 use App\Domains\Accounts\Enums\Locale;
+use App\Domains\Orders\Enums\OrderCanceller;
 use App\Domains\Orders\Models\Order;
 use App\Domains\Orders\Models\OrderStatusHistory;
 use App\Models\User;
@@ -11,8 +12,9 @@ use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
 
 /**
- * An order as staff see it, with the full fee breakdown. tayar_earning and platform_fee are estimates until a tayar
- * accepts. Amounts are decimal strings with two decimals (EGP).
+ * An order as staff see it, with the full fee breakdown and the tayar once one accepts. tayar_earning and platform_fee
+ * are estimates from the general rule until a tayar accepts; then they are the accepting tayar's. Amounts are decimal
+ * strings with two decimals (EGP).
  *
  * @mixin Order
  */
@@ -27,7 +29,7 @@ class OrderResource extends JsonResource
             'id' => $this->id,
             'code' => $this->code,
             'status' => $this->status,
-            'can_cancel' => $this->canBeCancelled(),
+            'can_cancel' => $this->canBeCancelledBy(OrderCanceller::Staff),
             'sender' => $this->whenLoaded('sender', fn (): array => [
                 'id' => $this->sender->id,
                 'name' => $this->sender->name,
@@ -76,7 +78,23 @@ class OrderResource extends JsonResource
                 'tayar_earning' => $this->tayar_earning,
                 'platform_fee' => $this->platform_fee,
             ],
+            'tayar' => $this->whenLoaded('tayar', fn (): ?array => $this->tayar === null ? null : [
+                'id' => $this->tayar->id,
+                'name' => $this->tayar->name,
+                'phone' => $this->tayar->phone,
+            ]),
+            'vehicle' => $this->whenLoaded('workSession', fn (): ?array => $this->workSession === null ? null : [
+                'id' => $this->workSession->vehicle->id,
+                'type' => self::translations($this->workSession->vehicle->vehicleType, 'name'),
+                'model' => $this->workSession->vehicle->model,
+                'color' => $this->workSession->vehicle->color,
+                'plate_number' => $this->workSession->vehicle->plate_number,
+            ]),
+            'work_session_id' => $this->work_session_id,
+            'cancelled_by_type' => $this->cancelledByType(),
             'cancelled_by' => $this->whenLoaded('canceller', fn (): ?array => self::person($this->canceller)),
+            'cancel_fee' => $this->cancel_fee,
+            'cancel_fee_owed_to' => $this->whenLoaded('cancelFeeOwedTo', fn (): ?array => self::person($this->cancelFeeOwedTo)),
             'cancel_reason' => $this->whenLoaded('cancelReason', fn (): ?array => $this->cancelReason === null ? null : [
                 'id' => $this->cancelReason->id,
                 'name' => self::translations($this->cancelReason, 'name'),
@@ -91,6 +109,7 @@ class OrderResource extends JsonResource
                 ])
                 ->all()),
             'price_accepted_at' => $this->price_accepted_at?->toIso8601ZuluString(),
+            'accepted_at' => $this->accepted_at?->toIso8601ZuluString(),
             'cancelled_at' => $this->cancelled_at?->toIso8601ZuluString(),
             'created_at' => $this->created_at?->toIso8601ZuluString(),
             'updated_at' => $this->updated_at?->toIso8601ZuluString(),

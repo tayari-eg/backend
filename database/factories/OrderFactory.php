@@ -10,6 +10,7 @@ use App\Domains\Orders\Enums\OrderStatus;
 use App\Domains\Orders\Enums\ShippingPaidBy;
 use App\Domains\Orders\Models\Order;
 use App\Domains\Orders\Models\OrderReason;
+use App\Domains\Tayars\Models\TayarProfile;
 use App\Models\User;
 use Illuminate\Database\Eloquent\Factories\Factory;
 use Illuminate\Support\Str;
@@ -96,6 +97,19 @@ class OrderFactory extends Factory
             'cancelled_at' => now(),
             'cancelled_by' => $by?->id ?? fn (array $attributes): int => $attributes['sender_id'],
             'cancel_reason_id' => OrderReason::factory(),
+        ]);
+    }
+
+    /**
+     * Accepted (pending) by an online tayar, in the tayar's current work session.
+     */
+    public function acceptedBy(TayarProfile $profile): static
+    {
+        return $this->state(fn (array $attributes) => [
+            'status' => OrderStatus::Pending,
+            'tayar_id' => $profile->user_id,
+            'work_session_id' => $profile->current_work_session_id,
+            'accepted_at' => now(),
         ]);
     }
 

@@ -5,8 +5,10 @@ namespace Tests\Feature\Domains\Orders;
 use App\Domains\Accounts\Models\BusinessProfile;
 use App\Domains\Catalog\Models\Category;
 use App\Domains\Orders\Actions\CreateOrderAction;
+use App\Domains\Orders\Enums\OfferStatus;
 use App\Domains\Orders\Enums\OrderStatus;
 use App\Domains\Orders\Models\Order;
+use App\Domains\Orders\Models\OrderOffer;
 use App\Domains\Pricing\Actions\CalculateShippingFeeAction;
 use App\Domains\Pricing\Models\PricingRule;
 use App\Models\User;
@@ -88,6 +90,20 @@ class CreateOrderActionTest extends TestCase
             'to_status' => OrderStatus::LookingForTayar->value,
             'changed_by' => $this->sender->id,
         ]);
+    }
+
+    public function test_a_new_order_is_offered_at_once_to_an_eligible_online_tayar_but_a_repeated_key_is_not(): void
+    {
+        $tayar = $this->onlineTayar(30.0010, 31.2000);
+        $attributes = $this->attributes();
+
+        $order = app(CreateOrderAction::class)->handle($this->sender, $attributes);
+        app(CreateOrderAction::class)->handle($this->sender, $attributes);
+
+        $this->assertSame(
+            [[$tayar->user_id, OfferStatus::Offered, 1]],
+            OrderOffer::query()->where('order_id', $order->id)->get()->map(fn (OrderOffer $offer): array => [$offer->tayar_id, $offer->status, $offer->round])->all(),
+        );
     }
 
     public function test_the_sender_paying_shipping_collects_only_the_goods_value(): void

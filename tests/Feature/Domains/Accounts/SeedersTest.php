@@ -13,10 +13,12 @@ use App\Domains\Catalog\Enums\ModeCode;
 use App\Domains\Catalog\Models\Area;
 use App\Domains\Catalog\Models\Category;
 use App\Domains\Catalog\Models\Mode;
+use App\Domains\Orders\Enums\OfferStatus;
 use App\Domains\Orders\Enums\OrderReasonType;
 use App\Domains\Orders\Enums\OrderStatus;
 use App\Domains\Orders\Enums\ShippingPaidBy;
 use App\Domains\Orders\Models\Order;
+use App\Domains\Orders\Models\OrderOffer;
 use App\Domains\Orders\Models\OrderReason;
 use App\Domains\Pricing\Models\PricingRule;
 use App\Domains\Tayars\Enums\TayarStatus;
@@ -301,15 +303,24 @@ class SeedersTest extends TestCase
         $this->assertDatabaseCount('media', 30);
         $this->assertSame(['local'], DB::table('media')->distinct()->pluck('disk')->all());
 
-        // The approved business has one order looking for a tayar (area mode) and one cancelled food order (zone mode).
-        $orders = Order::query()->with(['mode', 'statusHistories', 'cancelReason'])->orderBy('id')->get();
-        $this->assertSame([$businesses[0]->user_id, $businesses[0]->user_id], $orders->pluck('sender_id')->all());
-        $this->assertSame([OrderStatus::LookingForTayar, OrderStatus::Cancelled], $orders->pluck('status')->all());
-        $this->assertSame([ModeCode::Area, ModeCode::Zone], $orders->map(fn (Order $order): ModeCode => $order->mode->code)->all());
-        $this->assertSame(['0.00', '10.00'], $orders->pluck('food_extra')->all());
+        // The approved business has an order looking for a tayar (area mode, offered to the online demo tayar), a
+        // cancelled food order (zone mode, nobody to offer it to) and an order the demo tayar accepted (area mode).
+        $orders = Order::query()->with(['mode', 'statusHistories', 'cancelReason', 'offers'])->orderBy('id')->get();
+        $this->assertSame(array_fill(0, 3, $businesses[0]->user_id), $orders->pluck('sender_id')->all());
+        $this->assertSame([OrderStatus::LookingForTayar, OrderStatus::Cancelled, OrderStatus::Pending], $orders->pluck('status')->all());
+        $this->assertSame([ModeCode::Area, ModeCode::Zone, ModeCode::Area], $orders->map(fn (Order $order): ModeCode => $order->mode->code)->all());
+        $this->assertSame(['0.00', '10.00', '0.00'], $orders->pluck('food_extra')->all());
         $this->assertSame(ShippingPaidBy::Receiver, $orders[0]->shipping_paid_by);
-        $this->assertSame([1, 2], $orders->map(fn (Order $order): int => $order->statusHistories->count())->all());
+        $this->assertSame([1, 2, 2], $orders->map(fn (Order $order): int => $order->statusHistories->count())->all());
         $this->assertSame('I no longer need the order', $orders[1]->cancelReason->getTranslation('name', 'en'));
+
+        $demoTayar = $tayars[0];
+        $this->assertTrue($demoTayar->is_online);
+        $this->assertSame(ModeCode::Area, $demoTayar->currentWorkSession()->with('mode')->sole()->mode->code);
+        $this->assertSame([[$demoTayar->user_id, OfferStatus::Offered]], $orders[0]->offers->map(fn (OrderOffer $offer): array => [$offer->tayar_id, $offer->status])->all());
+        $this->assertSame([], $orders[1]->offers->all());
+        $this->assertSame([[$demoTayar->user_id, OfferStatus::Accepted]], $orders[2]->offers->map(fn (OrderOffer $offer): array => [$offer->tayar_id, $offer->status])->all());
+        $this->assertSame([$demoTayar->user_id, $demoTayar->current_work_session_id], [$orders[2]->tayar_id, $orders[2]->work_session_id]);
     }
 
     public function test_running_the_demo_data_seeder_twice_creates_nothing_twice(): void
@@ -333,8 +344,10 @@ class SeedersTest extends TestCase
         $this->assertDatabaseCount('vehicle_types', 4);
         $this->assertDatabaseCount('business_types', 10);
         $this->assertDatabaseCount('order_reasons', 5);
-        $this->assertDatabaseCount('orders', 2);
-        $this->assertDatabaseCount('order_status_histories', 3);
+        $this->assertDatabaseCount('orders', 3);
+        $this->assertDatabaseCount('order_status_histories', 5);
+        $this->assertDatabaseCount('order_offers', 2);
+        $this->assertDatabaseCount('tayar_work_sessions', 1);
     }
 
     public function test_a_second_demo_run_writes_no_placeholder_files_for_existing_applications(): void

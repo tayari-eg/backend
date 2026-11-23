@@ -7,7 +7,9 @@ use App\Domains\Accounts\Data\PhoneNumber;
 use App\Domains\Accounts\Enums\StaffRole;
 use App\Domains\Catalog\Enums\ModeCode;
 use App\Domains\Catalog\Models\Mode;
+use App\Domains\Tayars\Actions\GoOnlineAction;
 use App\Domains\Tayars\Data\WorkSessionSettings;
+use App\Domains\Tayars\Models\TayarProfile;
 use App\Models\User;
 use Database\Seeders\RolesAndPermissionsSeeder;
 use Illuminate\Foundation\Testing\TestCase as BaseTestCase;
@@ -60,6 +62,15 @@ abstract class TestCase extends BaseTestCase
     protected function zoneWorkSessionSettings(string $radiusKm = '5'): WorkSessionSettings
     {
         return new WorkSessionSettings($this->zoneMode(), radiusKm: $radiusKm);
+    }
+
+    /**
+     * An approved tayar online at the point through GoOnlineAction: the zone mode with a 5 km radius unless other
+     * settings are given.
+     */
+    protected function onlineTayar(float $lat, float $lng, ?WorkSessionSettings $settings = null): TayarProfile
+    {
+        return app(GoOnlineAction::class)->handle(TayarProfile::factory()->approved()->create(), $lat, $lng, $settings ?? $this->zoneWorkSessionSettings());
     }
 
     /**

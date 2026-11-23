@@ -5,6 +5,7 @@ namespace App\Domains\Orders\Actions;
 use App\Domains\Catalog\Models\Category;
 use App\Domains\Orders\Enums\OrderStatus;
 use App\Domains\Orders\Enums\ShippingPaidBy;
+use App\Domains\Orders\Events\OrderCreated;
 use App\Domains\Orders\Models\Order;
 use App\Domains\Pricing\Actions\CalculateShippingFeeAction;
 use App\Domains\Pricing\Data\GeoPoint;
@@ -24,9 +25,9 @@ class CreateOrderAction
     public function __construct(private CalculateShippingFeeAction $calculateShippingFee) {}
 
     /**
-     * Creates the order in looking_for_tayar at the fee the sender saw. The same idempotency key from the same sender
-     * returns the order it already created (wasRecentlyCreated is false), even for two taps racing each other.
-     * Amounts and coordinates arrive as decimal strings.
+     * Creates the order in looking_for_tayar at the fee the sender saw; OrderCreated then starts the search for a tayar.
+     * The same idempotency key from the same sender returns the order it already created (wasRecentlyCreated is false),
+     * even for two taps racing each other. Amounts and coordinates arrive as decimal strings.
      *
      * @param  array{idempotency_key: string, category_id: int, details?: string|null, pickup_address: string, pickup_lat: string, pickup_lng: string, pickup_contact_phone?: string|null, dropoff_address: string, dropoff_lat: string, dropoff_lng: string, receiver_name: string, receiver_phone: string, goods_value: string, shipping_paid_by: string, shipping_fee: string}  $attributes
      *
@@ -100,6 +101,8 @@ class CreateOrderAction
                 'to_status' => OrderStatus::LookingForTayar,
                 'changed_by' => $sender->id,
             ]);
+
+            OrderCreated::dispatch($order);
 
             return $order;
         });

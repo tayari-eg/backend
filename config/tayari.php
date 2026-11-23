@@ -154,6 +154,40 @@ return [
 
     /*
     |--------------------------------------------------------------------------
+    | Matching
+    |--------------------------------------------------------------------------
+    |
+    | A new order is offered to the offers_per_round nearest eligible tayars at
+    | once; the first to accept gets it. An offer lasts offer_timeout_seconds.
+    | Each round searches first_radius_km around the pickup, radius_step_km
+    | more per round, up to max_radius_km. An order nobody accepted within
+    | search_timeout_minutes of its price being accepted is cancelled by the
+    | system. A long-distance tayar only gets orders whose drop-off is within
+    | destination_radius_km of the destination. A tayar takes no new order
+    | while holding max_active_orders (zone and area modes) or
+    | max_active_orders_long_distance accepted orders. A sender cancels an
+    | accepted order for free within free_cancel_seconds of the accept; after
+    | that the sender owes the tayar cancel_fee (at most the shipping fee),
+    | recorded on the order and settled later by the wallet.
+    |
+    */
+
+    'matching' => [
+        'offer_timeout_seconds' => (int) env('MATCHING_OFFER_TIMEOUT_SECONDS', 60),
+        'offers_per_round' => (int) env('MATCHING_OFFERS_PER_ROUND', 5),
+        'first_radius_km' => (int) env('MATCHING_FIRST_RADIUS_KM', 3),
+        'radius_step_km' => (int) env('MATCHING_RADIUS_STEP_KM', 3),
+        'max_radius_km' => (int) env('MATCHING_MAX_RADIUS_KM', 10),
+        'search_timeout_minutes' => (int) env('MATCHING_SEARCH_TIMEOUT_MINUTES', 15),
+        'destination_radius_km' => (int) env('MATCHING_DESTINATION_RADIUS_KM', 20),
+        'max_active_orders' => (int) env('MATCHING_MAX_ACTIVE_ORDERS', 1),
+        'max_active_orders_long_distance' => (int) env('MATCHING_MAX_ACTIVE_ORDERS_LONG_DISTANCE', 5),
+        'free_cancel_seconds' => (int) env('MATCHING_FREE_CANCEL_SECONDS', 120),
+        'cancel_fee' => (string) env('MATCHING_CANCEL_FEE', '20.00'),
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
     | Pagination
     |--------------------------------------------------------------------------
     */

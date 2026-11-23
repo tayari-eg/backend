@@ -4,9 +4,15 @@ namespace App\Domains\Orders\Models;
 
 use App\Domains\Catalog\Models\Category;
 use App\Domains\Catalog\Models\Mode;
+use App\Domains\Orders\Enums\OrderCanceller;
 use App\Domains\Orders\Enums\OrderStatus;
 use App\Domains\Orders\Enums\ShippingPaidBy;
+use App\Domains\Tayars\Models\TayarWorkSession;
 use App\Models\User;
+use Brick\Math\BigDecimal;
+use Brick\Math\RoundingMode;
+use Carbon\CarbonImmutable;
+use Carbon\CarbonInterface;
 use Database\Factories\OrderFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Attributes\Scope;
@@ -46,6 +52,13 @@ class Order extends Model
     private const int CODE_LENGTH = 6;
 
     /**
+     * @var array<string, mixed>
+     */
+    protected $attributes = [
+        'cancel_fee' => '0.00',
+    ];
+
+    /**
      * @return array<string, string>
      */
     protected function casts(): array
@@ -55,6 +68,8 @@ class Order extends Model
             'category_id' => 'integer',
             'mode_id' => 'integer',
             'receiver_user_id' => 'integer',
+            'tayar_id' => 'integer',
+            'work_session_id' => 'integer',
             'pickup_lat' => 'decimal:7',
             'pickup_lng' => 'decimal:7',
             'dropoff_lat' => 'decimal:7',
@@ -74,9 +89,12 @@ class Order extends Model
             'platform_fee' => 'decimal:2',
             'status' => OrderStatus::class,
             'price_accepted_at' => 'datetime',
+            'accepted_at' => 'datetime',
             'cancelled_at' => 'datetime',
             'cancelled_by' => 'integer',
             'cancel_reason_id' => 'integer',
+            'cancel_fee' => 'decimal:2',
+            'cancel_fee_owed_to_tayar_id' => 'integer',
         ];
     }
 
@@ -147,9 +165,92 @@ class Order extends Model
         return $this->hasMany(OrderStatusHistory::class)->orderBy('id');
     }
 
-    public function canBeCancelled(): bool
+    /**
+     * @return BelongsTo<User, $this>
+     */
+    public function tayar(): BelongsTo
     {
-        return $this->status->canTransitionTo(OrderStatus::Cancelled);
+        return $this->belongsTo(User::class, 'tayar_id');
+    }
+
+    /**
+     * @return BelongsTo<TayarWorkSession, $this>
+     */
+    public function workSession(): BelongsTo
+    {
+        return $this->belongsTo(TayarWorkSession::class);
+    }
+
+    /**
+     * @return HasMany<OrderOffer, $this>
+     */
+    public function offers(): HasMany
+    {
+        return $this->hasMany(OrderOffer::class);
+    }
+
+    /**
+     * @return BelongsTo<User, $this>
+     */
+    public function cancelFeeOwedTo(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'cancel_fee_owed_to_tayar_id');
+    }
+
+    /**
+     * Until when the sender cancels an accepted order for free; null when the order is not accepted (pending).
+     */
+    public function freeCancelUntil(): ?CarbonImmutable
+    {
+        if ($this->status !== OrderStatus::Pending || $this->accepted_at === null) {
+            return null;
+        }
+
+        return $this->accepted_at->toImmutable()->addSeconds(config()->integer('tayari.matching.free_cancel_seconds'));
+    }
+
+    /**
+     * What the sender owes the tayar for cancelling at that moment: nothing before a tayar accepts or within the free
+     * period (its last second included), then tayari.matching.cancel_fee, at most the shipping fee.
+     */
+    public function senderCancelFeeAt(CarbonInterface $moment): BigDecimal
+    {
+        $freeUntil = $this->freeCancelUntil();
+
+        if ($freeUntil === null || $moment->lte($freeUntil)) {
+            return BigDecimal::zero()->toScale(2);
+        }
+
+        return BigDecimal::min(BigDecimal::of((string) config('tayari.matching.cancel_fee')), BigDecimal::of($this->shipping_fee))->toScale(2, RoundingMode::HalfUp);
+    }
+
+    public function canBeCancelledBy(OrderCanceller $canceller): bool
+    {
+        return $this->status->canBeCancelledBy($canceller);
+    }
+
+    /**
+     * Who cancelled the order: nobody (null) while it is not cancelled; no cancelled_by means the system.
+     */
+    public function cancelledByType(): ?OrderCanceller
+    {
+        if ($this->status !== OrderStatus::Cancelled) {
+            return null;
+        }
+
+        return match ($this->cancelled_by) {
+            null => OrderCanceller::System,
+            $this->sender_id => OrderCanceller::Sender,
+            default => OrderCanceller::Staff,
+        };
+    }
+
+    /**
+     * When the system stops looking for a tayar and cancels the order (tayari.matching.search_timeout_minutes).
+     */
+    public function searchEndsAt(): CarbonImmutable
+    {
+        return $this->price_accepted_at->toImmutable()->addMinutes(config()->integer('tayari.matching.search_timeout_minutes'));
     }
 
     /**

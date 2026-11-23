@@ -23,18 +23,26 @@ use App\Domains\Catalog\Enums\ModeCode;
 use App\Domains\Catalog\Models\Area;
 use App\Domains\Catalog\Models\Category;
 use App\Domains\Catalog\Models\Mode;
+use App\Domains\Orders\Actions\AcceptOfferAction;
 use App\Domains\Orders\Actions\CancelOrderAction;
 use App\Domains\Orders\Actions\CreateOrderAction;
+use App\Domains\Orders\Actions\DispatchOrderOffersAction;
+use App\Domains\Orders\Enums\OrderCanceller;
 use App\Domains\Orders\Enums\OrderReasonType;
+use App\Domains\Orders\Enums\OrderStatus;
 use App\Domains\Orders\Enums\ShippingPaidBy;
+use App\Domains\Orders\Models\Order;
+use App\Domains\Orders\Models\OrderOffer;
 use App\Domains\Orders\Models\OrderReason;
 use App\Domains\Pricing\Actions\CalculateShippingFeeAction;
 use App\Domains\Pricing\Actions\CreatePricingRuleAction;
 use App\Domains\Pricing\Data\GeoPoint;
 use App\Domains\Pricing\Models\PricingRule;
 use App\Domains\Tayars\Actions\ApproveTayarApplicationAction;
+use App\Domains\Tayars\Actions\GoOnlineAction;
 use App\Domains\Tayars\Actions\RejectTayarApplicationAction;
 use App\Domains\Tayars\Actions\SubmitTayarApplicationAction;
+use App\Domains\Tayars\Data\WorkSessionSettings;
 use App\Domains\Tayars\Enums\TayarDocument;
 use App\Domains\Tayars\Enums\TayarStatus;
 use App\Domains\Tayars\Models\TayarProfile;
@@ -167,20 +175,41 @@ class DemoDataSeeder extends Seeder
     /**
      * Orders of the approved business; the fixed idempotency keys make a second run find them instead of adding more.
      *
-     * @var list<array{idempotency_key: string, category: string, pickup_address: string, pickup: array{string, string}, dropoff_address: string, dropoff: array{string, string}, receiver_name: string, receiver_phone: string, goods_value: string, shipping_paid_by: ShippingPaidBy, details: string, cancel_reason: ?string}>
+     * The demo tayar accepts the third (accepted_by_demo_tayar), while the first stays looking for a tayar.
+     *
+     * @var list<array{idempotency_key: string, category: string, pickup_address: string, pickup: array{string, string}, dropoff_address: string, dropoff: array{string, string}, receiver_name: string, receiver_phone: string, goods_value: string, shipping_paid_by: ShippingPaidBy, details: string, cancel_reason: ?string, accepted_by_demo_tayar: bool}>
      */
     private const array ORDERS = [
         ['idempotency_key' => '6f1c2a8e-0d1b-4c3e-9a51-000000000001', 'category' => 'Electronics',
             'pickup_address' => 'Abbas El Akkad St, Nasr City', 'pickup' => ['30.0561000', '31.3402000'],
             'dropoff_address' => 'Makram Ebeid St, Nasr City', 'dropoff' => ['30.0606000', '31.3456000'],
             'receiver_name' => 'Demo Receiver One', 'receiver_phone' => '01000000020', 'goods_value' => '1500.00',
-            'shipping_paid_by' => ShippingPaidBy::Receiver, 'details' => 'A boxed phone charger. Handle with care.', 'cancel_reason' => null],
+            'shipping_paid_by' => ShippingPaidBy::Receiver, 'details' => 'A boxed phone charger. Handle with care.', 'cancel_reason' => null,
+            'accepted_by_demo_tayar' => false],
         ['idempotency_key' => '6f1c2a8e-0d1b-4c3e-9a51-000000000002', 'category' => 'Meals',
             'pickup_address' => 'Talaat Harb St, Downtown', 'pickup' => ['30.0480000', '31.2390000'],
             'dropoff_address' => '26th of July St, Zamalek', 'dropoff' => ['30.0617000', '31.2194000'],
             'receiver_name' => 'Demo Receiver Two', 'receiver_phone' => '01000000021', 'goods_value' => '240.00',
-            'shipping_paid_by' => ShippingPaidBy::Sender, 'details' => 'Two lunch boxes.', 'cancel_reason' => 'I no longer need the order'],
+            'shipping_paid_by' => ShippingPaidBy::Sender, 'details' => 'Two lunch boxes.', 'cancel_reason' => 'I no longer need the order',
+            'accepted_by_demo_tayar' => false],
+        ['idempotency_key' => '6f1c2a8e-0d1b-4c3e-9a51-000000000003', 'category' => 'Papers',
+            'pickup_address' => 'Mostafa El Nahas St, Nasr City', 'pickup' => ['30.0590000', '31.3350000'],
+            'dropoff_address' => 'Hassan El Maamoun St, Nasr City', 'dropoff' => ['30.0650000', '31.3440000'],
+            'receiver_name' => 'Demo Receiver Three', 'receiver_phone' => '01000000022', 'goods_value' => '0.00',
+            'shipping_paid_by' => ShippingPaidBy::Sender, 'details' => 'A signed contract in an envelope.', 'cancel_reason' => null,
+            'accepted_by_demo_tayar' => true],
     ];
+
+    /**
+     * Where the approved demo tayar goes online: the area mode in Nasr City, close to the demo pickups.
+     *
+     * @var array{lat: float, lng: float, area: string}
+     */
+    private const array DEMO_TAYAR_ONLINE = ['lat' => 30.0575, 'lng' => 31.3390, 'area' => 'Nasr City'];
+
+    private ?User $ordersSender = null;
+
+    private ?User $demoTayar = null;
 
     /**
      * Every demo phone, as written in the docs (local format).
@@ -227,6 +256,11 @@ class DemoDataSeeder extends Seeder
 
         foreach (self::TAYARS as $tayar) {
             $this->seedTayar($tayar, $password, $reviewer);
+        }
+
+        // After the tayars, so the approved demo tayar is online when the orders look for one.
+        if ($this->ordersSender !== null) {
+            $this->seedOrders($this->ordersSender);
         }
 
         foreach (self::NEW_ACCOUNTS as $account) {
@@ -390,14 +424,46 @@ class DemoDataSeeder extends Seeder
         }
 
         if ($business['status'] === VerificationStatus::Approved) {
-            $this->seedOrders($user);
+            $this->ordersSender = $user;
         }
 
         $this->addToSummary('business', $user, $profile->verification_status->value);
     }
 
     /**
-     * Priced and created through the order Actions, so the fee follows the demo pricing rules; one is then cancelled.
+     * The order was offered to the online demo tayar when it was created; a re-run offers it again if that expired.
+     */
+    private function acceptAsDemoTayar(Order $order): void
+    {
+        app(DispatchOrderOffersAction::class)->handle($order);
+
+        $offer = OrderOffer::query()->live()->where('order_id', $order->id)->where('tayar_id', $this->demoTayar->id)->first();
+
+        if ($offer === null) {
+            $this->command?->warn("Demo order {$order->code} was not offered to the demo tayar, so it was not accepted.");
+
+            return;
+        }
+
+        app(AcceptOfferAction::class)->handle($offer, $this->demoTayar);
+    }
+
+    /**
+     * Online in the area mode in Nasr City, so the demo orders there are offered to this tayar.
+     */
+    private function goOnlineAsDemoTayar(TayarProfile $profile): void
+    {
+        $settings = new WorkSessionSettings(
+            Mode::query()->where('code', ModeCode::Area)->firstOrFail(),
+            Area::query()->whereNameIs('en', self::DEMO_TAYAR_ONLINE['area'])->firstOrFail(),
+        );
+
+        app(GoOnlineAction::class)->handle($profile, self::DEMO_TAYAR_ONLINE['lat'], self::DEMO_TAYAR_ONLINE['lng'], $settings);
+    }
+
+    /**
+     * Priced and created through the order Actions, so the fee follows the demo pricing rules and the matching offers
+     * them to the online demo tayar; one is then cancelled by the business and one accepted by the demo tayar.
      */
     private function seedOrders(User $sender): void
     {
@@ -425,9 +491,13 @@ class DemoDataSeeder extends Seeder
                 'shipping_fee' => (string) $quote->shippingFee,
             ]);
 
-            if ($demoOrder['cancel_reason'] !== null && $order->canBeCancelled()) {
+            if ($demoOrder['cancel_reason'] !== null && $order->canBeCancelledBy(OrderCanceller::Sender)) {
                 $reason = OrderReason::query()->ofType(OrderReasonType::Cancel)->where('name->en', $demoOrder['cancel_reason'])->firstOrFail();
                 app(CancelOrderAction::class)->handle($order, $sender, $reason, 'Demo order cancelled by the business.');
+            }
+
+            if ($demoOrder['accepted_by_demo_tayar'] && $this->demoTayar !== null && $order->status === OrderStatus::LookingForTayar) {
+                $this->acceptAsDemoTayar($order);
             }
         }
     }
@@ -455,6 +525,11 @@ class DemoDataSeeder extends Seeder
 
         if ($profile->isApproved() && $user->last_mode !== AppMode::Tayar) {
             app(SwitchAppModeAction::class)->handle($user, AppMode::Tayar);
+        }
+
+        if ($profile->isApproved()) {
+            $this->goOnlineAsDemoTayar($profile);
+            $this->demoTayar = $user;
         }
 
         $this->addToSummary('tayar', $user, $profile->status->value);
