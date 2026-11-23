@@ -38,7 +38,7 @@ class TayarManagementTest extends TestCase
 
     public function test_the_list_filters_by_online_vehicle_type_blocked_and_search(): void
     {
-        $online = app(GoOnlineAction::class)->handle(TayarProfile::factory()->approved()->create(), 30.0444, 31.2357);
+        $online = app(GoOnlineAction::class)->handle(TayarProfile::factory()->approved()->create(), 30.0444, 31.2357, $this->zoneWorkSessionSettings());
         $bicycle = VehicleType::factory()->withoutLicense()->create();
         $cyclist = TayarProfile::factory()->approved()->create(['user_id' => User::factory()->create(['name' => 'Salma Nabil'])]);
         $cyclist->vehicle->update(['vehicle_type_id' => $bicycle->id]);
@@ -54,7 +54,7 @@ class TayarManagementTest extends TestCase
 
     public function test_show_has_the_last_position_and_the_vehicle(): void
     {
-        $tayar = app(GoOnlineAction::class)->handle(TayarProfile::factory()->approved()->create(), 30.0444, 31.2357);
+        $tayar = app(GoOnlineAction::class)->handle(TayarProfile::factory()->approved()->create(), 30.0444, 31.2357, $this->zoneWorkSessionSettings());
         Sanctum::actingAs($this->createStaffUser(StaffRole::Support));
 
         $this->getJson(route('api.v1.admin.tayars.show', $tayar))
@@ -80,6 +80,6 @@ class TayarManagementTest extends TestCase
         $this->postJson(route('api.v1.admin.users.block', $tayar->user), ['reason' => 'Many complaints'])->assertOk();
 
         Sanctum::actingAs($tayar->user->refresh());
-        $this->postJson(route('api.v1.tayar.online'), ['lat' => 30.0444, 'lng' => 31.2357])->assertForbidden();
+        $this->postJson(route('api.v1.tayar.online'), $this->zoneOnlinePayload())->assertForbidden();
     }
 }

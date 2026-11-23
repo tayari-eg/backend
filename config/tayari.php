@@ -105,6 +105,7 @@ return [
 
     'media' => [
         'private_disk' => env('MEDIA_PRIVATE_DISK', 'local'),
+        'public_disk' => env('MEDIA_PUBLIC_DISK', 'public'),
         'signed_url_minutes' => (int) env('MEDIA_SIGNED_URL_MINUTES', 5),
         'max_upload_kb' => (int) env('MEDIA_MAX_UPLOAD_KB', 5120),
         'allowed_mimes' => ['jpg', 'jpeg', 'png', 'webp', 'pdf'],
@@ -126,6 +127,8 @@ return [
         'offline_after_minutes' => (int) env('TAYAR_OFFLINE_AFTER_MINUTES', 5),
         'nearest_radius_km' => (float) env('TAYAR_NEAREST_RADIUS_KM', 5),
         'reapply_after_hours' => (int) env('TAYAR_REAPPLY_AFTER_HOURS', 24),
+        'zone_min_radius_km' => (int) env('TAYAR_ZONE_MIN_RADIUS_KM', 1),
+        'zone_max_radius_km' => (int) env('TAYAR_ZONE_MAX_RADIUS_KM', 15),
     ],
 
     /*

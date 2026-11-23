@@ -15,7 +15,7 @@ class DeleteVehicleTypeAction
     private const array FOREIGN_KEY_VIOLATIONS = ['23000', '23503'];
 
     /**
-     * @throws ValidationException when a vehicle uses the type
+     * @throws ValidationException when a vehicle or a pricing rule uses the type
      */
     public function handle(VehicleType $vehicleType): void
     {
@@ -27,10 +27,14 @@ class DeleteVehicleTypeAction
                     throw $this->inUse();
                 }
 
+                if ($vehicleType->pricingRules()->exists()) {
+                    throw ValidationException::withMessages(['vehicle_type' => __('admin.vehicle_type_has_pricing_rules')]);
+                }
+
                 $vehicleType->delete();
             });
         } catch (QueryException $exception) {
-            // A vehicle created at the same moment still holds the foreign key.
+            // A vehicle or pricing rule created at the same moment still holds the foreign key.
             if (! in_array((string) $exception->getCode(), self::FOREIGN_KEY_VIOLATIONS, true)) {
                 throw $exception;
             }

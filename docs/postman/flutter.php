@@ -21,7 +21,7 @@ return [
 
         - **Login:** Bearer token from **Sign up and login › Log in**. Its script saves the token to `{{token}}`, and every request in this folder sends it.
         - **Headers:** this folder adds `X-Platform: {{platform}}` (`android` by default; set `ios` in the environment) and `X-App-Version: {{appVersion}}`.
-        - Build the folders in order: app start, sign up and login, account, push notifications, then the business and national ID screens, then the **Tayar mode** folders.
+        - Build the folders in order: app start, sign up and login, account, push notifications, then the business and national ID screens, then the **Tayar mode** folders, then **Client mode · Categories**.
         - **Reopening the app:** `last_mode` in **Get my account** says which mode to open (`tayar` only works while `tayar_profile.status` is `approved`).
 
         ## Onboarding
@@ -327,17 +327,34 @@ return [
         [
             'name' => '10. Tayar mode · Go online and offline',
             'description' => <<<'MD'
-                The tayar home screen toggle:
+                The tayar home screen toggle, with the mode picker:
 
-                1. The tayar home is only shown in tayar mode (after **Switch mode** with `tayar`; a newly approved tayar with `last_mode` = `client` switches once first). **Online** toggle on → read the GPS position → **Go online**. Then start the background location service (**Location updates**).
-                2. **Online** toggle off → **Go offline**, then stop the location service.
-                3. `is_online` in **Get my account** (`tayar_profile.is_online`) tells the toggle state when the app opens.
+                1. The tayar home is only shown in tayar mode (after **Switch mode** with `tayar`; a newly approved tayar with `last_mode` = `client` switches once first).
+                2. **Online** toggle on → the **Choose mode** sheet → **Get modes**: one card per mode with `name` and `description`.
+                3. After the tayar picks a mode, ask for what it needs, from its flags:
+                   - `requires_area` → the **Area picker** → **Get areas** (circles on the map from `center` and `radius_km`);
+                   - `requires_radius` → a **radius slider** from `radius_km.min` to `radius_km.max` km;
+                   - `requires_destination` → a **destination picker** on the map (address, lat, lng).
+                4. Read the GPS position → **Go online** with `mode_id` and the field the mode needs. Then start the background location service (**Location updates**).
+                5. **Change mode** while online → the same sheet, then **Go online** again with the new settings: the server ends the old work session and starts a new one. Same settings only move the position.
+                6. **Online** toggle off → **Go offline**, then stop the location service.
+                7. `is_online` in **Get my account** (`tayar_profile.is_online`) tells the toggle state when the app opens; `work_session.mode` in the **Go online** response tells the current mode.
                 MD,
             'requests' => [
                 [
+                    'route' => 'api.v1.public.modes.index',
+                    'name' => 'Get modes',
+                    'screen' => '**Choose mode** sheet, when the tayar turns the **Online** toggle on or taps **Change mode**.',
+                ],
+                [
+                    'route' => 'api.v1.public.areas.index',
+                    'name' => 'Get areas',
+                    'screen' => '**Area picker**, after the tayar picks a mode with `requires_area`.',
+                ],
+                [
                     'route' => 'api.v1.tayar.online',
                     'name' => 'Go online',
-                    'screen' => '**Tayar home**, when the tayar turns the **Online** toggle on.',
+                    'screen' => '**Choose mode** sheet, when the tayar confirms the mode and its settings.',
                     'next' => 'Start sending **Update location**.',
                 ],
                 [
@@ -386,6 +403,25 @@ return [
                     'route' => 'api.v1.client.tayar-profile.vehicle.documents.store',
                     'name' => 'Replace vehicle document',
                     'screen' => '**My vehicle** screen, when the tayar picks a new licence or new photos.',
+                ],
+            ],
+        ],
+
+        [
+            'name' => '13. Client mode · Categories',
+            'description' => <<<'MD'
+                The category picker for a new order (the order screens come in the next release):
+
+                1. **New order › Category** step → **Get categories**: main categories with `icon_url`, each with its `children`.
+                2. The sender picks a main category, then one of its subcategories: the order is placed in the subcategory.
+                3. `is_food` marks food categories; food orders only go to vehicles that can carry food.
+                4. Load the list again when the user changes the language.
+                MD,
+            'requests' => [
+                [
+                    'route' => 'api.v1.public.categories.index',
+                    'name' => 'Get categories',
+                    'screen' => '**New order › Category** step, on open.',
                 ],
             ],
         ],

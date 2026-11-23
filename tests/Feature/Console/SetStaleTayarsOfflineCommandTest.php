@@ -16,8 +16,8 @@ class SetStaleTayarsOfflineCommandTest extends TestCase
     public function test_tayars_without_a_recent_location_go_offline_and_their_session_closes(): void
     {
         config(['tayari.tayars.offline_after_minutes' => 5]);
-        $stale = app(GoOnlineAction::class)->handle(TayarProfile::factory()->approved()->create(), 30.0444, 31.2357);
-        $fresh = app(GoOnlineAction::class)->handle(TayarProfile::factory()->approved()->create(), 30.0609, 31.2197);
+        $stale = app(GoOnlineAction::class)->handle(TayarProfile::factory()->approved()->create(), 30.0444, 31.2357, $this->zoneWorkSessionSettings());
+        $fresh = app(GoOnlineAction::class)->handle(TayarProfile::factory()->approved()->create(), 30.0609, 31.2197, $this->zoneWorkSessionSettings());
         $stale->forceFill(['location_updated_at' => now()->subMinutes(6)])->save();
         $fresh->forceFill(['location_updated_at' => now()->subMinutes(4)])->save();
 

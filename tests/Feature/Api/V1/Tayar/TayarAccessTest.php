@@ -17,7 +17,7 @@ class TayarAccessTest extends TestCase
 
     private function goOnline(): TestResponse
     {
-        return $this->postJson(route('api.v1.tayar.online'), ['lat' => 30.0444, 'lng' => 31.2357], ['Accept-Language' => 'en']);
+        return $this->postJson(route('api.v1.tayar.online'), $this->zoneOnlinePayload(), ['Accept-Language' => 'en']);
     }
 
     public function test_guests_get_401(): void

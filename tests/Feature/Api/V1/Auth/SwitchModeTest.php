@@ -29,7 +29,7 @@ class SwitchModeTest extends TestCase
 
     public function test_switching_to_client_mode_sets_an_online_tayar_offline(): void
     {
-        $profile = app(GoOnlineAction::class)->handle(TayarProfile::factory()->approved()->create(), 30.0444, 31.2357);
+        $profile = app(GoOnlineAction::class)->handle(TayarProfile::factory()->approved()->create(), 30.0444, 31.2357, $this->zoneWorkSessionSettings());
         $profile->user->forceFill(['last_mode' => 'tayar'])->save();
         Sanctum::actingAs($profile->user);
 
@@ -44,7 +44,7 @@ class SwitchModeTest extends TestCase
         $this->assertNotNull(TayarWorkSession::query()->where('tayar_profile_id', $profile->id)->sole()->ended_at);
 
         // Back in client mode, going online is refused until the app switches to tayar mode again.
-        $this->postJson(route('api.v1.tayar.online'), ['lat' => 30.0444, 'lng' => 31.2357])->assertForbidden();
+        $this->postJson(route('api.v1.tayar.online'), $this->zoneOnlinePayload())->assertForbidden();
     }
 
     public function test_tayar_mode_needs_an_approved_application(): void

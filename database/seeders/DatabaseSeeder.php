@@ -19,6 +19,7 @@ class DatabaseSeeder extends Seeder
             SuperAdminSeeder::class,
             BusinessTypeSeeder::class,
             VehicleTypeSeeder::class,
+            ModeSeeder::class,
         ]);
     }
 }

@@ -85,6 +85,8 @@ class ExportPostmanCollection extends Command
         ':tayar_location_per_minute' => ['TAYAR_LOCATION_UPDATES_PER_MINUTE', 'tayars.location_updates_per_minute'],
         ':tayar_offline_minutes' => ['TAYAR_OFFLINE_AFTER_MINUTES', 'tayars.offline_after_minutes'],
         ':tayar_reapply_hours' => ['TAYAR_REAPPLY_AFTER_HOURS', 'tayars.reapply_after_hours'],
+        ':zone_min_radius_km' => ['TAYAR_ZONE_MIN_RADIUS_KM', 'tayars.zone_min_radius_km'],
+        ':zone_max_radius_km' => ['TAYAR_ZONE_MAX_RADIUS_KM', 'tayars.zone_max_radius_km'],
         ':per_page' => [null, 'pagination.per_page'],
         ':max_per_page' => [null, 'pagination.max_per_page'],
     ];
