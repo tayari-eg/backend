@@ -11,5 +11,9 @@ return [
     'price_changed' => 'The shipping price is now :fee EGP. Check the new price and confirm again.',
     'idempotency_key_deleted' => 'This request key belongs to a deleted order. Use a new request key.',
     'cannot_cancel' => 'This order can no longer be cancelled.',
+    'offer_expired' => 'This offer has expired.',
+    'offer_unavailable' => 'This order is no longer available.',
+    'offer_session_changed' => 'This offer was for a work session that has ended. Stay online to get new offers.',
+    'tayar_busy' => 'Finish your current orders before accepting another one.',
 
 ];

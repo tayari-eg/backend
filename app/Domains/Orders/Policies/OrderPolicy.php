@@ -34,4 +34,12 @@ class OrderPolicy
     {
         return $order->sender_id === $user->id;
     }
+
+    /**
+     * The tayar who accepted the order.
+     */
+    public function viewAsTayar(User $user, Order $order): bool
+    {
+        return $order->tayar_id === $user->id;
+    }
 }

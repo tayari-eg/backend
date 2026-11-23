@@ -18,3 +18,6 @@ Schedule::command('queue:work --stop-when-empty --max-time=50 --tries=3')->every
 Schedule::command('model:prune', ['--model' => [OtpCode::class]])->daily();
 
 Schedule::command('tayars:set-stale-offline')->everyMinute()->withoutOverlapping(5);
+
+// Offers expire within a minute; reads and accepts check expires_at themselves, this only starts the next round.
+Schedule::command('orders:dispatch-offers')->everyMinute()->withoutOverlapping(5);

@@ -27,6 +27,16 @@ enum ModeCode: string
     }
 
     /**
+     * How many accepted orders a tayar working in this mode may hold at once; a long-distance tayar carries several.
+     */
+    public function maxActiveOrders(): int
+    {
+        return $this === self::LongDistance
+            ? config()->integer('tayari.matching.max_active_orders_long_distance')
+            : config()->integer('tayari.matching.max_active_orders');
+    }
+
+    /**
      * @return list<string>
      */
     public static function values(): array

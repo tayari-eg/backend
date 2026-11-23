@@ -29,6 +29,29 @@
 return [
 
     [
+        'version' => '1.8.0',
+        'date' => '2026-11-23',
+        'changes' => [
+            'Added: GET /api/v1/tayar/offers — my live offers for the current work session (cursor pages): the trip without phone numbers, my tayar_earning, expires_at and expires_in_seconds; poll every 5 to 10 seconds while online. Apps: Flutter tayar mode.',
+            'Added: POST /api/v1/tayar/offers/{offer}/accept — accepts an offer: 200 with the order (now pending, with the sender and receiver phones), also for a second tap while the order is still mine and pending; when the accept brings the tayar to the mode\'s limit, the tayar\'s other open offers are withdrawn; 422 errors.offer when the offer expired, another tayar took the order, the work session ended, or the tayar holds as many orders as the mode allows; 403 for another tayar\'s offer. Apps: Flutter tayar mode.',
+            'Added: POST /api/v1/tayar/offers/{offer}/reject — rejects an offer (no reason): 204, and the order is never offered to this tayar again. Apps: Flutter tayar mode.',
+            'Added: GET /api/v1/tayar/orders — the orders I accepted, status=active (default) or past, with cursor pages; each with cancel_fee when the sender owes me one for a late cancel; the sender, pickup contact and receiver phones are null once an order is past (the names stay). Apps: Flutter tayar mode.',
+            'Added: GET /api/v1/tayar/orders/{order} — one order I accepted, with the pickup contact, sender and receiver phones while it is active (null once it is past; the names stay), my earning, and cancel_fee when the sender owes me one for a late cancel; 403 for any other order. Apps: Flutter tayar mode.',
+            'Added: GET /api/v1/admin/orders/{order}/offers — every offer of an order, newest first: tayar, round, distance, earning, status (offered, accepted, rejected, expired, withdrawn) and responded_at (orders.view). Apps: Admin panel.',
+            'Changed: POST /api/v1/client/orders — the new order is offered at once to nearby tayars in its mode, in rounds; when no tayar accepts by search_ends_at, Tayari cancels it (cancelled_by_type = system) and sends an order_no_tayar push. The response has the new order fields (tayar, cancelled_by_type, search_ends_at, accepted_at). Apps: Website, Flutter client mode.',
+            'Changed: GET /api/v1/client/orders — each order has the new fields tayar (name, phone, vehicle; null until a tayar accepts; phone null once the order is past), cancelled_by_type, search_ends_at, accepted_at, free_cancel_until, cancel_fee_now and cancel_fee; can_cancel is now true until pickup. Apps: Website, Flutter client mode.',
+            'Changed: GET /api/v1/client/orders/{order} — the new fields tayar (phone null once the order is past), cancelled_by_type, search_ends_at, accepted_at, free_cancel_until (until when cancelling an accepted order is free), cancel_fee_now (what cancelling now costs) and cancel_fee; can_cancel is now true until pickup; poll every 10 seconds while the order is looking for a tayar. Apps: Website, Flutter client mode.',
+            'Changed: POST /api/v1/client/orders/{order}/cancel — the sender can now cancel after a tayar accepted, until pickup: free for MATCHING_FREE_CANCEL_SECONDS (120 by default) after the accept, then a cancellation fee owed to the tayar (MATCHING_CANCEL_FEE, at most the shipping fee) is recorded on the order and returned as cancel_fee (nothing is charged yet; the wallet settles it later); the tayar gets an order_cancelled push; open offers are withdrawn; 422 errors.status only once the order is picked up. Apps: Website, Flutter client mode, Flutter tayar mode.',
+            'Changed: GET /api/v1/admin/orders — new tayar_id filter, and the new fields tayar, vehicle, work_session_id, cancelled_by_type, cancel_fee, cancel_fee_owed_to and accepted_at; fee.tayar_earning and fee.platform_fee become the accepting tayar\'s on accept. Apps: Admin panel.',
+            'Changed: GET /api/v1/admin/orders/{order} — the new fields tayar, vehicle, work_session_id, cancelled_by_type, cancel_fee, cancel_fee_owed_to (the tayar a sender\'s late-cancel fee is owed to) and accepted_at; can_cancel is now also true for an accepted (pending) order; a status_history row with changed_by = null is the system. Apps: Admin panel.',
+            'Changed: POST /api/v1/admin/orders/{order}/cancel — staff can now cancel an accepted (pending) order before pickup, at any time and never with a cancellation fee; the order keeps its tayar, open offers are withdrawn, and the tayar gets an order_cancelled push. Apps: Admin panel, Flutter tayar mode.',
+            'Docs: Flutter folder 4. Push notifications — lists the push types order_offer (tayar; order_id, offer_id), order_accepted and order_no_tayar (sender; order_id) and order_cancelled (tayar, when the sender or staff cancel an accepted order; order_id, cancelled_by_type), and which screen each opens. Apps: Flutter client mode, Flutter tayar mode.',
+            'Docs: Flutter folders 15. Tayar mode · Offers and 16. Tayar mode · My orders — the offer cards with polling and the countdown, and the accepted orders. Apps: Flutter tayar mode.',
+            'Docs: Read me first — the demo data now has the approved tayar online in the area mode in Nasr City and a third demo order that tayar accepted. Apps: Website, Admin panel, Flutter client mode, Flutter tayar mode.',
+        ],
+    ],
+
+    [
         'version' => '1.7.0',
         'date' => '2026-11-23',
         'changes' => [

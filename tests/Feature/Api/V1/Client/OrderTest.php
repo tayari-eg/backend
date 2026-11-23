@@ -3,13 +3,19 @@
 namespace Tests\Feature\Api\V1\Client;
 
 use App\Domains\Accounts\Models\BusinessProfile;
+use App\Domains\Accounts\Models\UserDevice;
 use App\Domains\Catalog\Models\Category;
 use App\Domains\Orders\Enums\OrderStatus;
 use App\Domains\Orders\Models\Order;
+use App\Domains\Orders\Models\OrderOffer;
 use App\Domains\Orders\Models\OrderReason;
 use App\Domains\Pricing\Models\PricingRule;
+use App\Domains\Tayars\Models\TayarWorkSession;
+use App\Domains\Tayars\Models\Vehicle;
+use App\Jobs\SendPushToDevice;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Queue;
 use Illuminate\Support\Str;
 use Laravel\Sanctum\Sanctum;
 use Tests\TestCase;
@@ -222,15 +228,121 @@ class OrderTest extends TestCase
         }
     }
 
-    public function test_an_order_a_tayar_accepted_cannot_be_cancelled(): void
+    public function test_i_cancel_an_accepted_order_for_free_within_the_free_period_and_the_tayar_is_pushed(): void
     {
-        $order = Order::factory()->forSender($this->sender)->withStatus(OrderStatus::Pending)->create();
+        Queue::fake();
+        $tayar = $this->onlineTayar(30.0450, 31.2360);
+        UserDevice::factory()->for(User::query()->findOrFail($tayar->user_id))->create();
+        $order = Order::factory()->forSender($this->sender)->acceptedBy($tayar)->create();
+
+        $this->postJson(route('api.v1.client.orders.cancel', $order), ['cancel_reason_id' => OrderReason::factory()->create()->id])
+            ->assertOk()
+            ->assertJsonPath('data.status', 'cancelled')
+            ->assertJsonPath('data.cancelled_by_type', 'sender')
+            ->assertJsonPath('data.cancel_fee', '0.00');
+
+        Queue::assertPushed(SendPushToDevice::class, fn (SendPushToDevice $job): bool => $job->userId === $tayar->user_id
+            && $job->data === ['type' => 'order_cancelled', 'order_id' => (string) $order->id, 'cancelled_by_type' => 'sender']);
+    }
+
+    public function test_after_the_free_period_my_cancel_records_the_fee_owed_to_the_tayar_capped_at_the_shipping_fee(): void
+    {
+        Queue::fake();
+        config(['tayari.matching.cancel_fee' => '50.00']);
+        $tayar = $this->onlineTayar(30.0450, 31.2360);
+        UserDevice::factory()->for(User::query()->findOrFail($tayar->user_id))->create();
+        $order = Order::factory()->forSender($this->sender)->acceptedBy($tayar)->create();
+
+        $this->travel(config()->integer('tayari.matching.free_cancel_seconds') + 1)->seconds();
+
+        $this->getJson(route('api.v1.client.orders.show', $order))
+            ->assertOk()
+            ->assertJsonPath('data.can_cancel', true)
+            ->assertJsonPath('data.cancel_fee_now', '40.00');
+
+        $this->postJson(route('api.v1.client.orders.cancel', $order), ['cancel_reason_id' => OrderReason::factory()->create()->id])
+            ->assertOk()
+            ->assertJsonPath('data.cancel_fee', '40.00')
+            ->assertJsonPath('data.cancel_fee_now', '0.00')
+            ->assertJsonPath('data.free_cancel_until', null);
+
+        $this->assertDatabaseHas('orders', ['id' => $order->id, 'cancel_fee' => '40.00', 'cancel_fee_owed_to_tayar_id' => $tayar->user_id]);
+        Queue::assertPushed(SendPushToDevice::class, fn (SendPushToDevice $job): bool => $job->userId === $tayar->user_id
+            && $job->data['type'] === 'order_cancelled');
+    }
+
+    public function test_i_cannot_cancel_after_pickup(): void
+    {
+        $order = Order::factory()->forSender($this->sender)->withStatus(OrderStatus::PickedUp)->create();
 
         $this->postJson(route('api.v1.client.orders.cancel', $order), ['cancel_reason_id' => OrderReason::factory()->create()->id])
             ->assertUnprocessable()
             ->assertJsonPath('errors.status.0', __('orders.cannot_cancel', locale: 'en'));
 
-        $this->assertSame(OrderStatus::Pending, $order->refresh()->status);
+        $this->assertSame(OrderStatus::PickedUp, $order->refresh()->status);
+    }
+
+    public function test_a_new_order_is_offered_to_an_online_tayar_and_shows_until_when_the_search_runs(): void
+    {
+        $this->freezeSecond();
+        $tayar = $this->onlineTayar(30.0010, 31.2000);
+
+        $response = $this->postJson(route('api.v1.client.orders.store'), $this->payload())
+            ->assertCreated()
+            ->assertJsonPath('data.status', 'looking_for_tayar')
+            ->assertJsonPath('data.tayar', null)
+            ->assertJsonPath('data.accepted_at', null)
+            ->assertJsonPath('data.cancelled_by_type', null)
+            ->assertJsonPath('data.search_ends_at', now()->addMinutes(config()->integer('tayari.matching.search_timeout_minutes'))->toIso8601ZuluString());
+
+        $this->assertSame([$tayar->user_id], OrderOffer::query()->where('order_id', $response->json('data.id'))->pluck('tayar_id')->all());
+    }
+
+    public function test_after_a_tayar_accepts_i_see_the_tayar_the_vehicle_and_what_cancelling_costs(): void
+    {
+        $this->freezeSecond();
+        $tayar = $this->onlineTayar(30.0450, 31.2360);
+        $vehicle = Vehicle::query()->findOrFail(TayarWorkSession::query()->whereKey($tayar->current_work_session_id)->value('vehicle_id'));
+        $tayarUser = User::query()->findOrFail($tayar->user_id);
+        $order = Order::factory()->forSender($this->sender)->acceptedBy($tayar)->create();
+
+        $this->getJson(route('api.v1.client.orders.show', $order))
+            ->assertOk()
+            ->assertJsonPath('data.status', 'pending')
+            ->assertJsonPath('data.can_cancel', true)
+            ->assertJsonPath('data.free_cancel_until', now()->addSeconds(config()->integer('tayari.matching.free_cancel_seconds'))->toIso8601ZuluString())
+            ->assertJsonPath('data.cancel_fee_now', '0.00')
+            ->assertJsonPath('data.cancel_fee', '0.00')
+            ->assertJsonPath('data.search_ends_at', null)
+            ->assertJsonPath('data.tayar.name', $tayarUser->name)
+            ->assertJsonPath('data.tayar.phone', $tayarUser->phone)
+            ->assertJsonPath('data.tayar.vehicle.plate_number', $vehicle->plate_number)
+            ->assertJsonPath('data.tayar.vehicle.model', $vehicle->model)
+            ->assertJsonPath('data.tayar.vehicle.color', $vehicle->color)
+            ->assertJsonPath('data.tayar.vehicle.type', fn (?string $type): bool => $type !== null)
+            ->assertJsonMissingPath('data.tayar.location');
+    }
+
+    public function test_the_tayar_phone_is_gone_once_the_order_is_past_but_the_name_stays(): void
+    {
+        $tayar = $this->onlineTayar(30.0450, 31.2360);
+        $tayarUser = User::query()->findOrFail($tayar->user_id);
+        $order = Order::factory()->forSender($this->sender)->acceptedBy($tayar)->create(['status' => OrderStatus::Cancelled, 'cancelled_at' => now()]);
+
+        $this->getJson(route('api.v1.client.orders.show', $order))
+            ->assertOk()
+            ->assertJsonPath('data.tayar.name', $tayarUser->name)
+            ->assertJsonPath('data.tayar.phone', null);
+    }
+
+    public function test_an_order_cancelled_by_the_system_says_so(): void
+    {
+        $order = Order::factory()->forSender($this->sender)->create(['status' => OrderStatus::Cancelled, 'cancelled_at' => now()]);
+
+        $this->getJson(route('api.v1.client.orders.show', $order))
+            ->assertOk()
+            ->assertJsonPath('data.cancelled_by_type', 'system')
+            ->assertJsonPath('data.cancel_reason', null);
     }
 
     public function test_i_cannot_cancel_someone_elses_order(): void

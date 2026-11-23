@@ -20,7 +20,7 @@ class OrderController extends Controller
     /**
      * @var list<string>
      */
-    private const array RELATIONS = ['category', 'cancelReason'];
+    private const array RELATIONS = ['category', 'cancelReason', 'tayar', 'workSession.vehicle.vehicleType'];
 
     /**
      * My orders, newest first: active (default) or past. Cursor pages.
@@ -61,7 +61,8 @@ class OrderController extends Controller
     }
 
     /**
-     * Cancel one of my orders before a tayar accepts it, with a cancel reason.
+     * Cancel one of my orders before pickup, with a cancel reason. After a tayar accepted, it is free for a short time;
+     * later the cancel fee in cancel_fee_now is recorded as owed to the tayar.
      */
     public function cancel(CancelOrderRequest $request, Order $order, CancelOrderAction $cancelOrder): OrderResource
     {

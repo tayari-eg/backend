@@ -29,6 +29,7 @@ class ListOrdersRequest extends FormRequest
         return [
             'status' => ['sometimes', Rule::enum(OrderStatus::class)],
             'sender_id' => ['sometimes', 'integer', 'min:1'],
+            'tayar_id' => ['sometimes', 'integer', 'min:1'],
             'category_id' => ['sometimes', 'integer', 'min:1'],
             'mode_id' => ['sometimes', 'integer', 'min:1'],
             'created_from' => ['sometimes', 'date_format:'.self::DATE_FORMAT],

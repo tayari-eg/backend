@@ -2,45 +2,72 @@
 
 namespace App\Domains\Orders\Actions;
 
+use App\Domains\Orders\Enums\OfferStatus;
+use App\Domains\Orders\Enums\OrderCanceller;
 use App\Domains\Orders\Enums\OrderStatus;
+use App\Domains\Orders\Events\OrderCancelled;
 use App\Domains\Orders\Models\Order;
+use App\Domains\Orders\Models\OrderOffer;
 use App\Domains\Orders\Models\OrderReason;
 use App\Models\User;
+use Brick\Math\BigDecimal;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
 
 class CancelOrderAction
 {
     /**
-     * Cancels an order that no tayar has accepted yet, by its sender or by staff, with a cancel reason and an optional
-     * note (kept on the status history row). The row is locked so a cancel can't cross a later accept.
+     * Cancels an order by its sender or by staff, with a cancel reason and an optional note (kept on the status history
+     * row), or by the system (no actor, no reason) when no tayar accepted it. Senders and staff cancel until pickup; an
+     * accepted order keeps its tayar. A sender cancelling an accepted order after tayari.matching.free_cancel_seconds
+     * owes the tayar a cancel fee: it is only recorded on the order (cancel_fee, cancel_fee_owed_to_tayar_id) for the
+     * wallet to settle, never charged here. Staff never cause a fee. Offers still open are withdrawn. The order row is
+     * locked first and the fee is decided on the locked row against now(), so a cancel can't cross an accept or the end
+     * of the free period.
      *
      * @throws ValidationException (errors.status) when the order can no longer be cancelled
      */
-    public function handle(Order $order, User $actor, OrderReason $reason, ?string $note = null): Order
+    public function handle(Order $order, ?User $actor, ?OrderReason $reason, ?string $note = null): Order
     {
-        return DB::transaction(function () use ($order, $actor, $reason, $note): Order {
+        $canceller = match (true) {
+            $actor === null => OrderCanceller::System,
+            $actor->isStaff() => OrderCanceller::Staff,
+            default => OrderCanceller::Sender,
+        };
+
+        return DB::transaction(function () use ($order, $actor, $reason, $note, $canceller): Order {
             $order = Order::query()->lockForUpdate()->findOrFail($order->id);
 
-            if (! $order->canBeCancelled()) {
+            if (! $order->canBeCancelledBy($canceller)) {
                 throw ValidationException::withMessages(['status' => __('orders.cannot_cancel')]);
             }
 
             $from = $order->status;
+            $cancelFee = $canceller === OrderCanceller::Sender ? $order->senderCancelFeeAt(now()) : BigDecimal::zero()->toScale(2);
 
             $order->forceFill([
                 'status' => OrderStatus::Cancelled,
                 'cancelled_at' => now(),
-                'cancelled_by' => $actor->id,
-                'cancel_reason_id' => $reason->id,
+                'cancelled_by' => $actor?->id,
+                'cancel_reason_id' => $reason?->id,
+                'cancel_fee' => (string) $cancelFee,
+                'cancel_fee_owed_to_tayar_id' => $cancelFee->isPositive() ? $order->tayar_id : null,
             ])->save();
 
             $order->statusHistories()->create([
                 'from_status' => $from,
                 'to_status' => OrderStatus::Cancelled,
-                'changed_by' => $actor->id,
+                'changed_by' => $actor?->id,
                 'note' => $note,
             ]);
+
+            // Bulk update: Offered is the only non-final offer status, so every matched row may move to Withdrawn.
+            OrderOffer::query()
+                ->where('order_id', $order->id)
+                ->where('status', OfferStatus::Offered)
+                ->update(['status' => OfferStatus::Withdrawn, 'updated_at' => now()]);
+
+            OrderCancelled::dispatch($order, $from, $canceller);
 
             return $order;
         });

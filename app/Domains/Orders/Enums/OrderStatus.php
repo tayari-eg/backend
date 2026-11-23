@@ -21,9 +21,26 @@ enum OrderStatus: string
     public function canTransitionTo(self $next): bool
     {
         return match ($this) {
-            self::LookingForTayar => $next === self::Cancelled,
+            self::LookingForTayar => in_array($next, [self::Pending, self::Cancelled], true),
+            self::Pending => $next === self::Cancelled,
             default => false,
         };
+    }
+
+    /**
+     * Senders and staff cancel until pickup; the system only cancels an order no tayar accepted.
+     */
+    public function canBeCancelledBy(OrderCanceller $canceller): bool
+    {
+        return $this->canTransitionTo(self::Cancelled) && ($canceller !== OrderCanceller::System || $this === self::LookingForTayar);
+    }
+
+    /**
+     * @return list<self>
+     */
+    public static function withTayarCases(): array
+    {
+        return [self::Pending, self::PickedUp, self::Ongoing];
     }
 
     public function isActive(): bool

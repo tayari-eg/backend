@@ -51,10 +51,15 @@ $notTayar = '- **403:** not an approved tayar (`message`: "Tayar mode is only av
 $reapplyLater = '- **422:** `errors.status` = "You can change your application again from …" while a rejected application still has to wait until `can_reapply_at`.';
 $backToReview = 'An approved or rejected application goes back to `pending` (and an online tayar goes offline): warn the user before saving.';
 $orderRouteFields = "- `category_id` (number, required): a subcategory from **Get categories** (one of a main category's `children`).\n- `pickup_lat`, `pickup_lng`, `dropoff_lat`, `dropoff_lng` (numbers, required): the points picked on the map, up to 7 decimals.";
-$orderFields = '`id`, `code` (the short code people see, e.g. `TY-7K3P9Q`), `status` (`looking_for_tayar` | `pending` | `picked_up` | `ongoing` | `delivered` | `not_delivered` | `cancelled`), `can_cancel`, `category` (`id`, `name`, `is_food`), `details`, `pickup` (`address`, `lat`, `lng`, `contact_phone`), `dropoff` (`address`, `lat`, `lng`), `receiver` (`name`, `phone`), `goods_value`, `shipping_paid_by` (`sender` | `receiver`), `amount_to_collect` (what the receiver pays: the goods value, plus the shipping fee when the receiver pays it), `distance_km`, `food_extra`, `shipping_fee`, `cancel_reason` (`id`, `name`, or null), `price_accepted_at`, `cancelled_at`, `created_at`, `updated_at`. Amounts are strings with two decimals, in EGP; coordinates are strings with 7 decimals';
-$adminOrderFields = '`id`, `code`, `status`, `can_cancel`, `sender` (`id`, `name`, `phone`, `business_name`), `category` (`id`, `name` with `ar` and `en`, `is_food`), `mode` (`id`, `code`, `name` with `ar` and `en`: the mode the order was priced in), `details`, `pickup` (`address`, `lat`, `lng`, `contact_phone`), `dropoff` (`address`, `lat`, `lng`), `receiver` (`name`, `phone`, `user_id` when the receiver has an account), `goods_value`, `shipping_paid_by`, `amount_to_collect`, `fee` (`distance_km`, `base_fare`, `price_per_km`, `distance_fare`, `minimum_fare`, `food_extra`, `shipping_fee`, `tayar_share_percent`, `tayar_earning`, `platform_fee`), `price_accepted_at`, `cancelled_at`, `created_at`, `updated_at`. Amounts are strings with two decimals, in EGP';
+$orderFields = '`id`, `code` (the short code people see, e.g. `TY-7K3P9Q`), `status` (`looking_for_tayar` | `pending` | `picked_up` | `ongoing` | `delivered` | `not_delivered` | `cancelled`), `can_cancel` (true until pickup), `category` (`id`, `name`, `is_food`), `details`, `pickup` (`address`, `lat`, `lng`, `contact_phone`), `dropoff` (`address`, `lat`, `lng`), `receiver` (`name`, `phone`), `goods_value`, `shipping_paid_by` (`sender` | `receiver`), `amount_to_collect` (what the receiver pays: the goods value, plus the shipping fee when the receiver pays it), `distance_km`, `food_extra`, `shipping_fee`, `cancel_reason` (`id`, `name`, or null), `tayar` (null until a tayar accepts; then `name`, `phone` (null once the order is delivered, not delivered or cancelled) and `vehicle` (`type`, `model`, `color`, `plate_number`)), `cancelled_by_type` (null unless cancelled; then `sender`, `staff`, or `system` when no tayar accepted in time), `free_cancel_until` (while `pending`: until when cancelling is free; otherwise null), `cancel_fee_now` (what cancelling now would cost: `"0.00"` before a tayar accepts and until `free_cancel_until`, then the cancellation fee, at most the shipping fee), `cancel_fee` (the fee recorded when the order was cancelled, `"0.00"` otherwise), `search_ends_at` (while `looking_for_tayar`: when Tayari stops looking and cancels the order; otherwise null), `price_accepted_at`, `accepted_at` (when the tayar accepted, or null), `cancelled_at`, `created_at`, `updated_at`. Amounts are strings with two decimals, in EGP; coordinates are strings with 7 decimals';
+$adminOrderFields = '`id`, `code`, `status`, `can_cancel`, `sender` (`id`, `name`, `phone`, `business_name`), `category` (`id`, `name` with `ar` and `en`, `is_food`), `mode` (`id`, `code`, `name` with `ar` and `en`: the mode the order was priced in), `details`, `pickup` (`address`, `lat`, `lng`, `contact_phone`), `dropoff` (`address`, `lat`, `lng`), `receiver` (`name`, `phone`, `user_id` when the receiver has an account), `goods_value`, `shipping_paid_by`, `amount_to_collect`, `fee` (`distance_km`, `base_fare`, `price_per_km`, `distance_fare`, `minimum_fare`, `food_extra`, `shipping_fee`, `tayar_share_percent`, `tayar_earning`, `platform_fee`), `tayar` (`id`, `name`, `phone`, or null until a tayar accepts), `vehicle` (the tayar\'s vehicle for this order: `id`, `type` with `ar` and `en`, `model`, `color`, `plate_number`, or null), `work_session_id` (or null), `cancelled_by_type` (null unless cancelled; then `sender`, `staff` or `system`), `cancel_fee` (owed by the sender for cancelling an accepted order after the free period, `"0.00"` otherwise; recorded only, nothing is charged yet), `cancel_fee_owed_to` (`id`, `name` of the tayar it is owed to, or null), `price_accepted_at`, `accepted_at`, `cancelled_at`, `created_at`, `updated_at`. Amounts are strings with two decimals, in EGP';
 $adminOrderDetailFields = "{$adminOrderFields}, plus `cancelled_by` (`id`, `name`, or null), `cancel_reason` (`id`, `name` with `ar` and `en`, or null) and `status_history` (every status change, oldest first: `from_status` (null for the first row), `to_status`, `changed_by` (`id`, `name`, or null for the system), `note`, `created_at`)";
 $orderNotFound = '- **404:** no order with this id.';
+$offerFields = '`id`, `status` (`offered` while it can be accepted; `accepted`, `rejected`, `expired` or `withdrawn` otherwise), `round`, `distance_km` (from the tayar to the pickup, in a straight line, when the offer was made), `tayar_earning` (what this tayar earns with this vehicle, EGP), `expires_at`, `expires_in_seconds` (counted on the server: use it for the countdown, not the phone clock), `order` (`id`, `code`, `mode` (`code`, `name`), `category` (`id`, `name`, `is_food`), `details`, `pickup` (`address`, `lat`, `lng`), `dropoff` (`address`, `lat`, `lng`), `distance_km` (the trip, by road)). No phone numbers until the tayar accepts';
+$tayarOrderFields = '`id`, `code`, `status` (`pending` | `picked_up` | `ongoing` | `delivered` | `not_delivered` | `cancelled`), `mode` (`code`, `name`), `category` (`id`, `name`, `is_food`), `details`, `sender` (`name`, `phone`, `business_name`), `pickup` (`address`, `lat`, `lng`, `contact_phone`), `dropoff` (`address`, `lat`, `lng`), `receiver` (`name`, `phone`), `distance_km`, `tayar_earning` (what I earn, EGP). The phones (`sender.phone`, `pickup.contact_phone`, `receiver.phone`) are null once the order is delivered, not delivered or cancelled; the names stay, `cancel_fee` (what the sender owes me for cancelling after the free period, `"0.00"` otherwise; paid out later through the wallet), `accepted_at`, `cancelled_at`, `created_at`. Coordinates are strings with 7 decimals';
+$adminOfferFields = '`id`, `tayar` (`id`, `name`, `phone`), `work_session_id`, `round`, `distance_km` (tayar to pickup when offered), `tayar_share_percent`, `tayar_earning`, `platform_fee` (what the order would earn with this tayar\'s vehicle), `status` (`offered` | `accepted` | `rejected` | `expired` | `withdrawn`, as of now), `expires_at`, `responded_at` (when the tayar accepted or rejected, or null), `created_at`';
+$offerNotFound = '- **404:** no offer with this id.';
+$offerErrors = '- **422:** `errors.offer` explains why: "This offer has expired.", "This order is no longer available." (another tayar took it, or it was cancelled), "This offer was for a work session that has ended. Stay online to get new offers." (the tayar went offline or changed the mode settings), or "Finish your current orders before accepting another one." (:max_active_orders accepted order in the zone and area modes, :max_active_orders_long_distance in long distance). Remove the offer card and show the message.';
 $notApprovedBusiness = '- **403:** `message` explains why: only business accounts can send orders for now, or the business profile is not approved yet. Show the message with a link to the business profile page.';
 $routeErrors = '- **422:** `errors.route`: the pickup and drop-off are less than 100 m apart (in a straight line), the drop-off is more than :order_max_distance_km km (by road) from the pickup, Tayari does not deliver on this route yet, or a food order is too far (food only goes up to :order_zone_max_distance_km km, or inside one area). Show it on the map step.';
 $cancelReasonFields = "- `cancel_reason_id` (number, required): a reason from **Get cancel reasons**.\n- `note` (string, optional, up to 500 characters).";
@@ -547,6 +552,50 @@ return [
         'notes' => '- Send every 5 to 10 seconds while online (at most :tayar_location_per_minute a minute). A tayar with no location for :tayar_offline_minutes minutes is set offline by the server.',
     ],
 
+    'api.v1.tayar.offers.index' => [
+        'what' => 'Lists my offers that can still be accepted, for my current work session, newest first.',
+        'who' => 'An approved tayar. Offline tayars get an empty list.',
+        'request' => "- Query `per_page` (optional, 1 to :max_per_page, default :per_page).\n- Query `cursor` (optional): `meta.next_cursor` from the previous page.",
+        'success' => "**200** with `data`: a list of offers, each with {$offerFields}. Plus `meta` (`path`, `per_page`, `next_cursor`, `prev_cursor`) and `links`.",
+        'errors' => "- **422:** an invalid `per_page` or `cursor`.\n{$loggedOut}\n{$notTayar}\n{$upgrade}\n{$serverError}",
+        'notes' => "- Call it every 5 to 10 seconds while online and on the work screen, and at once when an `order_offer` push arrives: there are no live updates, and a push can arrive late or not at all.\n- An offer lasts :offer_timeout_seconds seconds. Count down from `expires_in_seconds` and remove the card at 0; an offer past its time is gone from the list even before the server marks it expired.\n- Several tayars get the same order at once: the first to accept gets it.",
+    ],
+
+    'api.v1.tayar.offers.accept' => [
+        'what' => 'Accepts an offer. The order becomes mine (`pending`) if no other tayar took it first.',
+        'who' => 'The tayar the offer was made to, online in the same work session.',
+        'request' => '- Path `offer`: the offer `id`. No body.',
+        'success' => "**200** with `data`, the order: {$tayarOrderFields}. Accepting the same offer again also answers 200 with the order while it is still mine and `pending`; after that it answers 422 \"This order is no longer available.\"",
+        'errors' => "{$offerNotFound}\n- **403:** the offer was made to another tayar.\n{$offerErrors}\n{$loggedOut}\n{$notTayar}\n{$upgrade}\n{$serverError}",
+        'notes' => "- Disable the **Accept** button while the request runs.\n- After a 200, open the order screen: the sender and the receiver phones are now included.\n- When this order brings the tayar to the mode's limit (:max_active_orders accepted order in the zone and area modes, :max_active_orders_long_distance in long distance), the tayar's other open offers are withdrawn: reload **Get my offers**.",
+    ],
+
+    'api.v1.tayar.offers.reject' => [
+        'what' => 'Rejects an offer. The order is never offered to me again.',
+        'who' => 'The tayar the offer was made to.',
+        'request' => '- Path `offer`: the offer `id`. No body, no reason.',
+        'success' => '**204** with no body. Remove the card. Rejecting an offer that already ended also answers 204.',
+        'errors' => "{$offerNotFound}\n- **403:** the offer was made to another tayar.\n{$loggedOut}\n{$notTayar}\n{$upgrade}\n{$serverError}",
+    ],
+
+    'api.v1.tayar.orders.index' => [
+        'what' => 'Lists the orders I accepted, newest first: the Active tab or the Past tab.',
+        'who' => 'An approved tayar.',
+        'request' => "- Query `status` (optional): `active` (default: pending, picked up, ongoing) or `past` (delivered, not delivered, cancelled).\n- Query `per_page` (optional, 1 to :max_per_page, default :per_page).\n- Query `cursor` (optional): `meta.next_cursor` from the previous page.",
+        'success' => "**200** with `data`: a list of orders, each with {$tayarOrderFields}. Plus `meta` (`path`, `per_page`, `next_cursor`, `prev_cursor`) and `links`.",
+        'errors' => "- **422:** an invalid `status`, `per_page` or `cursor`.\n{$loggedOut}\n{$notTayar}\n{$upgrade}\n{$serverError}",
+        'notes' => '- In the zone and area modes a tayar holds :max_active_orders accepted order at a time; in long distance up to :max_active_orders_long_distance.',
+    ],
+
+    'api.v1.tayar.orders.show' => [
+        'what' => 'Returns one order I accepted.',
+        'who' => 'The tayar who accepted the order.',
+        'request' => '- Path `order`: the order `id`. No body.',
+        'success' => "**200** with `data`: {$tayarOrderFields}.",
+        'errors' => "{$orderNotFound}\n- **403:** another tayar's order, or an order I never accepted.\n{$loggedOut}\n{$notTayar}\n{$upgrade}\n{$serverError}",
+        'notes' => '- Reload it when an `order_cancelled` push arrives: the sender or staff can cancel an accepted order before pickup. Then show it as cancelled and stop the trip, with `cancel_fee` when the sender owes me one (paid out later through the wallet).',
+    ],
+
     'api.v1.admin.tayar-applications.index' => [
         'what' => 'Lists tayar applications for review, filtered by status, oldest first.',
         'who' => 'Staff with `tayars.view` (support, ops, admin, super admin).',
@@ -958,7 +1007,7 @@ return [
         'request' => "- `idempotency_key` (string, required): a UUID made once when the order form opens, and sent again on every retry of the same order.\n{$orderRouteFields}\n- `details` (string, optional, up to 2000 characters): what is in the package.\n- `pickup_address`, `dropoff_address` (strings, required, up to 255 characters).\n- `pickup_contact_phone` (string, optional): someone to call at the pickup, if not the sender; any Egyptian mobile format.\n- `receiver_name` (string, required, up to 255 characters) and `receiver_phone` (string, required, any Egyptian mobile format).\n- `goods_value` (required): the price of the goods the receiver pays, 0 to 1000000, up to 2 decimals.\n- `shipping_paid_by` (required): `sender` or `receiver`.\n- `shipping_fee` (required): the `shipping_fee` from **Estimate price**, as shown to the user.",
         'success' => "**201** with `data`, the new order: {$orderFields}. **200** with the same order when this `idempotency_key` already made one (a double tap or a retry).",
         'errors' => "- **422:** field errors. When the price changed since the estimate: `errors.shipping_fee` = \"The shipping price is now 45.00 EGP. Check the new price and confirm again.\" Show the new price and ask the user to confirm again (send the new `shipping_fee` with the same `idempotency_key`). When the order this `idempotency_key` made was deleted: `errors.idempotency_key` = \"This request key belongs to a deleted order. Use a new request key.\" Make a new key and send again.\n{$routeErrors}\n{$loggedOut}\n{$notApprovedBusiness}\n{$upgrade}\n{$serverError}",
-        'notes' => "- Disable the **Send** button while the request runs, but keep the same `idempotency_key` for retries: the server never creates two orders for one key. Make a new key only for a new order.\n- Phones come back as `+201XXXXXXXXX`.",
+        'notes' => "- Disable the **Send** button while the request runs, but keep the same `idempotency_key` for retries: the server never creates two orders for one key. Make a new key only for a new order.\n- Phones come back as `+201XXXXXXXXX`.\n- The search for a tayar starts at once: the order is offered to up to :offers_per_round nearby tayars at a time, each offer lasting :offer_timeout_seconds seconds, in a wider circle each round around the pickup (:first_radius_km km, then :radius_step_km km more each round, up to :max_radius_km km; a round with nobody in reach widens at once). When no tayar accepts by `search_ends_at` (:search_timeout_minutes minutes after the price was accepted), Tayari cancels the order (`cancelled_by_type` = `system`) and sends an `order_no_tayar` push.",
     ],
 
     'api.v1.client.orders.index' => [
@@ -976,25 +1025,25 @@ return [
         'request' => '- Path `order`: the order `id`. No body.',
         'success' => "**200** with `data`: {$orderFields}.",
         'errors' => "{$orderNotFound}\n- **403:** the order belongs to someone else.\n{$loggedOut}\n{$clientOnly}\n{$upgrade}\n{$serverError}",
-        'notes' => '- Show **Cancel order** only when `can_cancel` is true.',
+        'notes' => "- Show **Cancel order** only when `can_cancel` is true.\n- While `status` = `looking_for_tayar`, call it again every 10 seconds while the screen is open (and when an `order_accepted` or `order_no_tayar` push arrives): there are no live updates. Stop when the status changes.\n- Once a tayar accepts (`status` = `pending`), show the `tayar` card: name, a call button for `phone`, and the vehicle. The tayar's location comes in a later version.\n- **Cancel order** stays available until pickup. Before confirming, show the cost from `cancel_fee_now`: free until `free_cancel_until` (:free_cancel_seconds seconds after the tayar accepted), then a cancellation fee owed to the tayar. Reload the order when the dialog opens, so the amount is current.\n- `cancelled_by_type` = `system` means no tayar accepted in time: offer to send the order again.",
     ],
 
     'api.v1.client.orders.cancel' => [
-        'what' => 'Cancels one of my orders before a tayar accepts it.',
+        'what' => 'Cancels one of my orders before pickup. Free before a tayar accepts and for :free_cancel_seconds seconds after; later, a cancellation fee owed to the tayar is recorded.',
         'who' => 'The sender of the order.',
         'request' => "- Path `order`: the order `id`.\n{$cancelReasonFields}",
-        'success' => "**200** with `data`, the order (`status` = `cancelled`, `can_cancel` = false): {$orderFields}.",
-        'errors' => "{$orderNotFound}\n- **422:** field errors, or `errors.status` = \"This order can no longer be cancelled.\" when a tayar already accepted it (reload the order).\n- **403:** the order belongs to someone else.\n{$loggedOut}\n{$clientOnly}\n{$upgrade}\n{$serverError}",
-        'notes' => '- Ask for confirmation in a dialog with the reasons from **Get cancel reasons** and an optional note.',
+        'success' => "**200** with `data`, the order (`status` = `cancelled`, `can_cancel` = false, `cancel_fee` = the fee that was recorded, `\"0.00\"` when free): {$orderFields}.",
+        'errors' => "{$orderNotFound}\n- **422:** field errors, or `errors.status` = \"This order can no longer be cancelled.\" once the order is picked up or finished (reload the order).\n- **403:** the order belongs to someone else.\n{$loggedOut}\n{$clientOnly}\n{$upgrade}\n{$serverError}",
+        'notes' => "- Ask for confirmation in a dialog with the reasons from **Get cancel reasons** and an optional note. For an accepted order, show `cancel_fee_now` from **Get order** in the dialog.\n- Whether the cancel is free is decided by the server at the moment it cancels: a cancel sent after `free_cancel_until` records the fee even if the dialog showed it as free. The fee is at most the shipping fee.\n- The fee is only recorded on the order for now: nothing is charged, and the wallet will settle it later.\n- The tayar of an accepted order gets an `order_cancelled` push.",
     ],
 
     'api.v1.admin.orders.index' => [
         'what' => 'Lists every order, newest first, with filters and search.',
         'who' => 'Staff with `orders.view` (support, ops, admin, super admin).',
-        'request' => "- Query `status` (optional): one order status, e.g. `looking_for_tayar` or `cancelled`.\n- Query `sender_id`, `category_id`, `mode_id` (optional numbers).\n- Query `created_from`, `created_to` (optional, `YYYY-MM-DD`): business days in Cairo time, both included.\n- Query `search` (optional, up to 100 characters): an order code (`TY-7K3P9Q` or `7k3p9q`), or a full phone number matched against the receiver's and the sender's phone.\n- Query `per_page` (optional, 1 to :max_per_page, default :per_page) and `page`.",
+        'request' => "- Query `status` (optional): one order status, e.g. `looking_for_tayar` or `cancelled`.\n- Query `sender_id`, `tayar_id` (the tayar's user `id`), `category_id`, `mode_id` (optional numbers).\n- Query `created_from`, `created_to` (optional, `YYYY-MM-DD`): business days in Cairo time, both included.\n- Query `search` (optional, up to 100 characters): an order code (`TY-7K3P9Q` or `7k3p9q`), or a full phone number matched against the receiver's and the sender's phone.\n- Query `per_page` (optional, 1 to :max_per_page, default :per_page) and `page`.",
         'success' => "**200** with `data`: a list of orders, each with {$adminOrderFields}. Plus `meta` and `links` for pages.",
         'errors' => "- **422:** an invalid filter, `created_to` before `created_from`, `search` too long or `per_page` out of range.\n{$loggedOut}\n{$staffOnly}\n{$serverError}",
-        'notes' => '- `fee.tayar_earning` and `fee.platform_fee` are estimates from the general pricing rule until a tayar accepts the order.',
+        'notes' => '- `fee.tayar_earning` and `fee.platform_fee` are estimates from the general pricing rule until a tayar accepts the order; then they are what the accepting tayar earns with their vehicle (the mode\'s rule for that vehicle type when there is one).',
     ],
 
     'api.v1.admin.orders.show' => [
@@ -1003,15 +1052,25 @@ return [
         'request' => '- Path `order`: the order `id`. No body.',
         'success' => "**200** with `data`: {$adminOrderDetailFields}.",
         'errors' => "{$orderNotFound}\n{$loggedOut}\n{$staffOnly}\n{$serverError}",
+        'notes' => '- A `status_history` row with `changed_by` = null was made by the system (an order cancelled because no tayar accepted in time).',
+    ],
+
+    'api.v1.admin.orders.offers.index' => [
+        'what' => 'Lists every offer of one order, newest first: which tayars got it, in which round, and whether they accepted, rejected, let it expire, or lost it to another tayar.',
+        'who' => 'Staff with `orders.view` (support, ops, admin, super admin).',
+        'request' => "- Path `order`: the order `id`.\n- Query `per_page` (optional, 1 to :max_per_page, default :per_page) and `page`.",
+        'success' => "**200** with `data`: a list of offers, each with {$adminOfferFields}. Plus `meta` and `links` for pages.",
+        'errors' => "{$orderNotFound}\n- **422:** `per_page` is out of range.\n{$loggedOut}\n{$staffOnly}\n{$serverError}",
+        'notes' => "- `withdrawn` means the order was taken by another tayar or cancelled while the offer was open.\n- An offer lasts :offer_timeout_seconds seconds; each round goes to up to :offers_per_round tayars.",
     ],
 
     'api.v1.admin.orders.cancel' => [
-        'what' => 'Cancels an order before a tayar accepts it, for example at the sender\'s request.',
+        'what' => 'Cancels an order before pickup, for example at the sender\'s request, or when the tayar who accepted it stopped answering.',
         'who' => 'Staff with `orders.manage` (ops, admin, super admin).',
         'request' => "- Path `order`: the order `id`.\n{$cancelReasonFields}",
-        'success' => "**200** with `data`, the order (`status` = `cancelled`): {$adminOrderDetailFields}. The last `status_history` row names the staff member.",
-        'errors' => "{$orderNotFound}\n- **422:** field errors, or `errors.status` = \"This order can no longer be cancelled.\" when a tayar already accepted it.\n{$loggedOut}\n{$staffOnly}\n{$serverError}",
-        'notes' => '- Ask for confirmation first, with the reasons from **Get cancel reasons**.',
+        'success' => "**200** with `data`, the order (`status` = `cancelled`, `cancelled_by_type` = `staff`): {$adminOrderDetailFields}. The last `status_history` row names the staff member.",
+        'errors' => "{$orderNotFound}\n- **422:** field errors, or `errors.status` = \"This order can no longer be cancelled.\" once the order is picked up or finished.\n{$loggedOut}\n{$staffOnly}\n{$serverError}",
+        'notes' => "- Ask for confirmation first, with the reasons from **Get cancel reasons**.\n- Staff can cancel an accepted (`pending`) order at any time, never with a cancellation fee (`cancel_fee` stays `\"0.00\"`). The order keeps its `tayar`, and the tayar gets an `order_cancelled` push with `cancelled_by_type` = `staff`.\n- Offers still open are withdrawn.",
     ],
 
 ];

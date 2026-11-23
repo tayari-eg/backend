@@ -164,7 +164,15 @@ return [
                 **What the app receives.** Every push is sent to all of the user's saved devices, through FCM:
 
                 - `notification.title` and `notification.body`: already in the user's language (`locale`), so show them as they are.
-                - `data`: every value is a **string**. There is always a `type`; each type adds its own keys. Today the only type is `test` (from the server's `push:test` command), with no other keys. Future types are listed here as they are added.
+                - `data`: every value is a **string**. There is always a `type`; each type adds its own keys. Ignore a `type` the app does not know. The types so far:
+
+                | `data.type` | Sent to | Other keys | Open |
+                | --- | --- | --- | --- |
+                | `test` | the user (server `push:test` command) | none | nothing |
+                | `order_offer` | a tayar, for a new offer | `order_id`, `offer_id` | the work screen, then **Get my offers** at once (the offer lasts :offer_timeout_seconds seconds) |
+                | `order_accepted` | the sender, when a tayar accepts | `order_id` | **Order details** (client mode) |
+                | `order_no_tayar` | the sender, when no tayar accepted in time and the order was cancelled | `order_id` | **Order details** (client mode) |
+                | `order_cancelled` | the tayar of an accepted order the sender or staff cancelled | `order_id`, `cancelled_by_type` (`sender` or `staff`) | **My order** (tayar mode) |
                 - Android uses the default notification channel (no `channel_id` is sent). If the app later creates its own channel, the server can send its id.
 
                 **Handling it:**
@@ -437,6 +445,9 @@ return [
                 4. **My orders** screen: two tabs, Active and Past → **Get my orders** with `status` = `active` or `past`. Infinite scroll with `cursor` = `meta.next_cursor`.
                 5. **Order details** → **Get order**. Show **Cancel order** while `can_cancel` is true.
                 6. **Cancel** dialog → **Get cancel reasons**, then **Cancel order** with the picked reason and an optional note.
+                7. While `status` = `looking_for_tayar`, **Order details** shows "Looking for a tayar…" until `search_ends_at`, and calls **Get order** again every 10 seconds while it is open (and when an `order_accepted` or `order_no_tayar` push arrives).
+                8. When a tayar accepts (`status` = `pending`), show the `tayar` card: name, a call button for `phone`, and the vehicle (`type`, `model`, `color`, `plate_number`). **Cancel order** stays until pickup: free until `free_cancel_until` (:free_cancel_seconds seconds), then the **Cancel** dialog shows the fee from `cancel_fee_now`, owed to the tayar.
+                9. `cancelled_by_type` = `system`: no tayar accepted in time. Show "No tayar found" with a **Send again** button that opens New order with the same details and a new `idempotency_key`.
                 MD,
             'requests' => [
                 [
@@ -458,7 +469,7 @@ return [
                 [
                     'route' => 'api.v1.client.orders.show',
                     'name' => 'Get order',
-                    'screen' => '**Order details** screen, on open.',
+                    'screen' => '**Order details** screen, on open, every 10 seconds while the order is looking for a tayar, and on an `order_accepted` or `order_no_tayar` push.',
                 ],
                 [
                     'route' => 'api.v1.public.order-reasons.index',
@@ -470,6 +481,62 @@ return [
                     'name' => 'Cancel order',
                     'screen' => '**Cancel order** dialog, when the user confirms.',
                     'next' => 'Show the order as cancelled and move it to the Past tab.',
+                ],
+            ],
+        ],
+
+        [
+            'name' => '15. Tayar mode · Offers',
+            'description' => <<<'MD'
+                New orders near the tayar, while online (folder 10). There are no live updates: the app polls, and a push is only a nudge.
+
+                1. **Work** screen, while online: call **Get my offers** every 5 to 10 seconds, and at once when an `order_offer` push arrives or the app comes back to the front.
+                2. Show one card per offer: the earning (`tayar_earning`), the distance to the pickup, the pickup and drop-off on a map, the category (food badge when `is_food`), and a countdown from `expires_in_seconds`. Remove the card at 0.
+                3. Several tayars get the same order at once (up to :offers_per_round per round). **Accept** → **Accept offer**: a 200 means the order is mine; open **My order** (folder 16). A 422 on `offer` means it expired, someone else took it, or the tayar is busy: remove the card and show the message.
+                4. **Reject** → **Reject offer** (no reason). That order never comes back to this tayar.
+                5. Offers belong to the current work session: going offline or changing the mode settings ends them.
+                MD,
+            'requests' => [
+                [
+                    'route' => 'api.v1.tayar.offers.index',
+                    'name' => 'Get my offers',
+                    'screen' => '**Work** screen, every 5 to 10 seconds while online, and on an `order_offer` push.',
+                ],
+                [
+                    'route' => 'api.v1.tayar.offers.accept',
+                    'name' => 'Accept offer',
+                    'screen' => '**Offer card**, when the tayar taps **Accept**.',
+                    'next' => 'Open **My order** for the returned order.',
+                ],
+                [
+                    'route' => 'api.v1.tayar.offers.reject',
+                    'name' => 'Reject offer',
+                    'screen' => '**Offer card**, when the tayar taps **Reject**.',
+                    'next' => 'Remove the card.',
+                ],
+            ],
+        ],
+
+        [
+            'name' => '16. Tayar mode · My orders',
+            'description' => <<<'MD'
+                The orders the tayar accepted. Pickup and delivery steps come in a later version.
+
+                1. **My orders** screen: two tabs, Active and Past → **Get my orders** with `status` = `active` or `past`. Infinite scroll with `cursor` = `meta.next_cursor`.
+                2. **My order** screen → **Get my order**: the pickup (with `contact_phone`), the sender (`phone`, `business_name`), the receiver (`name`, `phone`), the drop-off and my earning. Call buttons for each phone while the order is active; once it is past, the phones are null and only the names show.
+                3. In the zone and area modes a tayar holds :max_active_orders accepted order at a time (long distance: up to :max_active_orders_long_distance); while at the limit, no new offers arrive.
+                4. An `order_cancelled` push means the sender or staff cancelled the order (`cancelled_by_type`): reload it, show it as cancelled and stop the trip. When the sender cancelled after the free period, `cancel_fee` shows what the sender owes the tayar (paid out later through the wallet).
+                MD,
+            'requests' => [
+                [
+                    'route' => 'api.v1.tayar.orders.index',
+                    'name' => 'Get my orders',
+                    'screen' => '**My orders** screen (tayar mode), Active and Past tabs, on open, on pull to refresh and on scroll.',
+                ],
+                [
+                    'route' => 'api.v1.tayar.orders.show',
+                    'name' => 'Get my order',
+                    'screen' => '**My order** screen, on open and on an `order_cancelled` push.',
                 ],
             ],
         ],

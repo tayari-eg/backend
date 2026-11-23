@@ -2,6 +2,7 @@
 
 namespace Tests\Unit\Domains\Orders;
 
+use App\Domains\Orders\Enums\OrderCanceller;
 use App\Domains\Orders\Enums\OrderStatus;
 use PHPUnit\Framework\TestCase;
 
@@ -15,16 +16,27 @@ class OrderStatusTest extends TestCase
         );
     }
 
-    public function test_only_looking_for_tayar_to_cancelled_is_allowed_for_now(): void
+    public function test_only_the_matching_and_cancel_transitions_are_allowed_for_now(): void
     {
+        $allowed = ['looking_for_tayar → pending', 'looking_for_tayar → cancelled', 'pending → cancelled'];
+
         foreach (OrderStatus::cases() as $from) {
             foreach (OrderStatus::cases() as $to) {
-                $this->assertSame(
-                    $from === OrderStatus::LookingForTayar && $to === OrderStatus::Cancelled,
-                    $from->canTransitionTo($to),
-                    "{$from->value} → {$to->value}",
-                );
+                $transition = "{$from->value} → {$to->value}";
+
+                $this->assertSame(in_array($transition, $allowed, true), $from->canTransitionTo($to), $transition);
             }
+        }
+    }
+
+    public function test_senders_and_staff_cancel_until_pickup_and_the_system_only_before_a_tayar_accepts(): void
+    {
+        $beforePickup = [OrderStatus::LookingForTayar, OrderStatus::Pending];
+
+        foreach (OrderStatus::cases() as $status) {
+            $this->assertSame(in_array($status, $beforePickup, true), $status->canBeCancelledBy(OrderCanceller::Sender), $status->value);
+            $this->assertSame(in_array($status, $beforePickup, true), $status->canBeCancelledBy(OrderCanceller::Staff), $status->value);
+            $this->assertSame($status === OrderStatus::LookingForTayar, $status->canBeCancelledBy(OrderCanceller::System), $status->value);
         }
     }
 

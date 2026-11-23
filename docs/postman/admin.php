@@ -595,9 +595,10 @@ return [
             'description' => <<<'MD'
                 Following and cancelling orders (staff with `orders.view`; cancelling needs `orders.manage`):
 
-                1. **Orders** page: a table with status, sender, category, mode and date filters, and a search box (order code or phone) → **List orders**.
-                2. **Order details** page → **Get order**: the fee breakdown (the tayar earning and platform fee are estimates until a tayar accepts) and the status history with who made each change.
-                3. **Cancel** button (only while `can_cancel` is true) → a dialog with **Get cancel reasons** and a note → **Cancel order**.
+                1. **Orders** page: a table with status, sender, tayar, category, mode and date filters, and a search box (order code or phone) → **List orders**.
+                2. **Order details** page → **Get order**: the fee breakdown (the tayar earning and platform fee are estimates until a tayar accepts), the tayar and vehicle once accepted, and the status history with who made each change (no name = the system).
+                3. **Offers** tab on the order details page → **List order offers**: which tayars got the order in each round, and who accepted, rejected or let it expire.
+                4. **Cancel** button (only while `can_cancel` is true: before pickup, also after a tayar accepted) → a dialog with **Get cancel reasons** and a note → **Cancel order**. Cancelling an accepted order notifies the tayar and never records a fee; a sender who cancelled after the free period shows `cancel_fee` and `cancel_fee_owed_to` (recorded only, settled later by the wallet).
                 MD,
             'requests' => [
                 [
@@ -609,6 +610,11 @@ return [
                     'route' => 'api.v1.admin.orders.show',
                     'name' => 'Get order',
                     'screen' => '**Order details** page, on open.',
+                ],
+                [
+                    'route' => 'api.v1.admin.orders.offers.index',
+                    'name' => 'List order offers',
+                    'screen' => '**Order details › Offers** tab, on open and when the page changes.',
                 ],
                 [
                     'route' => 'api.v1.public.order-reasons.index',

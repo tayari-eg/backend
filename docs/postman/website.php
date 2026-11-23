@@ -210,6 +210,9 @@ return [
                 4. **My orders** page: two tabs, Active and Past → **Get my orders** with `status` = `active` or `past`. Load more with `cursor` = `meta.next_cursor`.
                 5. **Order details** → **Get order**. Show **Cancel order** while `can_cancel` is true.
                 6. **Cancel** dialog → **Get cancel reasons**, then **Cancel order** with the picked reason and an optional note.
+                7. While `status` = `looking_for_tayar`, **Order details** shows "Looking for a tayar…" until `search_ends_at`, and calls **Get order** again every 10 seconds while the page is open.
+                8. When a tayar accepts (`status` = `pending`), show the `tayar` card: name, phone and the vehicle (`type`, `model`, `color`, `plate_number`). **Cancel order** stays until pickup: free until `free_cancel_until` (:free_cancel_seconds seconds), then the **Cancel** dialog shows the fee from `cancel_fee_now`, owed to the tayar.
+                9. `cancelled_by_type` = `system`: no tayar accepted in time. Show "No tayar found" with a **Send again** button that opens New order with the same details and a new `idempotency_key`.
                 MD,
             'requests' => [
                 [
@@ -231,7 +234,7 @@ return [
                 [
                     'route' => 'api.v1.client.orders.show',
                     'name' => 'Get order',
-                    'screen' => '**Order details** page, on open.',
+                    'screen' => '**Order details** page, on open, and every 10 seconds while the order is looking for a tayar.',
                 ],
                 [
                     'route' => 'api.v1.public.order-reasons.index',

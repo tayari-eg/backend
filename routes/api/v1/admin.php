@@ -9,6 +9,7 @@ use App\Http\Controllers\Api\V1\Admin\CategoryIconController;
 use App\Http\Controllers\Api\V1\Admin\ModeController;
 use App\Http\Controllers\Api\V1\Admin\NationalIdReviewController;
 use App\Http\Controllers\Api\V1\Admin\OrderController;
+use App\Http\Controllers\Api\V1\Admin\OrderOfferController;
 use App\Http\Controllers\Api\V1\Admin\PricingRuleController;
 use App\Http\Controllers\Api\V1\Admin\StaffController;
 use App\Http\Controllers\Api\V1\Admin\TayarApplicationReviewController;
@@ -146,6 +147,7 @@ Route::middleware(['auth:sanctum', 'staff'])->group(function (): void {
     Route::middleware('permission:'.StaffPermission::OrdersView->value)->group(function (): void {
         Route::get('orders', [OrderController::class, 'index'])->name('orders.index');
         Route::get('orders/{order}', [OrderController::class, 'show'])->name('orders.show');
+        Route::get('orders/{order}/offers', OrderOfferController::class)->name('orders.offers.index');
     });
 
     Route::middleware('permission:'.StaffPermission::OrdersManage->value)->group(function (): void {

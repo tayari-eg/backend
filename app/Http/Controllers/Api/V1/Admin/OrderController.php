@@ -16,12 +16,12 @@ class OrderController extends Controller
     /**
      * @var list<string>
      */
-    private const array LIST_RELATIONS = ['sender.businessProfile', 'category', 'mode'];
+    private const array LIST_RELATIONS = ['sender.businessProfile', 'category', 'mode', 'tayar', 'workSession.vehicle.vehicleType', 'cancelFeeOwedTo'];
 
     /**
      * @var list<string>
      */
-    private const array DETAIL_RELATIONS = ['sender.businessProfile', 'category', 'mode', 'canceller', 'cancelReason', 'statusHistories.changer'];
+    private const array DETAIL_RELATIONS = ['sender.businessProfile', 'category', 'mode', 'tayar', 'workSession.vehicle.vehicleType', 'cancelFeeOwedTo', 'canceller', 'cancelReason', 'statusHistories.changer'];
 
     /**
      * Every order, newest first, with filters and a search by order code or phone.
@@ -37,6 +37,7 @@ class OrderController extends Controller
             ->with(self::LIST_RELATIONS)
             ->when($request->status(), fn ($query, $status) => $query->where('status', $status))
             ->when($request->integerFilter('sender_id'), fn ($query, int $senderId) => $query->where('sender_id', $senderId))
+            ->when($request->integerFilter('tayar_id'), fn ($query, int $tayarId) => $query->where('tayar_id', $tayarId))
             ->when($request->integerFilter('category_id'), fn ($query, int $categoryId) => $query->where('category_id', $categoryId))
             ->when($request->integerFilter('mode_id'), fn ($query, int $modeId) => $query->where('mode_id', $modeId))
             ->when($request->createdFrom(), fn ($query, $from) => $query->where('created_at', '>=', $from))
@@ -60,7 +61,7 @@ class OrderController extends Controller
     }
 
     /**
-     * Cancel an order no tayar has accepted yet, with a cancel reason and an optional note.
+     * Cancel an order before pickup, with a cancel reason and an optional note, never with a fee; an accepted order keeps its tayar.
      */
     public function cancel(CancelOrderRequest $request, Order $order, CancelOrderAction $cancelOrder): OrderResource
     {
