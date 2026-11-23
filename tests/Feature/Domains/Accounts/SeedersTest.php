@@ -2,21 +2,35 @@
 
 namespace Tests\Feature\Domains\Accounts;
 
+use App\Domains\Accounts\Enums\AppMode;
+use App\Domains\Accounts\Enums\RegisterAs;
 use App\Domains\Accounts\Enums\StaffPermission;
 use App\Domains\Accounts\Enums\StaffRole;
+use App\Domains\Accounts\Enums\VerificationStatus;
+use App\Domains\Accounts\Models\BusinessProfile;
 use App\Domains\Accounts\Models\BusinessType;
 use App\Domains\Catalog\Enums\ModeCode;
+use App\Domains\Catalog\Models\Area;
+use App\Domains\Catalog\Models\Category;
 use App\Domains\Catalog\Models\Mode;
+use App\Domains\Pricing\Models\PricingRule;
+use App\Domains\Tayars\Enums\TayarStatus;
+use App\Domains\Tayars\Enums\VehicleStatus;
+use App\Domains\Tayars\Models\TayarProfile;
 use App\Domains\Tayars\Models\VehicleType;
 use App\Models\User;
 use Database\Seeders\BusinessTypeSeeder;
 use Database\Seeders\DatabaseSeeder;
+use Database\Seeders\DemoDataSeeder;
 use Database\Seeders\ModeSeeder;
 use Database\Seeders\RolesAndPermissionsSeeder;
 use Database\Seeders\SuperAdminSeeder;
 use Database\Seeders\VehicleTypeSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Storage;
 use Spatie\Permission\Models\Permission;
 use Spatie\Permission\Models\Role;
 use Tests\TestCase;
@@ -180,5 +194,168 @@ class SeedersTest extends TestCase
         $this->seed(SuperAdminSeeder::class);
 
         $this->assertTrue($admin->refresh()->hasRole(StaffRole::SuperAdmin->value));
+    }
+
+    public function test_demo_data_refuses_to_run_without_a_password_and_creates_nothing(): void
+    {
+        config(['tayari.demo.users_password' => '']);
+        Storage::fake('local');
+
+        $this->seed(DemoDataSeeder::class);
+
+        $this->assertDatabaseCount('users', 0);
+        $this->assertDatabaseCount('roles', 0);
+        $this->assertDatabaseCount('categories', 0);
+        $this->assertDatabaseCount('areas', 0);
+        $this->assertDatabaseCount('pricing_rules', 0);
+        $this->assertDatabaseCount('media', 0);
+    }
+
+    public function test_demo_data_creates_the_catalog_and_accounts_that_look_like_real_data(): void
+    {
+        config(['tayari.demo.users_password' => 'demo-secret']);
+        Storage::fake('local');
+
+        $this->seed(DemoDataSeeder::class);
+
+        $this->assertDatabaseCount('roles', count(StaffRole::cases()));
+        $this->assertDatabaseCount('modes', 3);
+        $this->assertSame(11, Category::query()->count());
+        // Every main category needs an active subcategory to show in GET /api/v1/categories.
+        $this->assertTrue(Category::query()->main()->withCount('children')->get()->every(fn (Category $category): bool => $category->children_count > 0));
+        $this->assertFalse(Category::query()->whereNameIs('en', 'Medicines')->sole()->is_food);
+        $this->assertSame(['Food', 'Documents', 'Parcels', 'Pharmacy'], Category::query()->main()->orderBy('sort_order')->get()->map(fn (Category $category): string => $category->getTranslation('name', 'en'))->all());
+        $this->assertTrue(Category::query()->where('parent_id', Category::query()->main()->whereNameIs('en', 'Food')->value('id'))->get()->every(fn (Category $category): bool => $category->is_food));
+        $this->assertFalse(Category::query()->main()->whereNameIs('en', 'Pharmacy')->sole()->is_food);
+        $this->assertSame(8, Area::query()->count());
+        $this->assertSame('الجيزة', Area::query()->whereNameIs('en', 'Sheikh Zayed')->sole()->getTranslation('city', 'ar'));
+        $this->assertSame(4, PricingRule::query()->count());
+        $this->assertSame(1, PricingRule::query()->whereNotNull('vehicle_type_id')->count());
+        $this->assertNull(PricingRule::query()->whereHas('mode', fn ($query) => $query->where('code', ModeCode::LongDistance))->sole()->food_extra);
+
+        $this->assertDatabaseCount('users', 11);
+        $this->assertSame([
+            '+201000000001' => 'ready',
+            '+201000000002' => 'ready',
+            '+201000000003' => 'ready',
+            '+201000000004' => 'ready',
+            '+201000000005' => 'business_under_review',
+            '+201000000006' => 'business_rejected',
+            '+201000000007' => 'ready',
+            '+201000000008' => 'tayar_under_review',
+            '+201000000009' => 'tayar_rejected',
+            '+201000000010' => 'complete_business_profile',
+            '+201000000011' => 'complete_tayar_application',
+        ], User::query()->with(['businessProfile', 'tayarProfile'])->orderBy('phone')->get()->mapWithKeys(fn (User $user): array => [$user->phone => $user->onboardingStep()->value])->all());
+        $businessNew = User::query()->where('phone', '+201000000010')->sole();
+        $this->assertSame([RegisterAs::Business, 'business'], [$businessNew->register_as, $businessNew->account_type->value]);
+        $tayarNew = User::query()->where('phone', '+201000000011')->sole();
+        $this->assertSame([RegisterAs::Tayar, 'individual'], [$tayarNew->register_as, $tayarNew->account_type->value]);
+        $this->assertTrue(User::query()->get()->every(fn (User $user): bool => $user->hasVerifiedPhone() && Hash::check('demo-secret', $user->password)));
+        $this->assertTrue(User::query()->where('phone', '+201000000001')->sole()->hasRole(StaffRole::Admin->value));
+        $this->assertTrue(User::query()->where('phone', '+201000000002')->sole()->hasRole(StaffRole::Ops->value));
+        $this->assertTrue(User::query()->where('phone', '+201000000003')->sole()->hasRole(StaffRole::Support->value));
+        $admin = User::query()->where('phone', '+201000000001')->sole();
+
+        $businesses = BusinessProfile::query()->with('user')->orderBy('id')->get();
+        $this->assertSame([VerificationStatus::Approved, VerificationStatus::Pending, VerificationStatus::Rejected], $businesses->pluck('verification_status')->all());
+        $this->assertTrue($businesses->every(fn (BusinessProfile $profile): bool => $profile->user->register_as === RegisterAs::Business && $profile->user->account_type->value === 'business'));
+        $this->assertSame($admin->id, $businesses[0]->reviewed_by);
+        $this->assertNotNull($businesses[2]->rejection_reason);
+        $this->assertNull($businesses[1]->reviewed_at);
+
+        $tayars = TayarProfile::query()->with(['user', 'vehicle'])->orderBy('id')->get();
+        $this->assertSame([TayarStatus::Approved, TayarStatus::Pending, TayarStatus::Rejected], $tayars->pluck('status')->all());
+        $this->assertSame([VehicleStatus::Approved, VehicleStatus::Pending, VehicleStatus::Rejected], $tayars->map(fn (TayarProfile $profile): VehicleStatus => $profile->vehicle->status)->all());
+        $this->assertTrue($tayars[0]->vehicle->is_active);
+        $this->assertSame(AppMode::Tayar, $tayars[0]->user->last_mode);
+        $this->assertSame($admin->id, $tayars[0]->reviewed_by);
+        $this->assertNotNull($tayars[2]->can_reapply_at);
+        $this->assertNotNull($tayars[2]->rejection_reason);
+        $this->assertDatabaseCount('tayar_reviews', 2);
+
+        // Businesses: 4 + 2 + 2 documents; tayars: 5 + 1 + 2, 4 + 2 (a bicycle has no licences), 5 + 1 + 2.
+        $this->assertDatabaseCount('media', 30);
+        $this->assertSame(['local'], DB::table('media')->distinct()->pluck('disk')->all());
+    }
+
+    public function test_running_the_demo_data_seeder_twice_creates_nothing_twice(): void
+    {
+        config(['tayari.demo.users_password' => 'demo-secret']);
+        Storage::fake('local');
+
+        $this->seed(DemoDataSeeder::class);
+        $this->seed(DemoDataSeeder::class);
+
+        $this->assertDatabaseCount('users', 11);
+        $this->assertDatabaseCount('categories', 11);
+        $this->assertDatabaseCount('areas', 8);
+        $this->assertDatabaseCount('pricing_rules', 4);
+        $this->assertDatabaseCount('business_profiles', 3);
+        $this->assertDatabaseCount('tayar_profiles', 3);
+        $this->assertDatabaseCount('vehicles', 3);
+        $this->assertDatabaseCount('tayar_reviews', 2);
+        $this->assertDatabaseCount('media', 30);
+        $this->assertDatabaseCount('modes', 3);
+        $this->assertDatabaseCount('vehicle_types', 4);
+        $this->assertDatabaseCount('business_types', 10);
+    }
+
+    public function test_a_second_demo_run_writes_no_placeholder_files_for_existing_applications(): void
+    {
+        config(['tayari.demo.users_password' => 'demo-secret']);
+        Storage::fake('local');
+        $seeder = new class extends DemoDataSeeder
+        {
+            public int $placeholderFiles = 0;
+
+            protected function placeholderFile(string $fileName): UploadedFile
+            {
+                $this->placeholderFiles++;
+
+                return parent::placeholderFile($fileName);
+            }
+        };
+        $this->app->instance(DemoDataSeeder::class, $seeder);
+
+        $this->seed(DemoDataSeeder::class);
+        $this->assertSame(30, $seeder->placeholderFiles);
+
+        $seeder->placeholderFiles = 0;
+        $this->seed(DemoDataSeeder::class);
+
+        $this->assertSame(0, $seeder->placeholderFiles);
+        $this->assertDatabaseCount('media', 30);
+    }
+
+    public function test_demo_accounts_stop_when_the_reviewer_phone_belongs_to_a_non_staff_user(): void
+    {
+        config(['tayari.demo.users_password' => 'demo-secret']);
+        Storage::fake('local');
+        $customer = User::factory()->create(['phone' => '+201000000001']);
+
+        $this->seed(DemoDataSeeder::class);
+
+        $this->assertFalse($customer->refresh()->isStaff());
+        $this->assertDatabaseMissing('business_profiles', ['reviewed_by' => $customer->id]);
+        $this->assertDatabaseMissing('tayar_profiles', ['reviewed_by' => $customer->id]);
+        $this->assertDatabaseMissing('tayar_reviews', ['reviewed_by' => $customer->id]);
+        $this->assertDatabaseCount('business_profiles', 0);
+        $this->assertDatabaseCount('tayar_profiles', 0);
+        $this->assertDatabaseCount('media', 0);
+    }
+
+    public function test_the_database_seeder_never_creates_demo_data(): void
+    {
+        config(['tayari.demo.users_password' => 'demo-secret', 'tayari.super_admin' => ['name' => null, 'phone' => null, 'password' => null]]);
+
+        $this->seed(DatabaseSeeder::class);
+
+        $this->assertDatabaseCount('users', 0);
+        $this->assertDatabaseCount('categories', 0);
+        $this->assertDatabaseCount('areas', 0);
+        $this->assertDatabaseCount('pricing_rules', 0);
+        $this->assertDatabaseCount('business_profiles', 0);
+        $this->assertDatabaseCount('tayar_profiles', 0);
     }
 }

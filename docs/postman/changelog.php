@@ -29,6 +29,14 @@
 return [
 
     [
+        'version' => '1.6.0',
+        'date' => '2026-11-23',
+        'changes' => [
+            'Docs: Read me first — a new Demo accounts section: the DemoDataSeeder command (php artisan db:seed --class=DemoDataSeeder), the shared demo password, and the 11 demo accounts with phone, name, kind, status, next_step and the app that uses each; they exist only where the seeder was run with that password and are wiped before launch. The Tayari Local environment adds demo_password and one variable per demo phone (demo_admin_phone to demo_tayar_new_phone). Apps: Website, Admin panel, Flutter client mode, Flutter tayar mode.',
+        ],
+    ],
+
+    [
         'version' => '1.5.0',
         'date' => '2026-11-23',
         'changes' => [

@@ -2,7 +2,9 @@
 
 namespace Tests\Feature\Console;
 
+use App\Domains\Accounts\Data\PhoneNumber;
 use App\Models\User;
+use Database\Seeders\DemoDataSeeder;
 use Dotenv\Dotenv;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Arr;
@@ -140,6 +142,18 @@ class ExportPostmanCollectionTest extends TestCase
             'locale' => 'ar',
             'platform' => 'android',
             'appVersion' => '1.0.0',
+            'demo_password' => 'DFT5sxvmezNBWL8g',
+            'demo_admin_phone' => '01000000001',
+            'demo_ops_phone' => '01000000002',
+            'demo_support_phone' => '01000000003',
+            'demo_business_approved_phone' => '01000000004',
+            'demo_business_pending_phone' => '01000000005',
+            'demo_business_rejected_phone' => '01000000006',
+            'demo_business_new_phone' => '01000000010',
+            'demo_tayar_approved_phone' => '01000000007',
+            'demo_tayar_pending_phone' => '01000000008',
+            'demo_tayar_rejected_phone' => '01000000009',
+            'demo_tayar_new_phone' => '01000000011',
         ], array_column($environment['values'], 'value', 'key'));
     }
 
@@ -411,8 +425,15 @@ class ExportPostmanCollectionTest extends TestCase
         $this->export()->assertSuccessful();
         $content = $this->exportedFile(self::COLLECTION_FILE).$this->exportedFile(self::ENVIRONMENT_FILE);
 
+        // The documented demo accounts (DemoDataSeeder) are the only other fake phones allowed.
+        $demoPhones = array_map(fn (string $phone): string => PhoneNumber::from($phone)->value, DemoDataSeeder::phones());
+
         preg_match_all('/(?:\+?20|0)?1[0125]\d{8}/', $content, $phones);
         foreach ($phones[0] as $phone) {
+            if (in_array(PhoneNumber::from($phone)->value, $demoPhones, true)) {
+                continue;
+            }
+
             $this->assertMatchesRegularExpression('/^(?:\+?20|0)?1000000000$/', $phone, "Use a clearly fake phone instead of [{$phone}].");
         }
 

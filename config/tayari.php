@@ -157,4 +157,18 @@ return [
         'password' => env('SUPER_ADMIN_PASSWORD'),
     ],
 
+    /*
+    |--------------------------------------------------------------------------
+    | Demo Data
+    |--------------------------------------------------------------------------
+    |
+    | The password of every demo account made by DemoDataSeeder (php artisan
+    | db:seed --class=DemoDataSeeder). Empty: the seeder refuses to run.
+    |
+    */
+
+    'demo' => [
+        'users_password' => env('DEMO_USERS_PASSWORD'),
+    ],
+
 ];
