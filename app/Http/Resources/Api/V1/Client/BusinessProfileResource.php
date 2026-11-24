@@ -45,6 +45,12 @@ class BusinessProfileResource extends JsonResource
                 'name' => $this->user->name,
                 'phone' => $this->user->phone,
             ]),
+            // Staff only: the business never sees its own score.
+            'rating' => $this->when($request->user()?->isStaff() === true, fn (): array => [
+                'rating_avg' => $this->rating_avg,
+                'ratings_count_30d' => $this->ratings_count_30d,
+                'updated_at' => $this->rating_updated_at?->toIso8601ZuluString(),
+            ]),
             'created_at' => $this->created_at?->toIso8601ZuluString(),
             'updated_at' => $this->updated_at?->toIso8601ZuluString(),
         ];

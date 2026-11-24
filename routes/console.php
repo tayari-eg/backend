@@ -21,3 +21,7 @@ Schedule::command('tayars:set-stale-offline')->everyMinute()->withoutOverlapping
 
 // Offers expire within a minute; reads and accepts check expires_at themselves, this only starts the next round.
 Schedule::command('orders:dispatch-offers')->everyMinute()->withoutOverlapping(5);
+
+Schedule::command('tayars:recalculate-ranks')
+    ->dailyAt(config('tayari.ranks.recalculate_at'))
+    ->timezone(config('app.business_timezone'));

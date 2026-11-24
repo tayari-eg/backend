@@ -23,6 +23,7 @@ class DatabaseSeeder extends Seeder
             OrderReasonSeeder::class,
             WalletAdjustmentReasonSeeder::class,
             SystemWalletSeeder::class,
+            TayarRankSeeder::class,
         ]);
     }
 }

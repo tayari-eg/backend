@@ -21,5 +21,11 @@ return [
     'cannot_block_self' => 'لا يمكنك حظر حسابك.',
     'last_super_admin' => 'هذا آخر مدير عام نشط، لذلك لا يمكن حظره أو تغيير دوره.',
     'phone_belongs_to_account' => 'رقم الموبايل هذا مسجل بالفعل لحساب آخر.',
+    'rating_has_no_comment' => 'لا يوجد تعليق في هذا التقييم لإخفائه.',
+    'rating_comment_already_hidden' => 'هذا التعليق مخفي بالفعل.',
+    'rating_comment_not_hidden' => 'هذا التعليق غير مخفي.',
+    'tayar_rank_name_taken' => 'يوجد رتبة أخرى بنفس الاسم.',
+    'tayar_rank_below_previous' => 'يجب ألا يقل هذا عن متطلبات رتبة :rank.',
+    'tayar_rank_above_next' => 'يجب ألا يزيد هذا عن متطلبات رتبة :rank.',
 
 ];

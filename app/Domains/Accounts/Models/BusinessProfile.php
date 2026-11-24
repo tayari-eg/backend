@@ -45,6 +45,9 @@ class BusinessProfile extends Model implements HasMedia
             'verification_status' => VerificationStatus::class,
             'avg_daily_orders' => 'integer',
             'reviewed_at' => 'datetime',
+            'rating_avg' => 'decimal:2',
+            'ratings_count_30d' => 'integer',
+            'rating_updated_at' => 'datetime',
         ];
     }
 

@@ -5,6 +5,7 @@ use App\Http\Controllers\Api\V1\Client\BusinessProfileController;
 use App\Http\Controllers\Api\V1\Client\NationalIdController;
 use App\Http\Controllers\Api\V1\Client\OrderController;
 use App\Http\Controllers\Api\V1\Client\OrderEstimateController;
+use App\Http\Controllers\Api\V1\Client\OrderRatingController;
 use App\Http\Controllers\Api\V1\Client\TayarDocumentController;
 use App\Http\Controllers\Api\V1\Client\TayarProfileController;
 use App\Http\Controllers\Api\V1\Client\TayarVehicleController;
@@ -32,6 +33,7 @@ Route::middleware(['auth:sanctum', 'client'])->group(function (): void {
     Route::post('orders', [OrderController::class, 'store'])->name('orders.store');
     Route::get('orders/{order}', [OrderController::class, 'show'])->name('orders.show');
     Route::post('orders/{order}/cancel', [OrderController::class, 'cancel'])->name('orders.cancel');
+    Route::put('orders/{order}/rating', [OrderRatingController::class, 'update'])->name('orders.rating.update');
 
     Route::get('wallet', [WalletController::class, 'show'])->name('wallet.show');
     Route::get('wallet/transactions', [WalletController::class, 'transactions'])->name('wallet.transactions');

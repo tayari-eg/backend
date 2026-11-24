@@ -55,6 +55,21 @@ class TayarProfileResource extends JsonResource
                 'reviewed_by' => $review->reviewer === null ? null : ['id' => $review->reviewer->id, 'name' => $review->reviewer->name],
                 'created_at' => $review->created_at?->toIso8601ZuluString(),
             ])->all()),
+            // Only the admin screens load the rank.
+            'standing' => $this->whenLoaded('rank', fn (): array => [
+                'rank' => $this->rank === null ? null : [
+                    'id' => $this->rank->id,
+                    'code' => $this->rank->code,
+                    'name' => $this->rank->getTranslation('name', app()->getLocale()),
+                    'level' => $this->rank->level,
+                    'color' => $this->rank->color,
+                ],
+                'rank_below_since' => $this->rank_below_since?->toIso8601ZuluString(),
+                'delivered_orders_30d' => $this->delivered_orders_30d,
+                'ratings_count_30d' => $this->ratings_count_30d,
+                'rating_avg' => $this->rating_avg,
+                'updated_at' => $this->standing_updated_at?->toIso8601ZuluString(),
+            ]),
             'created_at' => $this->created_at?->toIso8601ZuluString(),
             'updated_at' => $this->updated_at?->toIso8601ZuluString(),
         ];

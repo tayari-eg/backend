@@ -5,6 +5,7 @@ namespace Database\Seeders;
 use App\Domains\Accounts\Actions\ApproveBusinessProfileAction;
 use App\Domains\Accounts\Actions\CreateBusinessProfileAction;
 use App\Domains\Accounts\Actions\CreateStaffUserAction;
+use App\Domains\Accounts\Actions\RecalculateBusinessRatingsAction;
 use App\Domains\Accounts\Actions\RejectBusinessProfileAction;
 use App\Domains\Accounts\Actions\SwitchAppModeAction;
 use App\Domains\Accounts\Data\PhoneNumber;
@@ -23,19 +24,25 @@ use App\Domains\Catalog\Enums\ModeCode;
 use App\Domains\Catalog\Models\Area;
 use App\Domains\Catalog\Models\Category;
 use App\Domains\Catalog\Models\Mode;
+use App\Domains\Incentives\Actions\RecalculateTayarRankAction;
+use App\Domains\Incentives\Models\TayarRank;
 use App\Domains\Orders\Actions\AcceptOfferAction;
 use App\Domains\Orders\Actions\CancelOrderAction;
 use App\Domains\Orders\Actions\ConfirmPickupAction;
 use App\Domains\Orders\Actions\ConfirmReceiverAction;
 use App\Domains\Orders\Actions\CreateOrderAction;
 use App\Domains\Orders\Actions\DispatchOrderOffersAction;
+use App\Domains\Orders\Actions\HideRatingCommentAction;
+use App\Domains\Orders\Actions\RateOrderAction;
 use App\Domains\Orders\Enums\OfferStatus;
 use App\Domains\Orders\Enums\OrderCanceller;
 use App\Domains\Orders\Enums\OrderReasonType;
 use App\Domains\Orders\Enums\OrderStatus;
+use App\Domains\Orders\Enums\RaterRole;
 use App\Domains\Orders\Enums\ShippingPaidBy;
 use App\Domains\Orders\Models\Order;
 use App\Domains\Orders\Models\OrderOffer;
+use App\Domains\Orders\Models\OrderRating;
 use App\Domains\Orders\Models\OrderReason;
 use App\Domains\Pricing\Actions\CalculateShippingFeeAction;
 use App\Domains\Pricing\Actions\CreatePricingRuleAction;
@@ -59,6 +66,9 @@ use App\Domains\Wallet\Models\Wallet;
 use App\Domains\Wallet\Models\WalletAdjustmentReason;
 use App\Models\User;
 use Brick\Math\BigDecimal;
+use Carbon\Carbon;
+use Carbon\CarbonImmutable;
+use Carbon\CarbonInterface;
 use Illuminate\Database\Seeder;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\DB;
@@ -238,6 +248,36 @@ class DemoDataSeeder extends Seeder
      */
     private const array DEMO_TAYAR_ONLINE = ['lat' => 30.0575, 'lng' => 31.3390, 'area' => 'Nasr City'];
 
+    /**
+     * Past orders of the approved business that the demo tayar delivered over the last weeks, so the tayar has a rank
+     * above the first, revealed ratings and the business a staff-only score. The receiver pays the shipping and there are
+     * no goods, so the demo wallets keep their story. Keys 2000000000NN keep a re-run from adding more.
+     */
+    private const int RATED_HISTORY_ORDERS = 30;
+
+    private const string RATED_HISTORY_KEY_PREFIX = '6f1c2a8e-0d1b-4c3e-9a51-2000000000';
+
+    /**
+     * The business's stars for the history orders, in turn: an average of 4.60, enough for the second rank.
+     *
+     * @var list<int>
+     */
+    private const array HISTORY_STARS = [5, 5, 4, 5, 4];
+
+    /**
+     * @var array<int, string>
+     */
+    private const array HISTORY_COMMENTS = [
+        0 => 'Fast and polite, thank you.',
+        3 => 'Careful with the parcel.',
+        6 => 'Arrived a little late but kept us updated.',
+    ];
+
+    /**
+     * The history order whose business comment staff hid as abusive (its stars still count).
+     */
+    private const int HIDDEN_COMMENT_ORDER = 9;
+
     private ?User $ordersSender = null;
 
     private ?User $demoTayar = null;
@@ -296,6 +336,7 @@ class DemoDataSeeder extends Seeder
 
         if ($this->ordersSender !== null && $this->demoTayar !== null) {
             $this->seedWallets($reviewer);
+            $this->seedRatings($reviewer);
         }
 
         foreach (self::NEW_ACCOUNTS as $account) {
@@ -337,6 +378,10 @@ class DemoDataSeeder extends Seeder
 
         if (! WalletAdjustmentReason::query()->exists()) {
             $this->call(WalletAdjustmentReasonSeeder::class);
+        }
+
+        if (! TayarRank::query()->exists()) {
+            $this->call(TayarRankSeeder::class);
         }
     }
 
@@ -609,6 +654,97 @@ class DemoDataSeeder extends Seeder
                 $this->command?->warn("Demo settlement {$settlement['reference']} skipped: {$exception->getMessage()}");
             }
         }
+    }
+
+    /**
+     * The business and the demo tayar rate each other on the delivered demo order (still in its window, so hidden from the
+     * other side) and on the history orders (revealed), staff hide one abusive comment, then the demo tayar's rank and the
+     * business's score are worked out as the nightly job does. Each history order is created, delivered and rated at its
+     * own past moment, so every timestamp and wallet entry matches.
+     */
+    private function seedRatings(User $reviewer): void
+    {
+        $deliveredNow = Order::query()->where('sender_id', $this->ordersSender->id)->where('idempotency_key', self::ORDERS[3]['idempotency_key'])->first();
+
+        if ($deliveredNow !== null) {
+            $this->rateBothWays($deliveredNow, 5, 'Quick delivery, thank you.', 5);
+        }
+
+        $category = Category::query()->whereNotNull('parent_id')->whereNameIs('en', 'Papers')->firstOrFail();
+        $pickup = new GeoPoint('30.0590000', '31.3350000');
+        $dropoff = new GeoPoint('30.0650000', '31.3440000');
+        $seededAt = now();
+
+        try {
+            for ($index = 0; $index < self::RATED_HISTORY_ORDERS; $index++) {
+                $key = self::RATED_HISTORY_KEY_PREFIX.str_pad((string) $index, 2, '0', STR_PAD_LEFT);
+                $order = Order::query()->where('sender_id', $this->ordersSender->id)->where('idempotency_key', $key)->first();
+                $deliveredAt = $order?->delivered_at ?? $seededAt->copy()->subDays(3 + intdiv($index * 24, self::RATED_HISTORY_ORDERS))->setTime(10 + $index % 8, 15);
+
+                self::travelTo($deliveredAt->copy()->subHour());
+                $order ??= app(CreateOrderAction::class)->handle($this->ordersSender, [
+                    'idempotency_key' => $key,
+                    'category_id' => $category->id,
+                    'details' => 'Signed papers for a client.',
+                    'pickup_address' => 'Mostafa El Nahas St, Nasr City',
+                    'pickup_lat' => $pickup->lat,
+                    'pickup_lng' => $pickup->lng,
+                    'pickup_contact_phone' => null,
+                    'dropoff_address' => 'Hassan El Maamoun St, Nasr City',
+                    'dropoff_lat' => $dropoff->lat,
+                    'dropoff_lng' => $dropoff->lng,
+                    'receiver_name' => 'Demo Receiver Five',
+                    'receiver_phone' => PhoneNumber::from('01000000024')->value,
+                    'goods_value' => '0.00',
+                    'shipping_paid_by' => ShippingPaidBy::Receiver->value,
+                    'shipping_fee' => (string) app(CalculateShippingFeeAction::class)->handle($pickup, $dropoff, $category)->shippingFee,
+                ]);
+
+                self::travelTo($deliveredAt);
+                $this->deliverAsDemoTayar($order->refresh());
+
+                self::travelTo($deliveredAt->copy()->addHour());
+                $this->rateBothWays(
+                    $order->refresh(),
+                    self::HISTORY_STARS[$index % count(self::HISTORY_STARS)],
+                    $index === self::HIDDEN_COMMENT_ORDER ? 'Useless and rude, never again.' : (self::HISTORY_COMMENTS[$index] ?? null),
+                    $index % 4 === 0 ? 4 : 5,
+                );
+            }
+        } finally {
+            self::travelTo(null);
+        }
+
+        $hidden = OrderRating::query()
+            ->where('rater_id', $this->ordersSender->id)
+            ->whereHas('order', fn ($orders) => $orders->where('idempotency_key', self::RATED_HISTORY_KEY_PREFIX.str_pad((string) self::HIDDEN_COMMENT_ORDER, 2, '0', STR_PAD_LEFT)))
+            ->first();
+
+        if ($hidden !== null && ! $hidden->isCommentHidden()) {
+            app(HideRatingCommentAction::class)->handle($hidden, $reviewer, 'Insulting language.');
+        }
+
+        app(RecalculateTayarRankAction::class)->handle(TayarProfile::query()->where('user_id', $this->demoTayar->id)->firstOrFail(), now());
+        app(RecalculateBusinessRatingsAction::class)->handle([(int) $this->ordersSender->businessProfile()->value('id')], now());
+    }
+
+    /**
+     * Skipped once the order's rating window is over (a re-run on a later day).
+     */
+    private function rateBothWays(Order $order, int $businessStars, ?string $businessComment, int $tayarStars): void
+    {
+        if (! $order->canBeRatedNow()) {
+            return;
+        }
+
+        app(RateOrderAction::class)->handle($order, $this->ordersSender, RaterRole::Business, $businessStars, $businessComment);
+        app(RateOrderAction::class)->handle($order, $this->demoTayar, RaterRole::Tayar, $tayarStars, null);
+    }
+
+    private static function travelTo(?CarbonInterface $moment): void
+    {
+        Carbon::setTestNow($moment);
+        CarbonImmutable::setTestNow($moment);
     }
 
     /**

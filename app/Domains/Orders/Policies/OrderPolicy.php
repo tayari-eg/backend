@@ -36,6 +36,22 @@ class OrderPolicy
     }
 
     /**
+     * The business that sent the order rates its tayar.
+     */
+    public function rate(User $user, Order $order): bool
+    {
+        return $order->sender_id === $user->id;
+    }
+
+    /**
+     * The tayar who delivered the order rates its business.
+     */
+    public function rateAsTayar(User $user, Order $order): bool
+    {
+        return $order->tayar_id === $user->id;
+    }
+
+    /**
      * The tayar who accepted the order.
      */
     public function viewAsTayar(User $user, Order $order): bool

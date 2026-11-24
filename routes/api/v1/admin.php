@@ -11,9 +11,12 @@ use App\Http\Controllers\Api\V1\Admin\NationalIdReviewController;
 use App\Http\Controllers\Api\V1\Admin\OrderController;
 use App\Http\Controllers\Api\V1\Admin\OrderOfferController;
 use App\Http\Controllers\Api\V1\Admin\PricingRuleController;
+use App\Http\Controllers\Api\V1\Admin\RatingController;
 use App\Http\Controllers\Api\V1\Admin\StaffController;
 use App\Http\Controllers\Api\V1\Admin\TayarApplicationReviewController;
 use App\Http\Controllers\Api\V1\Admin\TayarController;
+use App\Http\Controllers\Api\V1\Admin\TayarRankController;
+use App\Http\Controllers\Api\V1\Admin\TayarRankHistoryController;
 use App\Http\Controllers\Api\V1\Admin\UserController;
 use App\Http\Controllers\Api\V1\Admin\VehicleTypeController;
 use App\Http\Controllers\Api\V1\Admin\WalletAdjustmentReasonController;
@@ -180,6 +183,26 @@ Route::middleware(['auth:sanctum', 'staff'])->group(function (): void {
         Route::post('wallet-adjustment-reasons/{walletAdjustmentReason}/deactivate', [WalletAdjustmentReasonController::class, 'deactivate'])->name('wallet-adjustment-reasons.deactivate');
         Route::delete('wallet-adjustment-reasons/{walletAdjustmentReason}', [WalletAdjustmentReasonController::class, 'destroy'])->name('wallet-adjustment-reasons.destroy');
     });
+
+    Route::middleware('permission:'.StaffPermission::RatingsView->value)->group(function (): void {
+        Route::get('ratings', [RatingController::class, 'index'])->name('ratings.index');
+        Route::get('ratings/{rating}', [RatingController::class, 'show'])->name('ratings.show');
+    });
+
+    Route::middleware('permission:'.StaffPermission::RatingsModerate->value)->group(function (): void {
+        Route::post('ratings/{rating}/hide-comment', [RatingController::class, 'hideComment'])->name('ratings.hide-comment');
+        Route::post('ratings/{rating}/unhide-comment', [RatingController::class, 'unhideComment'])->name('ratings.unhide-comment');
+    });
+
+    Route::middleware('permission:'.StaffPermission::RanksView->value)->group(function (): void {
+        Route::get('tayar-ranks', [TayarRankController::class, 'index'])->name('tayar-ranks.index');
+        Route::get('tayar-ranks/{tayarRank}', [TayarRankController::class, 'show'])->name('tayar-ranks.show');
+        Route::get('tayars/{tayar}/rank-history', TayarRankHistoryController::class)->name('tayars.rank-history');
+    });
+
+    Route::patch('tayar-ranks/{tayarRank}', [TayarRankController::class, 'update'])
+        ->middleware('permission:'.StaffPermission::RanksManage->value)
+        ->name('tayar-ranks.update');
 
     Route::middleware('permission:'.StaffPermission::StaffManage->value)->group(function (): void {
         Route::get('staff', [StaffController::class, 'index'])->name('staff.index');

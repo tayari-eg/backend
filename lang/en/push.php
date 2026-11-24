@@ -62,5 +62,14 @@ return [
         'title' => 'Welcome bonus',
         'body' => 'You got a EGP :amount welcome bonus in your wallet.',
     ],
+    'rank_changed' => [
+        'title' => 'Your rank changed',
+        'up_body' => 'Well done! Your rank is now :rank.',
+        'down_body' => 'Your rank is now :rank. Deliver more orders and keep your ratings up to move back up.',
+    ],
+    'rank_at_risk' => [
+        'title' => 'Your rank is at risk',
+        'body' => 'You are below what :rank needs. Meet it again by :date to keep your rank.',
+    ],
 
 ];

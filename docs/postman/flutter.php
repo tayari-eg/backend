@@ -181,6 +181,8 @@ return [
                 | `wallet_cash_received` | a tayar whose cash hand-in staff recorded | `wallet_id`, `posting_id` | **Wallet** (tayar mode) |
                 | `wallet_adjusted` | the owner of a wallet staff adjusted, or whose payout or hand-in staff reversed | `wallet_id`, `posting_id` | **Wallet** (tayar or client mode) |
                 | `wallet_signup_bonus` | a newly approved tayar | `wallet_id`, `posting_id` | **Wallet** (tayar mode) |
+                | `rank_changed` | a tayar whose rank went up, or down after the grace days (nightly) | `rank_code`, `direction` (`up` or `down`) | **My rank** (tayar mode) |
+                | `rank_at_risk` | a tayar who fell below the rank's needs (once, when the grace days start) | `rank_code`, `drops_at` | **My rank** (tayar mode) |
                 - Android uses the default notification channel (no `channel_id` is sent). If the app later creates its own channel, the server can send its id.
 
                 **Handling it:**
@@ -458,6 +460,7 @@ return [
                 9. `cancelled_by_type` = `system`: no tayar accepted in time. Show "No tayar found" with a **Send again** button that opens New order with the same details and a new `idempotency_key`.
                 10. From acceptance to delivery, **Order details** shows the tayar on a map from `tayar.location` (with how old `updated_at` is) and the steps: picked up (with the pickup photos), on the way, delivered or not delivered (with the reason). Poll **Get order** every 10 to 15 seconds while the screen is open, and on `order_picked_up`, `order_on_the_way`, `order_delivered` and `order_not_delivered` pushes. There is no ETA.
                 11. After pickup nobody can cancel. The receiver gets the codes and the tracking link by SMS (only once a real SMS provider is configured); a **Share tracking link** button can build it from `tracking_token`. Delivery does not check payment yet.
+                12. **Rate your tayar:** a delivered order shows a card with 1 to 5 stars and an optional comment while `can_rate` is true (:rating_window_hours hours after delivery, until `rating_ends_at`) → **Rate the tayar**. Fill it from `my_rating` to let the user change it; after `rating_ends_at` show it read-only. The tayar sees the rating only after that, without the order or the business name. Open the card from the `order_delivered` push.
                 MD,
             'requests' => [
                 [
@@ -491,6 +494,12 @@ return [
                     'name' => 'Cancel order',
                     'screen' => '**Cancel order** dialog, when the user confirms.',
                     'next' => 'Show the order as cancelled and move it to the Past tab.',
+                ],
+                [
+                    'route' => 'api.v1.client.orders.rating.update',
+                    'name' => 'Rate the tayar',
+                    'screen' => '**Rate your tayar** card on a delivered order, when the user taps **Send** (or **Update**).',
+                    'next' => 'Show the stars as sent; the card stays editable until `editable_until`.',
                 ],
             ],
         ],
@@ -641,6 +650,37 @@ return [
                     'route' => 'api.v1.client.wallet.transactions',
                     'name' => 'Get my business wallet transactions',
                     'screen' => '**Wallet** screen (client mode), the transactions list: on open and on scroll.',
+                ],
+            ],
+        ],
+
+        [
+            'name' => '20. Tayar mode · Rank and ratings',
+            'description' => <<<'MD'
+                The tayar's rank and the ratings between tayars and businesses. Ranks are shown only: no money or offer changes yet.
+
+                1. **Rate the business:** right after **Deliver** succeeds, and on **My order** while `can_rate` is true (:rating_window_hours hours after delivery), show 1 to 5 stars and an optional comment → **Rate the business**. Fill it from `my_rating` to let the tayar change it until `rating_ends_at`.
+                2. **My rank** screen (from the profile or the wallet) → **Get my rank**: the rank badge (`rank.name`, `rank.color`), the 30-day numbers (`delivered_orders_30d`, `rating_avg`: "No average yet" while null, with "from :min_ratings_for_average ratings"), and progress to `next_rank` (orders and average against `min_delivered_orders_30d` and `min_rating`). Show the ladder from `ranks`.
+                3. When `at_risk` is not null, show a warning: "Meet your rank's needs again before `drops_at` (a Cairo date) to keep it". The numbers update every night (`updated_at`) and count whole Cairo days up to the night before.
+                4. **My ratings** list under the rank → **Get my ratings**, newest rating first, infinite scroll with `cursor` = `meta.next_cursor`. A rating shows :rating_window_hours hours after its delivery, with no order, business or time, so the tayar can't tell who gave it.
+                5. Reload **Get my rank** on a `rank_changed` or `rank_at_risk` push.
+                MD,
+            'requests' => [
+                [
+                    'route' => 'api.v1.tayar.orders.rating.update',
+                    'name' => 'Rate the business',
+                    'screen' => '**Rate the business** sheet after **Deliver**, and the rating card on **My order**, when the tayar taps **Send**.',
+                    'next' => 'Close the sheet; the card stays editable until `editable_until`.',
+                ],
+                [
+                    'route' => 'api.v1.tayar.rank.show',
+                    'name' => 'Get my rank',
+                    'screen' => '**My rank** screen (tayar mode), on open, on pull to refresh and on a `rank_changed` or `rank_at_risk` push.',
+                ],
+                [
+                    'route' => 'api.v1.tayar.ratings.index',
+                    'name' => 'Get my ratings',
+                    'screen' => '**My rank** screen, the ratings list: on open and on scroll.',
                 ],
             ],
         ],

@@ -25,7 +25,7 @@ class OrderController extends Controller
     /**
      * @var list<string>
      */
-    private const array DETAIL_RELATIONS = ['sender.businessProfile', 'category', 'mode', 'tayar', 'workSession.vehicle.vehicleType', 'cancelFeeOwedTo', 'canceller', 'cancelReason', 'notDeliveredReason', 'media', 'statusHistories.changer'];
+    private const array DETAIL_RELATIONS = ['sender.businessProfile', 'category', 'mode', 'tayar', 'workSession.vehicle.vehicleType', 'cancelFeeOwedTo', 'canceller', 'cancelReason', 'notDeliveredReason', 'media', 'statusHistories.changer', 'ratings'];
 
     /**
      * Every order, newest first, with filters and a search by order code or phone.

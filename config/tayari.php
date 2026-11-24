@@ -236,6 +236,31 @@ return [
 
     /*
     |--------------------------------------------------------------------------
+    | Ratings and ranks
+    |--------------------------------------------------------------------------
+    |
+    | After delivery, the business and the tayar rate each other for
+    | window_hours; the rated party sees a rating, and it counts, only once
+    | that window ends. An average is shown from min_ratings_for_average
+    | ratings. Ranks are recalculated nightly at recalculate_at (business
+    | time) over the last window_days; a tayar below the rank keeps it for
+    | downgrade_grace_days first.
+    |
+    */
+
+    'ratings' => [
+        'window_hours' => (int) env('RATINGS_WINDOW_HOURS', 48),
+        'min_ratings_for_average' => (int) env('RATINGS_MIN_FOR_AVERAGE', 5),
+    ],
+
+    'ranks' => [
+        'window_days' => (int) env('RANKS_WINDOW_DAYS', 30),
+        'downgrade_grace_days' => (int) env('RANKS_DOWNGRADE_GRACE_DAYS', 7),
+        'recalculate_at' => (string) env('RANKS_RECALCULATE_AT', '03:00'),
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
     | Pagination
     |--------------------------------------------------------------------------
     */

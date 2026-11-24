@@ -5,6 +5,7 @@ namespace App\Http\Resources\Api\V1\Tayar;
 use App\Domains\Orders\Enums\OrderStatus;
 use App\Domains\Orders\Models\Order;
 use App\Http\Resources\Api\V1\MediaResource;
+use App\Http\Resources\Api\V1\OrderRatingResource;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
 
@@ -74,6 +75,12 @@ class OrderResource extends JsonResource
                 'name' => $this->notDeliveredReason->getTranslation('name', app()->getLocale()),
             ]),
             'not_delivered_note' => $this->not_delivered_note,
+            // Within the rating window after delivery; my_rating is my own rating only, never the other party's.
+            'can_rate' => $this->canBeRatedNow(),
+            'rating_ends_at' => $this->ratingEndsAt()?->toIso8601ZuluString(),
+            'my_rating' => $this->whenLoaded('ratings', fn (): ?OrderRatingResource => ($rating = $this->ratings->firstWhere('rater_id', $request->user()?->id)) === null
+                ? null
+                : OrderRatingResource::make($rating)),
             'accepted_at' => $this->accepted_at?->toIso8601ZuluString(),
             'picked_up_at' => $this->picked_up_at?->toIso8601ZuluString(),
             'receiver_confirmed_at' => $this->receiver_confirmed_at?->toIso8601ZuluString(),

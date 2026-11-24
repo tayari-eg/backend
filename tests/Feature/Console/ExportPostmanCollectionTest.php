@@ -166,7 +166,7 @@ class ExportPostmanCollectionTest extends TestCase
         $this->assertSame([], $this->topFolder($collection, 'Changelog')['item']);
 
         $this->assertSame(
-            ['1. App start', '2. Sign up and login', '3. Account', '4. Push notifications', '5. Business profile', '6. National ID', '7. Tayar mode · Become a tayar', '8. Tayar mode · Application status', '9. Tayar mode · Switch mode', '10. Tayar mode · Go online and offline', '11. Tayar mode · Location updates', '12. Tayar mode · Vehicle', '13. Client mode · Categories', '14. Client mode · Orders', '15. Tayar mode · Offers', '16. Tayar mode · My orders', '17. Tayar mode · Delivery', '18. Tayar mode · Wallet', '19. Client mode · Wallet'],
+            ['1. App start', '2. Sign up and login', '3. Account', '4. Push notifications', '5. Business profile', '6. National ID', '7. Tayar mode · Become a tayar', '8. Tayar mode · Application status', '9. Tayar mode · Switch mode', '10. Tayar mode · Go online and offline', '11. Tayar mode · Location updates', '12. Tayar mode · Vehicle', '13. Client mode · Categories', '14. Client mode · Orders', '15. Tayar mode · Offers', '16. Tayar mode · My orders', '17. Tayar mode · Delivery', '18. Tayar mode · Wallet', '19. Client mode · Wallet', '20. Tayar mode · Rank and ratings'],
             array_column($this->topFolder($collection, 'Flutter app')['item'], 'name'),
         );
         $this->assertSame(
@@ -174,7 +174,7 @@ class ExportPostmanCollectionTest extends TestCase
             array_column($this->topFolder($collection, 'React website')['item'], 'name'),
         );
         $this->assertSame(
-            ['1. Login', '2. Business profiles review', '3. National IDs review', '4. Users', '5. Business types', '6. Staff', '7. Tayar applications review', '8. Tayars', '9. Vehicle types', '10. Categories', '11. Modes', '12. Areas', '13. Pricing rules', '14. Account', '15. Orders', '16. Wallets', '17. Wallet adjustment reasons'],
+            ['1. Login', '2. Business profiles review', '3. National IDs review', '4. Users', '5. Business types', '6. Staff', '7. Tayar applications review', '8. Tayars', '9. Vehicle types', '10. Categories', '11. Modes', '12. Areas', '13. Pricing rules', '14. Account', '15. Orders', '16. Wallets', '17. Wallet adjustment reasons', '18. Ratings', '19. Tayar ranks'],
             array_column($this->topFolder($collection, 'React admin panel')['item'], 'name'),
         );
     }

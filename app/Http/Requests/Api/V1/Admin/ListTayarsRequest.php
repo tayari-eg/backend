@@ -25,6 +25,7 @@ class ListTayarsRequest extends FormRequest
             'is_online' => ['sometimes', 'in:true,false,1,0'],
             'blocked' => ['sometimes', 'in:true,false,1,0'],
             'vehicle_type_id' => ['sometimes', 'integer'],
+            'rank_id' => ['sometimes', 'integer'],
             ...$this->userSearchRules(),
             ...$this->paginationRules(),
         ];

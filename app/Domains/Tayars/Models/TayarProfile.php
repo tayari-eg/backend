@@ -3,6 +3,8 @@
 namespace App\Domains\Tayars\Models;
 
 use App\Domains\Accounts\Enums\UserStatus;
+use App\Domains\Incentives\Models\TayarRank;
+use App\Domains\Incentives\Models\TayarRankHistory;
 use App\Domains\Orders\Enums\OrderStatus;
 use App\Domains\Orders\Models\Order;
 use App\Domains\Tayars\Data\BoundingBox;
@@ -62,6 +64,12 @@ class TayarProfile extends Model implements HasMedia
             'current_lat' => 'decimal:7',
             'current_lng' => 'decimal:7',
             'location_updated_at' => 'datetime',
+            'rank_id' => 'integer',
+            'rank_below_since' => 'datetime',
+            'rating_avg' => 'decimal:2',
+            'ratings_count_30d' => 'integer',
+            'delivered_orders_30d' => 'integer',
+            'standing_updated_at' => 'datetime',
         ];
     }
 
@@ -130,6 +138,24 @@ class TayarProfile extends Model implements HasMedia
     public function reviewer(): BelongsTo
     {
         return $this->belongsTo(User::class, 'reviewed_by');
+    }
+
+    /**
+     * The tayar's rank, set by the nightly job; null until its first run after approval.
+     *
+     * @return BelongsTo<TayarRank, $this>
+     */
+    public function rank(): BelongsTo
+    {
+        return $this->belongsTo(TayarRank::class);
+    }
+
+    /**
+     * @return HasMany<TayarRankHistory, $this>
+     */
+    public function rankHistories(): HasMany
+    {
+        return $this->hasMany(TayarRankHistory::class);
     }
 
     /**

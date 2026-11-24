@@ -296,6 +296,14 @@ class Order extends Model implements HasMedia
     }
 
     /**
+     * @return HasMany<OrderRating, $this>
+     */
+    public function ratings(): HasMany
+    {
+        return $this->hasMany(OrderRating::class);
+    }
+
+    /**
      * @return BelongsTo<OrderReason, $this>
      */
     public function notDeliveredReason(): BelongsTo
@@ -357,6 +365,40 @@ class Order extends Model implements HasMedia
             $this->sender_id => OrderCanceller::Sender,
             default => OrderCanceller::Staff,
         };
+    }
+
+    /**
+     * Until when the business and the tayar can rate each other or change their rating (tayari.ratings.window_hours
+     * after delivery); null for an order that can't be rated.
+     */
+    public function ratingEndsAt(): ?CarbonImmutable
+    {
+        if (! $this->status->canBeRated() || $this->delivered_at === null) {
+            return null;
+        }
+
+        return $this->delivered_at->toImmutable()->addHours(config()->integer('tayari.ratings.window_hours'));
+    }
+
+    /**
+     * Why the order can't be rated at that moment, as an orders.* message key, or null when it can: delivered, within the
+     * rating window, and sent by a business (individual senders are rated later). Reads the sender relation.
+     */
+    public function ratingProblemAt(CarbonInterface $moment): ?string
+    {
+        $endsAt = $this->ratingEndsAt();
+
+        return match (true) {
+            $endsAt === null => 'rating_not_delivered',
+            $moment->gte($endsAt) => 'rating_closed',
+            ! $this->sender->isBusiness() => 'rating_business_only',
+            default => null,
+        };
+    }
+
+    public function canBeRatedNow(): bool
+    {
+        return $this->ratingProblemAt(now()) === null;
     }
 
     /**
