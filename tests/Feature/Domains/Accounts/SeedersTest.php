@@ -13,12 +13,16 @@ use App\Domains\Catalog\Enums\ModeCode;
 use App\Domains\Catalog\Models\Area;
 use App\Domains\Catalog\Models\Category;
 use App\Domains\Catalog\Models\Mode;
+use App\Domains\Incentives\Models\TayarRank;
+use App\Domains\Incentives\Models\TayarRankHistory;
 use App\Domains\Orders\Enums\OfferStatus;
 use App\Domains\Orders\Enums\OrderReasonType;
 use App\Domains\Orders\Enums\OrderStatus;
+use App\Domains\Orders\Enums\RaterRole;
 use App\Domains\Orders\Enums\ShippingPaidBy;
 use App\Domains\Orders\Models\Order;
 use App\Domains\Orders\Models\OrderOffer;
+use App\Domains\Orders\Models\OrderRating;
 use App\Domains\Orders\Models\OrderReason;
 use App\Domains\Pricing\Models\PricingRule;
 use App\Domains\Tayars\Enums\TayarStatus;
@@ -40,6 +44,7 @@ use Database\Seeders\OrderReasonSeeder;
 use Database\Seeders\RolesAndPermissionsSeeder;
 use Database\Seeders\SuperAdminSeeder;
 use Database\Seeders\SystemWalletSeeder;
+use Database\Seeders\TayarRankSeeder;
 use Database\Seeders\VehicleTypeSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
@@ -62,8 +67,8 @@ class SeedersTest extends TestCase
         $this->assertSame(['admin', 'ops', 'super_admin', 'support'], Role::query()->where('guard_name', 'web')->orderBy('name')->pluck('name')->all());
         $this->assertSame($this->permissionNames(StaffRole::Admin), $this->rolePermissions('admin'));
         $this->assertNotContains(StaffPermission::StaffManage->value, $this->rolePermissions('admin'));
-        $this->assertSame(['areas.view', 'business_profiles.review', 'business_profiles.view', 'business_types.view', 'categories.view', 'modes.view', 'national_ids.review', 'national_ids.view', 'orders.manage', 'orders.view', 'pricing_rules.view', 'tayars.review', 'tayars.view', 'users.block', 'users.view', 'vehicle_types.view', 'wallets.settle', 'wallets.view'], $this->rolePermissions('ops'));
-        $this->assertSame(['areas.view', 'business_profiles.view', 'business_types.view', 'categories.view', 'modes.view', 'national_ids.view', 'orders.view', 'pricing_rules.view', 'tayars.view', 'users.view', 'vehicle_types.view', 'wallets.view'], $this->rolePermissions('support'));
+        $this->assertSame(['areas.view', 'business_profiles.review', 'business_profiles.view', 'business_types.view', 'categories.view', 'modes.view', 'national_ids.review', 'national_ids.view', 'orders.manage', 'orders.view', 'pricing_rules.view', 'ranks.manage', 'ranks.view', 'ratings.moderate', 'ratings.view', 'tayars.review', 'tayars.view', 'users.block', 'users.view', 'vehicle_types.view', 'wallets.settle', 'wallets.view'], $this->rolePermissions('ops'));
+        $this->assertSame(['areas.view', 'business_profiles.view', 'business_types.view', 'categories.view', 'modes.view', 'national_ids.view', 'orders.view', 'pricing_rules.view', 'ranks.view', 'ratings.view', 'tayars.view', 'users.view', 'vehicle_types.view', 'wallets.view'], $this->rolePermissions('support'));
         $this->assertContains(StaffPermission::PricingRulesManage->value, $this->rolePermissions('admin'));
         $this->assertContains(StaffPermission::OrdersManage->value, $this->rolePermissions('admin'));
         $this->assertContains(StaffPermission::TayarsReview->value, $this->rolePermissions('admin'));
@@ -206,7 +211,21 @@ class SeedersTest extends TestCase
         $this->assertSame([WalletType::System], Wallet::query()->distinct()->pluck('type')->all());
     }
 
-    public function test_the_database_seeder_runs_all_eight(): void
+    public function test_the_four_tayar_ranks_are_seeded_once_in_order_and_keep_what_staff_changed(): void
+    {
+        $this->seed(TayarRankSeeder::class);
+        TayarRank::query()->where('code', 'captain')->update(['min_delivered_orders_30d' => 70]);
+
+        $this->seed(TayarRankSeeder::class);
+
+        $ranks = TayarRank::query()->orderBy('level')->get();
+        $this->assertSame(['trainee', 'tayar', 'captain', 'senior_captain'], $ranks->pluck('code')->all());
+        $this->assertSame(['متدرب', 'طيار', 'كابتن', 'كابتن أول'], $ranks->map(fn (TayarRank $rank): string => $rank->getTranslation('name', 'ar'))->all());
+        $this->assertSame([0, 30, 70, 150], $ranks->pluck('min_delivered_orders_30d')->all());
+        $this->assertSame([null, '4.30', '4.60', '4.80'], $ranks->pluck('min_rating')->all());
+    }
+
+    public function test_the_database_seeder_runs_all_nine(): void
     {
         config(['tayari.super_admin' => ['name' => 'Owner', 'phone' => '01012345678', 'password' => 'owner-secret']]);
 
@@ -219,6 +238,7 @@ class SeedersTest extends TestCase
         $this->assertDatabaseCount('order_reasons', 10);
         $this->assertSame(count(SystemWallet::cases()), Wallet::query()->where('type', WalletType::System)->count());
         $this->assertSame(['Correction', 'Compensation', 'Penalty', 'Other'], WalletAdjustmentReason::query()->orderBy('sort_order')->get()->map(fn (WalletAdjustmentReason $reason): string => $reason->getTranslation('name', 'en'))->all());
+        $this->assertDatabaseCount('tayar_ranks', 4);
         $this->assertTrue(User::query()->sole()->hasRole(StaffRole::SuperAdmin->value));
     }
 
@@ -330,8 +350,10 @@ class SeedersTest extends TestCase
 
         // The approved business has an order looking for a tayar (area mode, offered to the online demo tayar), a
         // cancelled food order (zone mode, nobody to offer it to), an order the demo tayar accepted (area mode) and an
-        // order the demo tayar delivered (area mode).
-        $orders = Order::query()->with(['mode', 'statusHistories', 'cancelReason', 'offers', 'media'])->orderBy('id')->get();
+        // order the demo tayar delivered (area mode). Then come the rated history orders.
+        $allOrders = Order::query()->with(['mode', 'statusHistories', 'cancelReason', 'offers', 'media'])->orderBy('id')->get();
+        $orders = $allOrders->take(4)->values();
+        $history = $allOrders->slice(4)->values();
         $this->assertSame(array_fill(0, 4, $businesses[0]->user_id), $orders->pluck('sender_id')->all());
         $this->assertSame([OrderStatus::LookingForTayar, OrderStatus::Cancelled, OrderStatus::Ongoing, OrderStatus::Delivered], $orders->pluck('status')->all());
         $this->assertSame([ModeCode::Area, ModeCode::Zone, ModeCode::Area, ModeCode::Area], $orders->map(fn (Order $order): ModeCode => $order->mode->code)->all());
@@ -356,12 +378,30 @@ class SeedersTest extends TestCase
         $this->assertSame($demoTayar->user_id, $orders[3]->tayar_id);
 
         // Wallets: the signup bonus, order 4's delivery (cash, shipping paid by the receiver), EGP 500 cash handed in
-        // and a EGP 300 payout to the business; every balance adds up to zero.
-        $this->assertSame(['signup_bonus', 'order_delivered', 'cash_handed_in', 'payout'], WalletPosting::query()->orderBy('id')->pluck('type')->map->value->all());
+        // and a EGP 300 payout to the business, then the history deliveries; every balance adds up to zero.
+        $this->assertSame(['signup_bonus', 'order_delivered', 'cash_handed_in', 'payout', ...array_fill(0, 30, 'order_delivered')], WalletPosting::query()->orderBy('id')->pluck('type')->map->value->all());
         $tayarBalance = BigDecimal::of('100.00')->plus((string) $orders[3]->tayar_earning)->minus((string) $orders[3]->amount_to_collect)->plus('500.00');
+        foreach ($history as $order) {
+            $tayarBalance = $tayarBalance->plus((string) $order->tayar_earning)->minus((string) $order->amount_to_collect);
+        }
         $this->assertSame((string) $tayarBalance->toScale(2), Wallet::ensureFor($demoTayar->user_id, WalletType::Tayar)->balance);
         $this->assertSame('500.00', Wallet::ensureFor($businesses[0]->user_id, WalletType::Business)->balance);
         $this->assertSame('0.00', (string) BigDecimal::of((string) Wallet::query()->sum('balance'))->toScale(2));
+
+        // Ratings: 30 past orders delivered by the demo tayar over the last weeks, rated both ways and revealed; order 4
+        // is rated too but still in its window. One business comment is hidden by staff. The demo tayar is ranked as the
+        // nightly job would: 30 orders delivered before today and a 4.60 average reach the second rank, from the starting
+        // rank given on approval.
+        $this->assertCount(30, $history);
+        $this->assertTrue($history->every(fn (Order $order): bool => $order->status === OrderStatus::Delivered && $order->tayar_id === $demoTayar->user_id && $order->delivered_at->lt(now()->subDays(2))));
+        $this->assertDatabaseCount('order_ratings', 62);
+        $this->assertSame(2, OrderRating::query()->where('order_id', $orders[3]->id)->where('revealed_at', '>', now())->count());
+        $hidden = OrderRating::query()->whereNotNull('comment_hidden_at')->sole();
+        $this->assertSame([$admin->id, RaterRole::Business], [$hidden->comment_hidden_by, $hidden->rater_role]);
+        $demoTayar->refresh()->load('rank');
+        $this->assertSame(['tayar', 'طيار', '4.60', 30, 30], [$demoTayar->rank->code, $demoTayar->rank->getTranslation('name', 'ar'), $demoTayar->rating_avg, $demoTayar->ratings_count_30d, $demoTayar->delivered_orders_30d]);
+        $this->assertSame([['trainee', null], ['tayar', 'trainee']], TayarRankHistory::query()->with(['toRank', 'fromRank'])->orderBy('id')->get()->map(fn (TayarRankHistory $row): array => [$row->toRank->code, $row->fromRank?->code])->all());
+        $this->assertSame('4.73', $businesses[0]->refresh()->rating_avg);
     }
 
     public function test_running_the_demo_data_seeder_twice_creates_nothing_twice(): void
@@ -385,9 +425,11 @@ class SeedersTest extends TestCase
         $this->assertDatabaseCount('vehicle_types', 4);
         $this->assertDatabaseCount('business_types', 10);
         $this->assertDatabaseCount('order_reasons', 10);
-        $this->assertDatabaseCount('orders', 4);
-        $this->assertDatabaseCount('order_status_histories', 12);
-        $this->assertDatabaseCount('wallet_postings', 4);
+        $this->assertDatabaseCount('orders', 34);
+        $this->assertDatabaseCount('order_status_histories', 162);
+        $this->assertDatabaseCount('wallet_postings', 34);
+        $this->assertDatabaseCount('order_ratings', 62);
+        $this->assertDatabaseCount('tayar_rank_histories', 2);
         $this->assertDatabaseCount('wallet_adjustment_reasons', 4);
         $this->assertDatabaseCount('order_offers', 2);
         $this->assertDatabaseCount('tayar_work_sessions', 1);

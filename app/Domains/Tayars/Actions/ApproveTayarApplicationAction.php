@@ -2,6 +2,7 @@
 
 namespace App\Domains\Tayars\Actions;
 
+use App\Domains\Incentives\Actions\AssignStartingRankAction;
 use App\Domains\Tayars\Enums\ReviewDecision;
 use App\Domains\Tayars\Enums\TayarStatus;
 use App\Domains\Tayars\Enums\VehicleStatus;
@@ -17,12 +18,16 @@ use Illuminate\Validation\ValidationException;
 
 class ApproveTayarApplicationAction
 {
-    public function __construct(private EnsureWalletsAction $ensureWallets, private PostSignupBonusAction $postSignupBonus) {}
+    public function __construct(
+        private EnsureWalletsAction $ensureWallets,
+        private PostSignupBonusAction $postSignupBonus,
+        private AssignStartingRankAction $assignStartingRank,
+    ) {}
 
     /**
      * Approves the application with its vehicle, which becomes the active one, and records the review. A first approval
      * posts the signup bonus in the same transaction (a tayar sent back to review and approved again gets none); its
-     * wallets are created before the transaction opens.
+     * wallets are created before the transaction opens. A tayar without a rank gets the lowest one.
      *
      * @throws ValidationException when the application is not pending
      */
@@ -55,6 +60,8 @@ class ApproveTayarApplicationAction
             if ($isFirstApproval) {
                 $this->postSignupBonus->handle($profile);
             }
+
+            $this->assignStartingRank->handle($profile);
 
             return $profile;
         });

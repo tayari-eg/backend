@@ -5,6 +5,7 @@ namespace App\Http\Resources\Api\V1\Admin;
 use App\Domains\Accounts\Enums\Locale;
 use App\Domains\Orders\Enums\OrderCanceller;
 use App\Domains\Orders\Models\Order;
+use App\Domains\Orders\Models\OrderRating;
 use App\Domains\Orders\Models\OrderStatusHistory;
 use App\Http\Resources\Api\V1\MediaResource;
 use App\Models\User;
@@ -124,6 +125,19 @@ class OrderResource extends JsonResource
                     'lng' => $history->lng,
                     'created_at' => $history->created_at?->toIso8601ZuluString(),
                 ])
+                ->all()),
+            'rating_ends_at' => $this->ratingEndsAt()?->toIso8601ZuluString(),
+            'ratings' => $this->whenLoaded('ratings', fn (): array => $this->ratings
+                ->map(fn (OrderRating $rating): array => [
+                    'id' => $rating->id,
+                    'rater_role' => $rating->rater_role,
+                    'stars' => $rating->stars,
+                    'comment' => $rating->comment,
+                    'comment_hidden_at' => $rating->comment_hidden_at?->toIso8601ZuluString(),
+                    'revealed_at' => $rating->revealed_at?->toIso8601ZuluString(),
+                    'created_at' => $rating->created_at?->toIso8601ZuluString(),
+                ])
+                ->values()
                 ->all()),
             'price_accepted_at' => $this->price_accepted_at?->toIso8601ZuluString(),
             'accepted_at' => $this->accepted_at?->toIso8601ZuluString(),

@@ -30,4 +30,8 @@ enum StaffPermission: string
     case WalletsView = 'wallets.view';
     case WalletsSettle = 'wallets.settle';
     case WalletsAdjust = 'wallets.adjust';
+    case RatingsView = 'ratings.view';
+    case RatingsModerate = 'ratings.moderate';
+    case RanksView = 'ranks.view';
+    case RanksManage = 'ranks.manage';
 }

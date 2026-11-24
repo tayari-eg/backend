@@ -21,5 +21,11 @@ return [
     'cannot_block_self' => 'You cannot block your own account.',
     'last_super_admin' => 'This is the last active super admin, so it cannot be blocked or demoted.',
     'phone_belongs_to_account' => 'This phone number already belongs to an account.',
+    'rating_has_no_comment' => 'This rating has no comment to hide.',
+    'rating_comment_already_hidden' => 'This comment is already hidden.',
+    'rating_comment_not_hidden' => 'This comment is not hidden.',
+    'tayar_rank_name_taken' => 'Another rank already has this name.',
+    'tayar_rank_below_previous' => 'This must be at least what :rank needs.',
+    'tayar_rank_above_next' => 'This must be at most what :rank needs.',
 
 ];

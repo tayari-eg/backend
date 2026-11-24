@@ -69,6 +69,14 @@ enum OrderStatus: string
     }
 
     /**
+     * Only a delivered order is rated; a not delivered one is usually the receiver's doing.
+     */
+    public function canBeRated(): bool
+    {
+        return $this === self::Delivered;
+    }
+
+    /**
      * @return list<self>
      */
     public static function withTayarCases(): array

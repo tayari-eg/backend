@@ -283,6 +283,7 @@ return [
                 1. **Tayars** page with filters **Online now**, vehicle type and **Blocked**, and a search box → **List tayars**, paged, newest first.
                 2. Clicking a row opens the **Tayar details** page → **Get tayar**: documents, vehicle, the last position (`location`) and the review history.
                 3. **Block** and **Unblock** use the users endpoints (**Users › Block user / Unblock user**, with `user.id`) and need `users.block`. A blocked tayar is out of tayar mode at once.
+                4. The list and details show `standing` (rank, 30-day delivered orders and average, as of the last nightly run); the list filters by `rank_id` (**Tayar ranks › List tayar ranks**). **Rank history** tab on the details page (`ranks.view`) → **Get tayar rank history**. The tayar's ratings: **Ratings › List ratings** with `rated_user_id` = `user.id` and `rater_role` = `business`.
                 MD,
             'requests' => [
                 [
@@ -294,6 +295,11 @@ return [
                     'route' => 'api.v1.admin.tayars.show',
                     'name' => 'Get tayar',
                     'screen' => '**Tayar details** page, on open.',
+                ],
+                [
+                    'route' => 'api.v1.admin.tayars.rank-history',
+                    'name' => 'Get tayar rank history',
+                    'screen' => '**Tayar details › Rank history** tab, on open and when the page changes.',
                 ],
             ],
         ],
@@ -602,6 +608,7 @@ return [
                 5. **Close as not delivered** button (picked up or on the way; `orders.manage`): when the receiver can't be reached → a dialog with **Get not-delivered reasons** and a required note → **Close as not delivered**. The only status staff can force; the sender and the tayar are both notified.
                 6. **Resend receiver codes** button (picked up or on the way; `orders.manage`), for a receiver who lost the SMS or hit the lock-out (`receiver_codes.locked`). Staff never see the codes.
                 7. The status history shows where the tayar was for each step (`lat`, `lng`), and the pickup photos. Delivery does not check payment yet; receivers get codes only once a real SMS provider is configured.
+                8. A delivered order shows both sides' `ratings` (moderate them under **Ratings**).
                 MD,
             'requests' => [
                 [
@@ -746,6 +753,70 @@ return [
                     'name' => 'Delete adjustment reason',
                     'screen' => '**Adjustment reasons** page, when the staff member confirms the **Delete** dialog.',
                     'next' => 'Remove the row. On 422, keep the dialog open with the message and a **Deactivate** button.',
+                ],
+            ],
+        ],
+
+        [
+            'name' => '18. Ratings',
+            'description' => <<<'MD'
+                Ratings between businesses and tayars after delivery. Needs `ratings.view` to see, `ratings.moderate` to hide comments:
+
+                1. **Ratings** page: a table with filters (who rated: `business` or `tayar`, stars, with a comment, hidden comments, the rated user, dates) → **List ratings**, newest first. `is_revealed` = false: the rated side can't see it yet and the rater can still change it (:rating_window_hours hours after delivery).
+                2. Clicking a row → **Get rating**: both parties, the order and the full comment.
+                3. **Hide comment** (abusive language) → a dialog with a required reason → **Hide comment**. The rated side no longer sees the comment; the stars still count. **Show comment** → **Unhide comment**.
+                4. A business's score (`rating`, from its tayars' ratings) shows on the business profile pages and the user details, for staff only.
+                MD,
+            'requests' => [
+                [
+                    'route' => 'api.v1.admin.ratings.index',
+                    'name' => 'List ratings',
+                    'screen' => '**Ratings** page, on open, when a filter changes and on page change; also the ratings tab of a tayar or business.',
+                ],
+                [
+                    'route' => 'api.v1.admin.ratings.show',
+                    'name' => 'Get rating',
+                    'screen' => '**Rating details** drawer, on open.',
+                ],
+                [
+                    'route' => 'api.v1.admin.ratings.hide-comment',
+                    'name' => 'Hide comment',
+                    'screen' => '**Hide comment** dialog, when the staff member clicks **Hide**.',
+                    'next' => 'Update the row: the comment shows as hidden with the reason.',
+                ],
+                [
+                    'route' => 'api.v1.admin.ratings.unhide-comment',
+                    'name' => 'Unhide comment',
+                    'screen' => '**Rating details** drawer, when the staff member clicks **Show comment**.',
+                ],
+            ],
+        ],
+
+        [
+            'name' => '19. Tayar ranks',
+            'description' => <<<'MD'
+                The four tayar ranks (متدرب Trainee, طيار Tayar, كابتن Captain, كابتن أول Senior Captain). Needs `ranks.view` to see, `ranks.manage` to edit:
+
+                1. **Tayar ranks** page → **List tayar ranks**: the ladder, lowest first, with each rank's needs over the last :rank_window_days days and how many tayars hold it.
+                2. **Edit** → **Get tayar rank**, then **Save** → **Update tayar rank**: the Arabic and English names, the delivered orders and average rating needed, and the colour. Ranks can't be added or deleted, and the code and level never change.
+                3. Ranks are recalculated every night (03:00 Cairo time by default): up that night, down after :rank_grace_days Cairo calendar days below. Edits apply from the next run. Each threshold must stay between the levels below and above (save from the top rank down when raising several). Ranks bring no money or offer changes yet.
+                MD,
+            'requests' => [
+                [
+                    'route' => 'api.v1.admin.tayar-ranks.index',
+                    'name' => 'List tayar ranks',
+                    'screen' => '**Tayar ranks** page, on open; also the rank filter on the **Tayars** page.',
+                ],
+                [
+                    'route' => 'api.v1.admin.tayar-ranks.show',
+                    'name' => 'Get tayar rank',
+                    'screen' => '**Edit tayar rank** form, on open.',
+                ],
+                [
+                    'route' => 'api.v1.admin.tayar-ranks.update',
+                    'name' => 'Update tayar rank',
+                    'screen' => '**Edit tayar rank** form, when the staff member clicks **Save**.',
+                    'next' => 'Close the form and update the row.',
                 ],
             ],
         ],

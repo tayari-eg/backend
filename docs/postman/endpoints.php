@@ -44,19 +44,19 @@ $bilingualName = '`name.ar` and `name.en` (strings, both required): up to 100 ch
 $amountRule = 'a number with up to 2 decimals, 0 to 99999999.99';
 $vehicleFields = '`id`, `vehicle_type` (`id`, `name`, `requires_license`, `can_carry_food`), `plate_number`, `model`, `color`, `year`, `status` (`pending` | `approved` | `rejected`), `is_active`, `documents` (`vehicle_license`: a file or null; `vehicle_photos`: a list of files; each file with a signed `url`)';
 $tayarProfileFields = "`id`, `status` (`pending` | `approved` | `rejected`), `rejection_reason`, `can_reapply_at` (when a rejected applicant may change the application again, or null), `reviewed_at`, `national_id_number`, `is_online`, `location` (`lat`, `lng`, `updated_at`, or null), `documents` (`national_id_front`, `national_id_back`, `criminal_record` (the فيش), `personal_photo`, `driving_license`: each a file with a signed `url`, or null), `vehicle` ({$vehicleFields}), `created_at`, `updated_at`";
-$tayarAdminFields = "{$tayarProfileFields}, the applicant as `user` (`id`, `name`, `phone`, `status`)";
+$tayarAdminFields = "{$tayarProfileFields}, the applicant as `user` (`id`, `name`, `phone`, `status`), and `standing` (as of the last nightly run: `rank` (`id`, `code`, `name`, `level`, `color`; the lowest rank from approval), `rank_below_since` (when the tayar fell below the rank\'s needs, or null), `delivered_orders_30d`, `ratings_count_30d`, `rating_avg` (null below :min_ratings_for_average ratings), `updated_at`)";
 $tayarAdminDetailFields = "{$tayarAdminFields}, `reviewed_by` (`id`, `name`, or null) and `reviews` (every approval and rejection, oldest first: `decision`, `reason`, `reviewed_by`, `created_at`)";
 $workStatusFields = '`is_online`, `work_session` (`id`, `vehicle_id`, `mode` (`id`, `code`, `name`), `area` (`id`, `name`, or null), `radius_km` (or null), `destination` (`address`, `lat`, `lng`, or null), `started_at`; or null when offline), `location` (`lat`, `lng`, `updated_at`, or null)';
 $notTayar = '- **403:** not an approved tayar (`message`: "Tayar mode is only available after your tayar application is approved."), the account is blocked, or the phone is not verified. Leave tayar mode and show the application status.';
 $reapplyLater = '- **422:** `errors.status` = "You can change your application again from …" while a rejected application still has to wait until `can_reapply_at`.';
 $backToReview = 'An approved or rejected application goes back to `pending` (and an online tayar goes offline): warn the user before saving.';
 $orderRouteFields = "- `category_id` (number, required): a subcategory from **Get categories** (one of a main category's `children`).\n- `pickup_lat`, `pickup_lng`, `dropoff_lat`, `dropoff_lng` (numbers, required): the points picked on the map, up to 7 decimals.";
-$orderFields = '`id`, `code` (the short code people see, e.g. `TY-7K3P9Q`), `status` (`looking_for_tayar` | `pending` | `picked_up` | `ongoing` | `delivered` | `not_delivered` | `cancelled`), `can_cancel` (true until pickup), `category` (`id`, `name`, `is_food`), `details`, `pickup` (`address`, `lat`, `lng`, `contact_phone`), `dropoff` (`address`, `lat`, `lng`), `receiver` (`name`, `phone`), `goods_value`, `shipping_paid_by` (`sender` | `receiver`), `amount_to_collect` (what the receiver pays: the goods value, plus the shipping fee when the receiver pays it), `distance_km`, `food_extra`, `shipping_fee`, `cancel_reason` (`id`, `name`, or null), `tayar` (null until a tayar accepts; then `name`, `phone` (null once the order is delivered, not delivered or cancelled) and `vehicle` (`type`, `model`, `color`, `plate_number`)), `cancelled_by_type` (null unless cancelled; then `sender`, `staff`, or `system` when no tayar accepted in time), `free_cancel_until` (while `pending`: until when cancelling is free; otherwise null), `cancel_fee_now` (what cancelling now would cost: `"0.00"` before a tayar accepts and until `free_cancel_until`, then the cancellation fee, at most the shipping fee), `cancel_fee` (the fee recorded when the order was cancelled, `"0.00"` otherwise), `search_ends_at` (while `looking_for_tayar`: when Tayari stops looking and cancels the order; otherwise null), `price_accepted_at`, `accepted_at` (when the tayar accepted, or null), `cancelled_at`, `created_at`, `updated_at`. Amounts are strings with two decimals, in EGP; coordinates are strings with 7 decimals. Delivery: `tayar.location` (`lat`, `lng`, `updated_at`: the tayar\'s last position while the order is `pending`, `picked_up` or `ongoing`, otherwise null), `pickup_photos` (the tayar\'s photos at pickup, each with a signed `url`), `picked_up_at`, `receiver_confirmed_at`, `codes_sent_at` (when the receiver\'s codes were last sent by SMS), `delivered_at`, `not_delivered_at`, `not_delivered_reason` (`id`, `name`, or null), `not_delivered_note`, `tracking_token` (for the receiver\'s tracking link)';
-$adminOrderFields = '`id`, `code`, `status`, `can_cancel`, `sender` (`id`, `name`, `phone`, `business_name`), `category` (`id`, `name` with `ar` and `en`, `is_food`), `mode` (`id`, `code`, `name` with `ar` and `en`: the mode the order was priced in), `details`, `pickup` (`address`, `lat`, `lng`, `contact_phone`), `dropoff` (`address`, `lat`, `lng`), `receiver` (`name`, `phone`, `user_id` when the receiver has an account), `goods_value`, `shipping_paid_by`, `amount_to_collect`, `fee` (`distance_km`, `base_fare`, `price_per_km`, `distance_fare`, `minimum_fare`, `food_extra`, `shipping_fee`, `tayar_share_percent`, `tayar_earning`, `platform_fee`), `tayar` (`id`, `name`, `phone`, or null until a tayar accepts), `vehicle` (the tayar\'s vehicle for this order: `id`, `type` with `ar` and `en`, `model`, `color`, `plate_number`, or null), `work_session_id` (or null), `cancelled_by_type` (null unless cancelled; then `sender`, `staff` or `system`), `cancel_fee` (owed by the sender for cancelling an accepted order after the free period, `"0.00"` otherwise; charged to the business\'s wallet and added to the tayar\'s), `cancel_fee_owed_to` (`id`, `name` of the tayar it is owed to, or null), `price_accepted_at`, `accepted_at`, `cancelled_at`, `created_at`, `updated_at`. Amounts are strings with two decimals, in EGP. Delivery: `picked_up_at`, `receiver_confirmed_at`, `delivered_at`, `not_delivered_at`, `not_delivered_reason` (`id`, `name` with `ar` and `en`, or null), `not_delivered_note`, `tracking_token`, `receiver_codes` (`sent_at`, `expire_at`, `attempts`, `locked`; never the codes)';
-$adminOrderDetailFields = "{$adminOrderFields}, plus `cancelled_by` (`id`, `name`, or null), `cancel_reason` (`id`, `name` with `ar` and `en`, or null) and `status_history` (every status change, oldest first: `from_status` (null for the first row), `to_status`, `changed_by` (`id`, `name`, or null for the system), `note`, `lat`, `lng` (where the tayar was, or null for the sender, staff and the system), `created_at`), and `pickup_photos` (each with a signed `url`)";
+$orderFields = '`id`, `code` (the short code people see, e.g. `TY-7K3P9Q`), `status` (`looking_for_tayar` | `pending` | `picked_up` | `ongoing` | `delivered` | `not_delivered` | `cancelled`), `can_cancel` (true until pickup), `category` (`id`, `name`, `is_food`), `details`, `pickup` (`address`, `lat`, `lng`, `contact_phone`), `dropoff` (`address`, `lat`, `lng`), `receiver` (`name`, `phone`), `goods_value`, `shipping_paid_by` (`sender` | `receiver`), `amount_to_collect` (what the receiver pays: the goods value, plus the shipping fee when the receiver pays it), `distance_km`, `food_extra`, `shipping_fee`, `cancel_reason` (`id`, `name`, or null), `tayar` (null until a tayar accepts; then `name`, `phone` (null once the order is delivered, not delivered or cancelled) and `vehicle` (`type`, `model`, `color`, `plate_number`)), `cancelled_by_type` (null unless cancelled; then `sender`, `staff`, or `system` when no tayar accepted in time), `free_cancel_until` (while `pending`: until when cancelling is free; otherwise null), `cancel_fee_now` (what cancelling now would cost: `"0.00"` before a tayar accepts and until `free_cancel_until`, then the cancellation fee, at most the shipping fee), `cancel_fee` (the fee recorded when the order was cancelled, `"0.00"` otherwise), `search_ends_at` (while `looking_for_tayar`: when Tayari stops looking and cancels the order; otherwise null), `price_accepted_at`, `accepted_at` (when the tayar accepted, or null), `cancelled_at`, `created_at`, `updated_at`. Amounts are strings with two decimals, in EGP; coordinates are strings with 7 decimals. Delivery: `tayar.location` (`lat`, `lng`, `updated_at`: the tayar\'s last position while the order is `pending`, `picked_up` or `ongoing`, otherwise null), `pickup_photos` (the tayar\'s photos at pickup, each with a signed `url`), `picked_up_at`, `receiver_confirmed_at`, `codes_sent_at` (when the receiver\'s codes were last sent by SMS), `delivered_at`, `not_delivered_at`, `not_delivered_reason` (`id`, `name`, or null), `not_delivered_note`, `tracking_token` (for the receiver\'s tracking link). Ratings: `can_rate` (true for :rating_window_hours hours after delivery, for an order sent by a business), `rating_ends_at` (until when I can rate or change my rating, or null when the order can\'t be rated), `my_rating` (my rating of the tayar, or null: `id`, `stars`, `comment`, `comment_hidden` (staff hid it from the tayar), `editable_until`, `created_at`, `updated_at`). The tayar\'s rating of me is never shown';
+$adminOrderFields = '`id`, `code`, `status`, `can_cancel`, `sender` (`id`, `name`, `phone`, `business_name`), `category` (`id`, `name` with `ar` and `en`, `is_food`), `mode` (`id`, `code`, `name` with `ar` and `en`: the mode the order was priced in), `details`, `pickup` (`address`, `lat`, `lng`, `contact_phone`), `dropoff` (`address`, `lat`, `lng`), `receiver` (`name`, `phone`, `user_id` when the receiver has an account), `goods_value`, `shipping_paid_by`, `amount_to_collect`, `fee` (`distance_km`, `base_fare`, `price_per_km`, `distance_fare`, `minimum_fare`, `food_extra`, `shipping_fee`, `tayar_share_percent`, `tayar_earning`, `platform_fee`), `tayar` (`id`, `name`, `phone`, or null until a tayar accepts), `vehicle` (the tayar\'s vehicle for this order: `id`, `type` with `ar` and `en`, `model`, `color`, `plate_number`, or null), `work_session_id` (or null), `cancelled_by_type` (null unless cancelled; then `sender`, `staff` or `system`), `cancel_fee` (owed by the sender for cancelling an accepted order after the free period, `"0.00"` otherwise; charged to the business\'s wallet and added to the tayar\'s), `cancel_fee_owed_to` (`id`, `name` of the tayar it is owed to, or null), `price_accepted_at`, `accepted_at`, `cancelled_at`, `created_at`, `updated_at`. Amounts are strings with two decimals, in EGP. Delivery: `picked_up_at`, `receiver_confirmed_at`, `delivered_at`, `not_delivered_at`, `not_delivered_reason` (`id`, `name` with `ar` and `en`, or null), `not_delivered_note`, `tracking_token`, `receiver_codes` (`sent_at`, `expire_at`, `attempts`, `locked`; never the codes), `rating_ends_at` (the end of the rating window after delivery, or null)';
+$adminOrderDetailFields = "{$adminOrderFields}, plus `cancelled_by` (`id`, `name`, or null), `cancel_reason` (`id`, `name` with `ar` and `en`, or null) and `status_history` (every status change, oldest first: `from_status` (null for the first row), `to_status`, `changed_by` (`id`, `name`, or null for the system), `note`, `lat`, `lng` (where the tayar was, or null for the sender, staff and the system), `created_at`), and `pickup_photos` (each with a signed `url`), and `ratings` (both sides\' ratings: `id`, `rater_role` (`business` | `tayar`), `stars`, `comment` (even when hidden), `comment_hidden_at`, `revealed_at`, `created_at`)";
 $orderNotFound = '- **404:** no order with this id.';
 $offerFields = '`id`, `status` (`offered` while it can be accepted; `accepted`, `rejected`, `expired` or `withdrawn` otherwise), `round`, `distance_km` (from the tayar to the pickup, in a straight line, when the offer was made), `tayar_earning` (what this tayar earns with this vehicle, EGP), `expires_at`, `expires_in_seconds` (counted on the server: use it for the countdown, not the phone clock), `order` (`id`, `code`, `mode` (`code`, `name`), `category` (`id`, `name`, `is_food`), `details`, `pickup` (`address`, `lat`, `lng`), `dropoff` (`address`, `lat`, `lng`), `distance_km` (the trip, by road)). No phone numbers until the tayar accepts';
-$tayarOrderFields = '`id`, `code`, `status` (`pending` | `picked_up` | `ongoing` | `delivered` | `not_delivered` | `cancelled`), `mode` (`code`, `name`), `category` (`id`, `name`, `is_food`), `details`, `sender` (`name`, `phone`, `business_name`), `pickup` (`address`, `lat`, `lng`, `contact_phone`), `dropoff` (`address`, `lat`, `lng`), `receiver` (`name`, `phone`), `distance_km`, `tayar_earning` (what I earn, EGP). The phones (`sender.phone`, `pickup.contact_phone`, `receiver.phone`) are null once the order is delivered, not delivered or cancelled; the names stay, `cancel_fee` (what the sender owes me for cancelling after the free period, `"0.00"` otherwise; added to my wallet), `accepted_at`, `cancelled_at`, `created_at`. Coordinates are strings with 7 decimals. Delivery: `pickup_photos` (each with a signed `url`), `receiver_codes` (`sent_at`, `expire_at`, `attempts_left`, `problem`: null when a code can be checked now, else `codes_not_sent`, `codes_locked` or `codes_expired`; never the codes), `picked_up_at`, `receiver_confirmed_at`, `delivered_at`, `not_delivered_at`, `not_delivered_reason` (`id`, `name`, or null), `not_delivered_note`';
+$tayarOrderFields = '`id`, `code`, `status` (`pending` | `picked_up` | `ongoing` | `delivered` | `not_delivered` | `cancelled`), `mode` (`code`, `name`), `category` (`id`, `name`, `is_food`), `details`, `sender` (`name`, `phone`, `business_name`), `pickup` (`address`, `lat`, `lng`, `contact_phone`), `dropoff` (`address`, `lat`, `lng`), `receiver` (`name`, `phone`), `distance_km`, `tayar_earning` (what I earn, EGP). The phones (`sender.phone`, `pickup.contact_phone`, `receiver.phone`) are null once the order is delivered, not delivered or cancelled; the names stay, `cancel_fee` (what the sender owes me for cancelling after the free period, `"0.00"` otherwise; added to my wallet), `accepted_at`, `cancelled_at`, `created_at`. Coordinates are strings with 7 decimals. Delivery: `pickup_photos` (each with a signed `url`), `receiver_codes` (`sent_at`, `expire_at`, `attempts_left`, `problem`: null when a code can be checked now, else `codes_not_sent`, `codes_locked` or `codes_expired`; never the codes), `picked_up_at`, `receiver_confirmed_at`, `delivered_at`, `not_delivered_at`, `not_delivered_reason` (`id`, `name`, or null), `not_delivered_note`. Ratings: `can_rate` (true for :rating_window_hours hours after delivery, for an order sent by a business), `rating_ends_at`, `my_rating` (my rating of the business, or null: `id`, `stars`, `comment`, `comment_hidden`, `editable_until`, `created_at`, `updated_at`). The business\'s rating of me is never shown here: see **Get my ratings**';
 $adminOfferFields = '`id`, `tayar` (`id`, `name`, `phone`), `work_session_id`, `round`, `distance_km` (tayar to pickup when offered), `tayar_share_percent`, `tayar_earning`, `platform_fee` (what the order would earn with this tayar\'s vehicle), `status` (`offered` | `accepted` | `rejected` | `expired` | `withdrawn`, as of now), `expires_at`, `responded_at` (when the tayar accepted or rejected, or null), `created_at`';
 $tayarPositionFields = '- `lat` (number, required): -90 to 90, up to 7 decimals.\n- `lng` (number, required): -180 to 180, up to 7 decimals. The current GPS position, saved on the status history.';
 $wrongStep = "- **422:** `errors.status` = \"This order can't move to that step now.\" (another step is due: reload the order).";
@@ -85,6 +85,14 @@ $walletNotFound = '- **404:** no wallet with this id.';
 $walletReasonNotFound = '- **404:** no adjustment reason with this id.';
 $transactionListRequest = "- Query `type` (optional): one transaction type, e.g. `delivery_earning` or `payout`.\n- Query `per_page` (optional, 1 to :max_per_page, default :per_page) and `cursor` (from `meta.next_cursor`).";
 $businessWalletOnly = '- **403:** `message` = "Only business accounts have a wallet here. Tayars see their wallet in tayar mode.", or the account is blocked or the phone is not verified.';
+$businessScoreField = '`rating` (staff only; the business never sees it: `rating_avg` from its tayars\' ratings revealed in the last :rank_window_days days, null below :min_ratings_for_average ratings, `ratings_count_30d`, `updated_at` of the last nightly run)';
+$ratingBody = "- `stars` (number, required): 1 to 5.\n- `comment` (string, optional, up to 500 characters): left out or blank means no comment. Sending the rating again replaces both, so send the comment again to keep it.";
+$myRatingFields = '`id`, `stars`, `comment`, `comment_hidden` (true when staff hid the comment from the other side), `editable_until` (the end of the rating window: until then it can be changed and the other side can\'t see it), `created_at`, `updated_at`';
+$ratingErrors = '- **422:** field errors, or `errors.order` = "Only delivered orders can be rated.", "The time to rate this order is over." or "Only orders sent by a business can be rated for now."';
+$adminRatingFields = '`id`, `order` (`id`, `code`), `rater_role` (`business` | `tayar`), `rater` and `rated_user` (`id`, `name`, `phone`), `stars`, `comment` (even when hidden), `comment_hidden_at`, `comment_hidden_reason`, `comment_hidden_by` (`id`, `name`, `phone`, or null), `is_revealed` (true once the rated side can see it), `revealed_at`, `created_at`, `updated_at`';
+$ratingNotFound = '- **404:** no rating with this id.';
+$tayarRankFields = '`id`, `code` (`trainee` | `tayar` | `captain` | `senior_captain`, never changes), `name` (`ar` and `en`), `level` (1 is the starting rank; never changes), `min_delivered_orders_30d`, `min_rating` (the average rating needed, or null when none is), `color` (`#RRGGBB`), `tayars_count` (how many tayars hold it), `created_at`, `updated_at`';
+$tayarRankNotFound = '- **404:** no rank with this id.';
 $idempotencyKey = '- `idempotency_key` (string, required): a UUID the panel makes once per form. Sending the same one again (a double click or a retry) returns the first result with 200 instead of recording it twice.';
 $cashOnly = 'Every order is cash for now: the tayar collects `amount_to_collect` from the receiver and owes it to Tayari.';
 
@@ -274,7 +282,7 @@ return [
         'what' => 'Lists business profiles for review, filtered by status, oldest first.',
         'who' => 'Staff with `business_profiles.view` (support, ops, admin, super admin).',
         'request' => "- Query `status` (optional): `pending` (default), `approved` or `rejected`.\n- Query `per_page` (optional, 1 to :max_per_page, default :per_page) and `page`.",
-        'success' => "**200** with `data`: a list of business profiles, each with {$profileFields}, and the owner as `user` (`id`, `name`, `phone`). Plus `meta` and `links` for pages.",
+        'success' => "**200** with `data`: a list of business profiles, each with {$profileFields}, the owner as `user` (`id`, `name`, `phone`) and {$businessScoreField}. Plus `meta` and `links` for pages.",
         'errors' => "- **422:** an unknown `status` or `per_page` out of range.\n{$loggedOut}\n{$staffOnly}\n{$serverError}",
         'notes' => '- Open the Review details page with **Get business profile**. The document `url`s expire after :signed_url_minutes minutes.',
     ],
@@ -283,7 +291,7 @@ return [
         'what' => 'Returns one business profile with everything the Review details page needs: the business data, links, documents, the owner and who reviewed it.',
         'who' => 'Staff with `business_profiles.view` (support, ops, admin, super admin).',
         'request' => '- Path `businessProfile`: the profile `id` (from the list). No body.',
-        'success' => "**200** with `data`, the business profile: {$profileFields}, the owner as `user` (`id`, `name`, `phone`) and `reviewed_by` (`id`, `name` of the staff member who approved or rejected it, or null).",
+        'success' => "**200** with `data`, the business profile: {$profileFields}, the owner as `user` (`id`, `name`, `phone`), `reviewed_by` (`id`, `name` of the staff member who approved or rejected it, or null) and {$businessScoreField}.",
         'errors' => "- **404:** no profile with this id.\n{$loggedOut}\n{$staffOnly}\n{$serverError}",
         'notes' => '- Call it again to refresh the document `url`s; they expire after :signed_url_minutes minutes.',
     ],
@@ -408,7 +416,7 @@ return [
         'what' => 'Returns one customer or business account for the User details page: the national ID and the business profile with links and documents.',
         'who' => 'Staff with `users.view`.',
         'request' => '- Path `customer`: the user `id` (from the list). No body.',
-        'success' => "**200** with `data`: {$customerFields}, with `business_profile` in full: {$profileFields}.",
+        'success' => "**200** with `data`: {$customerFields}, with `business_profile` in full: {$profileFields}, and {$businessScoreField}.",
         'errors' => "{$customerNotFound}\n{$loggedOut}\n{$staffOnly}\n{$serverError}",
         'notes' => "- A file comes without `url` when the staff member can't view that kind of document (`national_ids.view` for the national ID, `business_profiles.view` for business documents).\n- The `url`s expire after :signed_url_minutes minutes: call it again to refresh them.",
     ],
@@ -679,7 +687,7 @@ return [
         'request' => '- Path `tayarProfile`: the application `id`. No body.',
         'success' => "**200** with `data`: {$tayarAdminDetailFields} (`status` = `approved`). Remove it from the pending tab.",
         'errors' => "- **404:** no application with this id.\n- **422:** the application is not pending any more (`errors.status`): reload the list.\n{$loggedOut}\n{$staffOnly} Staff (except super admins) can't review their own application.\n{$serverError}",
-        'notes' => '- The tayar can switch to tayar mode and go online at once.\n- A first approval adds the EGP :signup_bonus signup bonus to the tayar\'s wallet (once per tayar; an application approved again after a review gets none).',
+        'notes' => '- The tayar can switch to tayar mode and go online at once.\n- A first approval adds the EGP :signup_bonus signup bonus to the tayar\'s wallet (once per tayar; an application approved again after a review gets none).\n- A tayar without a rank gets the lowest one (متدرب, Trainee), with a rank history row; a tayar approved again keeps their rank.',
     ],
 
     'api.v1.admin.tayar-applications.reject' => [
@@ -694,7 +702,7 @@ return [
     'api.v1.admin.tayars.index' => [
         'what' => 'Lists approved tayars, newest first, with filters.',
         'who' => 'Staff with `tayars.view` (support, ops, admin, super admin).',
-        'request' => "- Query `is_online` (optional): `true` for tayars online now, `false` for offline.\n- Query `vehicle_type_id` (optional): only tayars with this vehicle type.\n- Query `blocked` (optional): `true` for blocked accounts, `false` for active ones.\n- Query `search` (optional): the same rules as **List users**.\n- Query `per_page` (optional, 1 to :max_per_page, default :per_page) and `page`.",
+        'request' => "- Query `is_online` (optional): `true` for tayars online now, `false` for offline.\n- Query `vehicle_type_id` (optional): only tayars with this vehicle type.\n- Query `rank_id` (optional): only tayars at this rank (from **List tayar ranks**).\n- Query `blocked` (optional): `true` for blocked accounts, `false` for active ones.\n- Query `search` (optional): the same rules as **List users**.\n- Query `per_page` (optional, 1 to :max_per_page, default :per_page) and `page`.",
         'success' => "**200** with `data`: a list of tayars, each with {$tayarAdminFields} (in the list, `documents` are left out). Plus `meta` and `links` for pages.",
         'errors' => "- **422:** an invalid filter or `per_page` out of range.\n{$loggedOut}\n{$staffOnly}\n{$serverError}",
         'notes' => '- Block or unblock a tayar from **Users › Block user** (`user.id` is the user id): a blocked tayar is out of tayar mode at once and is set offline within :tayar_offline_minutes minutes.',
@@ -1314,6 +1322,110 @@ return [
         'success' => '**204** with no body. Remove the row.',
         'errors' => "{$walletReasonNotFound}\n- **422:** a posting uses the reason: `errors.wallet_adjustment_reason` = \"This reason is used by wallet adjustments, so it cannot be deleted. Deactivate it instead.\"\n{$loggedOut}\n{$staffOnly}\n{$serverError}",
         'notes' => '- Ask for confirmation first; a delete can\'t be undone.',
+    ],
+
+    'api.v1.client.orders.rating.update' => [
+        'what' => 'Rates the tayar of my delivered order, or changes my rating, within :rating_window_hours hours of delivery.',
+        'who' => 'The business that sent the order.',
+        'request' => "- Path `order`: the order `id`.\n{$ratingBody}",
+        'success' => "**201** with `data`, my new rating: {$myRatingFields}. **200** with the same body when it changed an existing rating.",
+        'errors' => "{$ratingErrors}\n- **403:** not my order.\n{$loggedOut}\n{$upgrade}\n{$serverError}",
+        'notes' => '- Show the **Rate your tayar** card on a delivered order while `can_rate` is true, filled from `my_rating`. After `rating_ends_at` the rating is final.\n- The tayar sees the rating only after `editable_until`, without the order or my business name, so ratings can\'t be traded. Abusive comments may be hidden by staff; the stars still count.',
+    ],
+
+    'api.v1.tayar.orders.rating.update' => [
+        'what' => 'Rates the business of an order I delivered, or changes my rating, within :rating_window_hours hours of delivery.',
+        'who' => 'The tayar who delivered the order.',
+        'request' => "- Path `order`: the order `id`.\n{$ratingBody}",
+        'success' => "**201** with `data`, my new rating: {$myRatingFields}. **200** with the same body when it changed an existing rating.",
+        'errors' => "{$ratingErrors}\n- **403:** not my order.\n{$loggedOut}\n{$notTayar}\n{$upgrade}\n{$serverError}",
+        'notes' => '- Ask for the rating right after **Deliver** succeeds, and on **My order** while `can_rate` is true.\n- Only staff see a business\'s ratings for now.',
+    ],
+
+    'api.v1.tayar.rank.show' => [
+        'what' => 'Returns my rank, my numbers over the last :rank_window_days days, what the next rank needs, and every rank.',
+        'who' => 'An approved tayar (tayar mode).',
+        'request' => '- No body.',
+        'success' => '**200** with `data`: `rank` (`code`, `name` in my language, `level`, `min_delivered_orders_30d`, `min_rating`, `color`), `next_rank` (the same fields, or null at the top rank), `delivered_orders_30d`, `ratings_count_30d`, `rating_avg` (null until :min_ratings_for_average ratings), `min_ratings_for_average`, `at_risk` (null, or `since` and `drops_at` while I am below my rank\'s needs), `ranks` (every rank, lowest first, same fields as `rank`), `updated_at` (the last nightly run, or null before the first one). `at_risk.drops_at` is the start of a Cairo day.',
+        'errors' => "{$loggedOut}\n{$notTayar}\n{$upgrade}\n{$serverError}",
+        'notes' => '- Ranks are worked out every night (03:00 Cairo time by default) from delivered orders and the ratings businesses gave, revealed in the :rank_window_days whole Cairo days before the run (orders delivered after midnight count the next night). A newly approved tayar starts at the lowest rank.\n- Moving up happens that night. Moving down waits :rank_grace_days Cairo calendar days after the day the tayar fell below the rank\'s needs: the rank drops at the first run on or after `at_risk.drops_at`; meeting them again first clears it.\n- A rank needing `min_rating` needs an average, which only exists from :min_ratings_for_average ratings.\n- Show progress to `next_rank`, e.g. "45 of 80 orders" and the average against `min_rating`. Ranks bring no money or offer changes yet.\n- Reload it on a `rank_changed` or `rank_at_risk` push.',
+    ],
+
+    'api.v1.tayar.ratings.index' => [
+        'what' => 'Lists the ratings businesses gave me, newest first, once each rating window has ended.',
+        'who' => 'An approved tayar (tayar mode).',
+        'request' => '- Query `per_page` (optional, 1 to :max_per_page, default :per_page) and `cursor` (from `meta.next_cursor`).',
+        'success' => '**200** with `data`: a list of ratings, newest rating first, each with `stars`, `comment` (null when there is none or staff hid it) and `date` (`YYYY-MM-DD`, Cairo time). No id, order, business or time, so the rater stays unknown. Plus `meta` (`next_cursor`, `prev_cursor`, `per_page`) and `links`.',
+        'errors' => "- **422:** `per_page` out of range.\n{$loggedOut}\n{$notTayar}\n{$upgrade}\n{$serverError}",
+        'notes' => '- A rating shows here :rating_window_hours hours after its delivery, never earlier. The list is in the order the ratings were given, not by `date`; treat `cursor` as opaque.',
+    ],
+
+    'api.v1.admin.ratings.index' => [
+        'what' => 'Lists every rating in both directions, newest first, with filters.',
+        'who' => 'Staff with `ratings.view` (support, ops, admin, super admin).',
+        'request' => "- Query `rater_role` (optional): `business` (businesses rating tayars) or `tayar` (tayars rating businesses).\n- Query `rated_user_id`, `rater_id`, `order_id` (optional numbers; users by their user `id`).\n- Query `stars` (optional): 1 to 5.\n- Query `has_comment` (optional): `true` or `false`.\n- Query `comment_hidden` (optional): `true` for hidden comments, `false` for the rest.\n- Query `created_from`, `created_to` (optional, `YYYY-MM-DD`): business days in Cairo time, both included.\n- Query `per_page` (optional, 1 to :max_per_page, default :per_page) and `page`.",
+        'success' => "**200** with `data`: a list of ratings, each with {$adminRatingFields}. Plus `meta` and `links` for pages.",
+        'errors' => "- **422:** an invalid filter or `per_page` out of range.\n{$loggedOut}\n{$staffOnly}\n{$serverError}",
+        'notes' => '- Ratings with `is_revealed` = false are still hidden from the rated side and can still be changed by the rater.',
+    ],
+
+    'api.v1.admin.ratings.show' => [
+        'what' => 'Returns one rating with both parties and the full comment.',
+        'who' => 'Staff with `ratings.view`.',
+        'request' => '- Path `rating`: the rating `id`. No body.',
+        'success' => "**200** with `data`: {$adminRatingFields}.",
+        'errors' => "{$ratingNotFound}\n{$loggedOut}\n{$staffOnly}\n{$serverError}",
+    ],
+
+    'api.v1.admin.ratings.hide-comment' => [
+        'what' => 'Hides an abusive comment from the rated side, with a reason. The stars still count.',
+        'who' => 'Staff with `ratings.moderate` (ops, admin, super admin).',
+        'request' => '- Path `rating`: the rating `id`.\n- `reason` (string, required, up to 500 characters): why it was hidden (staff only).',
+        'success' => "**200** with `data`, the rating: {$adminRatingFields}.",
+        'errors' => "{$ratingNotFound}\n- **422:** `errors.reason` when missing, or `errors.rating` = \"This rating has no comment to hide.\" or \"This comment is already hidden.\"\n{$loggedOut}\n{$staffOnly}\n{$serverError}",
+        'notes' => '- If the rater changes the rating or the comment within the rating window, a hidden comment stays hidden (with the same reason and staff member) until staff use **Unhide comment**.',
+    ],
+
+    'api.v1.admin.ratings.unhide-comment' => [
+        'what' => 'Shows a hidden comment to the rated side again.',
+        'who' => 'Staff with `ratings.moderate` (ops, admin, super admin).',
+        'request' => '- Path `rating`: the rating `id`. No body.',
+        'success' => "**200** with `data`, the rating (`comment_hidden_at`, `comment_hidden_reason` and `comment_hidden_by` cleared): {$adminRatingFields}.",
+        'errors' => "{$ratingNotFound}\n- **422:** `errors.rating` = \"This comment is not hidden.\"\n{$loggedOut}\n{$staffOnly}\n{$serverError}",
+    ],
+
+    'api.v1.admin.tayar-ranks.index' => [
+        'what' => 'Lists the four tayar ranks, lowest level first, with how many tayars hold each.',
+        'who' => 'Staff with `ranks.view` (support, ops, admin, super admin).',
+        'request' => '- No body.',
+        'success' => "**200** with `data`: a list of ranks, each with {$tayarRankFields}.",
+        'errors' => "{$loggedOut}\n{$staffOnly}\n{$serverError}",
+        'notes' => '- Ranks can\'t be added or deleted; the list is short, so it has no pages.',
+    ],
+
+    'api.v1.admin.tayar-ranks.show' => [
+        'what' => 'Returns one rank with its name in both languages, to fill the edit form.',
+        'who' => 'Staff with `ranks.view`.',
+        'request' => '- Path `tayarRank`: the rank `id`. No body.',
+        'success' => "**200** with `data`: {$tayarRankFields}.",
+        'errors' => "{$tayarRankNotFound}\n{$loggedOut}\n{$staffOnly}\n{$serverError}",
+    ],
+
+    'api.v1.admin.tayar-ranks.update' => [
+        'what' => 'Updates a rank\'s name, thresholds or colour. Send only the fields that change; the code and level never change.',
+        'who' => 'Staff with `ranks.manage` (ops, admin, super admin).',
+        'request' => "- Path `tayarRank`: the rank `id`.\n- {$bilingualName}, each unique among ranks (ignoring letter case).\n- `min_delivered_orders_30d` (number, optional): 0 to 100000 delivered orders in the last :rank_window_days days.\n- `min_rating` (number or null, optional): 1 to 5 with up to 2 decimals; null means no rating is needed.\n- `color` (string, optional): `#RRGGBB`.",
+        'success' => "**200** with `data`, the updated rank: {$tayarRankFields}.",
+        'errors' => "{$tayarRankNotFound}\n- **422:** field errors, for example a name with one language only, a name another rank already uses (\"Another rank already has this name.\"), `min_rating` out of range, a colour that is not `#RRGGBB`, or a threshold outside its neighbours: `errors.min_delivered_orders_30d` or `errors.min_rating` = \"This must be at least what … needs.\" (the level below) or \"This must be at most what … needs.\" (the level above).\n{$loggedOut}\n{$staffOnly}\n{$serverError}",
+        'notes' => '- Each threshold must be at least the level below\'s and at most the level above\'s; no rating needed (`min_rating` null) counts as 0, so only the lowest rank can need none. To raise several ranks, save from the top rank down.\n- Tayars move at the next nightly run, not at once: up that night, down after :rank_grace_days Cairo calendar days below.',
+    ],
+
+    'api.v1.admin.tayars.rank-history' => [
+        'what' => 'Lists one tayar\'s rank changes, newest first.',
+        'who' => 'Staff with `ranks.view` (support, ops, admin, super admin).',
+        'request' => '- Path `tayar`: the tayar profile `id`.\n- Query `per_page` (optional, 1 to :max_per_page, default :per_page) and `page`.',
+        'success' => '**200** with `data`: a list of changes, each with `id`, `from_rank` (`id`, `code`, `name`, `level`, or null for the starting rank), `to_rank` (the same fields), `source` (`auto`: the nightly job), `created_at`. Plus `meta` and `links` for pages.',
+        'errors' => "- **404:** no approved tayar with this id.\n- **422:** `per_page` out of range.\n{$loggedOut}\n{$staffOnly}\n{$serverError}",
     ],
 
 ];

@@ -34,6 +34,13 @@ class OrderStatusTest extends TestCase
         }
     }
 
+    public function test_only_a_delivered_order_can_be_rated(): void
+    {
+        foreach (OrderStatus::cases() as $status) {
+            $this->assertSame($status === OrderStatus::Delivered, $status->canBeRated(), $status->value);
+        }
+    }
+
     public function test_senders_and_staff_cancel_until_pickup_and_the_system_only_before_a_tayar_accepts(): void
     {
         $beforePickup = [OrderStatus::LookingForTayar, OrderStatus::Pending];

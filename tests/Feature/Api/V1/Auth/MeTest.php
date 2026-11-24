@@ -53,7 +53,7 @@ class MeTest extends TestCase
         $this->getJson(route('api.v1.auth.me'))
             ->assertOk()
             ->assertJsonPath('data.roles', ['support'])
-            ->assertJsonPath('data.permissions', ['business_profiles.view', 'national_ids.view', 'business_types.view', 'users.view', 'tayars.view', 'vehicle_types.view']);
+            ->assertJsonPath('data.permissions', ['business_profiles.view', 'national_ids.view', 'business_types.view', 'users.view', 'tayars.view', 'vehicle_types.view', 'categories.view', 'modes.view', 'areas.view', 'pricing_rules.view', 'orders.view', 'wallets.view', 'ratings.view', 'ranks.view']);
     }
 
     public function test_a_super_admin_gets_every_permission(): void

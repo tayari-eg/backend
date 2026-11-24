@@ -24,5 +24,8 @@ return [
     'codes_not_available' => 'Codes are only sent while the order is with the tayar.',
     'cannot_close_not_delivered' => 'Only a picked-up or ongoing order can be closed as not delivered.',
     'receiver_codes_sms' => 'Tayari: order :code from :sender is on its way. Give the tayar the delivery code :delivery when you receive it. Refuse the order only with the code :refusal. Track it: :url',
+    'rating_not_delivered' => 'Only delivered orders can be rated.',
+    'rating_closed' => 'The time to rate this order is over.',
+    'rating_business_only' => 'Only orders sent by a business can be rated for now.',
 
 ];

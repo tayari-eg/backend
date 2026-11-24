@@ -9,7 +9,9 @@ use App\Domains\Accounts\Models\BusinessType;
 use App\Domains\Catalog\Models\Area;
 use App\Domains\Catalog\Models\Category;
 use App\Domains\Catalog\Models\Mode;
+use App\Domains\Incentives\Models\TayarRank;
 use App\Domains\Orders\Models\Order;
+use App\Domains\Orders\Models\OrderRating;
 use App\Domains\Pricing\Models\PricingRule;
 use App\Domains\Tayars\Models\TayarProfile;
 use App\Domains\Tayars\Models\Vehicle;
@@ -112,6 +114,14 @@ class AdminRolePermissionsTest extends TestCase
         'api.v1.admin.wallet-adjustment-reasons.activate' => ['POST', 'walletAdjustmentReason', StaffPermission::WalletsAdjust],
         'api.v1.admin.wallet-adjustment-reasons.deactivate' => ['POST', 'walletAdjustmentReason', StaffPermission::WalletsAdjust],
         'api.v1.admin.wallet-adjustment-reasons.destroy' => ['DELETE', 'walletAdjustmentReason', StaffPermission::WalletsAdjust],
+        'api.v1.admin.ratings.index' => ['GET', null, StaffPermission::RatingsView],
+        'api.v1.admin.ratings.show' => ['GET', 'rating', StaffPermission::RatingsView],
+        'api.v1.admin.ratings.hide-comment' => ['POST', 'rating', StaffPermission::RatingsModerate],
+        'api.v1.admin.ratings.unhide-comment' => ['POST', 'rating', StaffPermission::RatingsModerate],
+        'api.v1.admin.tayar-ranks.index' => ['GET', null, StaffPermission::RanksView],
+        'api.v1.admin.tayar-ranks.show' => ['GET', 'tayarRank', StaffPermission::RanksView],
+        'api.v1.admin.tayar-ranks.update' => ['PATCH', 'tayarRank', StaffPermission::RanksManage],
+        'api.v1.admin.tayars.rank-history' => ['GET', 'tayar', StaffPermission::RanksView],
         'api.v1.admin.staff.index' => ['GET', null, StaffPermission::StaffManage],
         'api.v1.admin.staff.store' => ['POST', null, StaffPermission::StaffManage],
         'api.v1.admin.staff.role.update' => ['PUT', 'staff', StaffPermission::StaffManage],
@@ -153,6 +163,8 @@ class AdminRolePermissionsTest extends TestCase
             'wallet' => Wallet::factory()->create(),
             'walletPosting' => $this->postToWallet(Wallet::factory()->create(), '10.00'),
             'walletAdjustmentReason' => WalletAdjustmentReason::factory()->create(),
+            'rating' => OrderRating::factory()->create(),
+            'tayarRank' => TayarRank::factory()->create(),
             null => null,
         };
     }

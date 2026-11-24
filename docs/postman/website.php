@@ -215,6 +215,7 @@ return [
                 9. `cancelled_by_type` = `system`: no tayar accepted in time. Show "No tayar found" with a **Send again** button that opens New order with the same details and a new `idempotency_key`.
                 10. From acceptance to delivery, **Order details** shows the tayar on a map from `tayar.location` (with how old `updated_at` is) and the steps: picked up (with the pickup photos), on the way, delivered or not delivered (with the reason). Reload every 10 to 15 seconds while the page is open. There is no ETA.
                 11. After pickup nobody can cancel. The receiver gets the codes and the tracking link by SMS (only once a real SMS provider is configured); a **Copy tracking link** button can build it from `tracking_token` (folder 8). Delivery does not check payment yet.
+                12. **Rate your tayar:** a delivered order shows 1 to 5 stars and an optional comment while `can_rate` is true (:rating_window_hours hours after delivery, until `rating_ends_at`) → **Rate the tayar**. Fill it from `my_rating` so the user can change it; after `rating_ends_at` show it read-only. The tayar sees the rating only after that, without the order or the business name.
                 MD,
             'requests' => [
                 [
@@ -248,6 +249,12 @@ return [
                     'name' => 'Cancel order',
                     'screen' => '**Cancel order** dialog, when the user confirms.',
                     'next' => 'Show the order as cancelled and move it to the Past tab.',
+                ],
+                [
+                    'route' => 'api.v1.client.orders.rating.update',
+                    'name' => 'Rate the tayar',
+                    'screen' => '**Rate your tayar** card on a delivered order, when the user clicks **Send** (or **Update**).',
+                    'next' => 'Show the stars as sent; the card stays editable until `editable_until`.',
                 ],
             ],
         ],

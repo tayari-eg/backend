@@ -109,6 +109,10 @@ class ExportPostmanCollection extends Command
         ':signup_bonus' => ['WALLET_SIGNUP_BONUS', 'wallet.signup_bonus'],
         ':bonus_unlock_delivered_orders' => ['WALLET_BONUS_UNLOCK_DELIVERED_ORDERS', 'wallet.bonus_unlock_delivered_orders'],
         ':available_from_hour' => ['WALLET_AVAILABLE_FROM_HOUR', 'wallet.available_from_hour'],
+        ':rating_window_hours' => ['RATINGS_WINDOW_HOURS', 'ratings.window_hours'],
+        ':min_ratings_for_average' => ['RATINGS_MIN_FOR_AVERAGE', 'ratings.min_ratings_for_average'],
+        ':rank_window_days' => ['RANKS_WINDOW_DAYS', 'ranks.window_days'],
+        ':rank_grace_days' => ['RANKS_DOWNGRADE_GRACE_DAYS', 'ranks.downgrade_grace_days'],
         ':per_page' => [null, 'pagination.per_page'],
         ':max_per_page' => [null, 'pagination.max_per_page'],
     ];

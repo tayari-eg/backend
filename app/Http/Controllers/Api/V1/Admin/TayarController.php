@@ -18,10 +18,11 @@ class TayarController extends Controller
     {
         $tayars = TayarProfile::query()
             ->approved()
-            ->with(['user', 'vehicle.vehicleType'])
+            ->with(['user', 'vehicle.vehicleType', 'rank'])
             ->when($request->isOnline() !== null, fn ($query) => $query->where('is_online', $request->isOnline()))
             ->when($request->validated('vehicle_type_id'), fn ($query, $vehicleTypeId) => $query
                 ->whereHas('vehicles', fn ($vehicles) => $vehicles->where('vehicle_type_id', $vehicleTypeId)))
+            ->when($request->validated('rank_id'), fn ($query, $rankId) => $query->where('rank_id', $rankId))
             ->when($request->blocked() !== null, fn ($query) => $query
                 ->whereHas('user', fn ($users) => $users->where('status', $request->blocked() ? UserStatus::Blocked : UserStatus::Active)))
             ->when($request->validated('search') !== null, fn ($query) => $query
@@ -37,6 +38,6 @@ class TayarController extends Controller
      */
     public function show(TayarProfile $tayar): TayarProfileResource
     {
-        return TayarProfileResource::make($tayar->load(['user', 'media', 'vehicle.vehicleType', 'vehicle.media', 'reviewer', 'reviews.reviewer']));
+        return TayarProfileResource::make($tayar->load(['user', 'media', 'vehicle.vehicleType', 'vehicle.media', 'reviewer', 'reviews.reviewer', 'rank']));
     }
 }
